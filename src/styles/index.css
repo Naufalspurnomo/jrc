@@ -1,7 +1,7 @@
 @import "tailwindcss";
 
 @theme {
-  --font-display: "Cormorant Garamond Variable", Georgia, serif;
+  --font-display: "Cinzel Variable", Georgia, serif;
   --font-sans: "Manrope Variable", Arial, sans-serif;
   --font-mono: "IBM Plex Mono", monospace;
   --color-coal: #100c0b;
@@ -15,8 +15,8 @@
   color-scheme: dark;
   font-family: var(--font-sans);
   font-synthesis: none;
-  --coal: #100c0b;
-  --coal-soft: #191310;
+  --coal: #0e0b09;
+  --coal-soft: #16110d;
   --ink: #241714;
   --oxblood: #601c1e;
   --oxblood-bright: #8c2928;
@@ -115,7 +115,7 @@ h2,
 h3 {
   font-family: var(--font-display);
   font-weight: 600;
-  letter-spacing: -.035em;
+  letter-spacing: -.02em;
 }
 
 ::selection {
@@ -321,7 +321,7 @@ h3 {
 .site-action--primary {
   border-color: var(--imperial);
   background: linear-gradient(135deg, #edc65d, #bd7b1e);
-  box-shadow: 0 1rem 3rem rgb(208 145 36 / 18%);
+  box-shadow: 0 .6rem 1.8rem rgb(208 145 36 / 14%);
   color: #21150c;
 }
 
@@ -348,8 +348,8 @@ h3 {
 .site-action:hover,
 .site-action:focus-visible {
   border-color: var(--imperial-pale);
-  transform: translateY(-3px);
-  box-shadow: 0 1rem 3rem rgb(208 145 36 / 22%);
+  transform: translateY(-2px);
+  box-shadow: 0 .6rem 1.8rem rgb(208 145 36 / 16%);
 }
 
 /* Header */
@@ -361,6 +361,16 @@ h3 {
   z-index: 90;
   padding: clamp(1rem, 2.4vw, 2.2rem) 0;
   color: var(--paper);
+}
+
+.site-header::after {
+  position: absolute;
+  right: 5%;
+  bottom: 0;
+  left: 5%;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgb(215 166 59 / 42%), transparent);
+  content: "";
 }
 
 .site-header__inner {
@@ -426,7 +436,7 @@ h3 {
   min-width: 30rem;
   padding: .35rem .55rem;
   border: 1px solid rgb(255 244 219 / 14%);
-  border-radius: 99px;
+  border-radius: 0;
   background: rgb(13 11 12 / 56%);
   box-shadow: 0 1rem 3rem rgb(0 0 0 / 12%);
   backdrop-filter: blur(16px);
@@ -441,6 +451,7 @@ h3 {
 
 .site-header__nav-list li {
   flex: 1;
+  position: relative;
 }
 
 .site-header__nav-list a {
@@ -453,7 +464,25 @@ h3 {
   letter-spacing: .06em;
   text-align: center;
   text-transform: uppercase;
-  transition: color .25s, background .25s;
+  transition: color .25s;
+}
+
+.site-header__nav-list a::after {
+  position: absolute;
+  right: 18%;
+  bottom: .2rem;
+  left: 18%;
+  height: 1px;
+  background: var(--imperial);
+  content: "";
+  transform: scaleX(0);
+  transform-origin: center;
+  transition: transform .35s var(--ease-out);
+}
+
+.site-header__nav-list a:hover::after,
+.site-header__nav-list a:focus-visible::after {
+  transform: scaleX(1);
 }
 
 .site-header__nav-list a span {
@@ -465,9 +494,15 @@ h3 {
 
 .site-header__nav-list a:hover,
 .site-header__nav-list a:focus-visible {
-  border-radius: 99px;
-  background: rgb(255 255 255 / 6%);
   color: white;
+}
+
+.site-header__nav-list a[data-active="true"] {
+  color: var(--imperial-pale);
+}
+
+.site-header__nav-list a[data-active="true"]::after {
+  transform: scaleX(1);
 }
 
 .site-header__portal-link {
@@ -553,7 +588,9 @@ h3 {
 .hero-section__title-lockup {
   width: min(90vw, 42rem);
   margin-top: clamp(-4rem, -7vh, -1.5rem);
+  padding: clamp(1.5rem, 4vw, 3rem);
   text-align: center;
+  background: radial-gradient(ellipse at 50% 50%, rgb(12 9 8 / 58%) 0%, rgb(12 9 8 / 30%) 52%, transparent 78%);
 }
 
 .hero-section__theme {
@@ -582,10 +619,9 @@ h3 {
 .hero-section h1 {
   margin: 0;
   color: #fff8df;
-  filter: drop-shadow(0 .22rem .15rem rgb(39 21 12 / 46%));
-  font-size: clamp(3.1rem, 5.4vw, 6.4rem);
-  line-height: .72;
-  text-shadow: 0 1px 0 #8d662e, 0 .35rem 1.2rem rgb(30 11 9 / 42%);
+  font-size: clamp(2.9rem, 5vw, 6rem);
+  font-weight: 600;
+  line-height: .8;
   text-transform: uppercase;
 }
 
@@ -594,14 +630,11 @@ h3 {
 .hero-section h1 strong {
   position: relative;
   display: block;
-  margin-top: .22em;
-  background: linear-gradient(180deg, #fff0a8 0%, #f5c651 38%, #a96414 72%, #f2c64c 100%);
-  background-clip: text;
-  color: transparent;
-  font-size: 1.55em;
+  margin-top: .16em;
+  color: var(--imperial-pale);
+  font-size: 1.35em;
   font-weight: 600;
-  letter-spacing: .035em;
-  -webkit-text-stroke: 1px rgb(104 55 10 / 58%);
+  letter-spacing: .03em;
 }
 
 .hero-section h1 strong::before,
@@ -621,11 +654,38 @@ h3 {
   max-width: 35rem;
   margin: 1.15rem auto 0;
   color: rgb(255 244 215 / 82%);
-  font-family: var(--font-display);
+  font-family: var(--font-sans);
   font-size: clamp(.86rem, 1.2vw, 1.06rem);
-  font-style: italic;
   letter-spacing: .03em;
-  line-height: 1.5;
+  line-height: 1.6;
+}
+
+.hero-section__laurel {
+  display: flex;
+  width: min(24rem, 64vw);
+  gap: 1rem;
+  align-items: center;
+  justify-content: center;
+  margin: 1.6rem auto 0;
+  font-style: normal;
+}
+
+.hero-section__laurel i {
+  flex: 1;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgb(215 166 59 / 85%));
+}
+
+.hero-section__laurel i:last-child {
+  background: linear-gradient(90deg, rgb(215 166 59 / 85%), transparent);
+}
+
+.hero-section__laurel b {
+  width: .5rem;
+  height: .5rem;
+  border: 1px solid var(--imperial);
+  transform: rotate(45deg);
+  background: rgb(215 166 59 / 18%);
 }
 
 .hero-section__actions {
@@ -680,7 +740,7 @@ h3 {
   overflow: hidden;
   background:
     linear-gradient(90deg, rgb(255 255 255 / 2%) 1px, transparent 1px) 0 0 / 12.5% 100%,
-    radial-gradient(circle at 84% 30%, rgb(118 37 29 / 28%), transparent 28rem),
+    radial-gradient(circle at 84% 30%, rgb(118 37 29 / 22%), transparent 28rem),
     #17110f;
 }
 
@@ -742,8 +802,8 @@ h3 {
   padding: clamp(6rem, 11vw, 11rem) 0 clamp(5rem, 10vw, 9rem);
   overflow: hidden;
   background:
-    radial-gradient(circle at 12% 0, rgb(196 146 54 / 16%), transparent 29rem),
-    linear-gradient(90deg, transparent 0 4.9%, rgb(84 51 32 / 10%) 5%, transparent 5.1%),
+    radial-gradient(circle at 12% 0, rgb(196 146 54 / 12%), transparent 29rem),
+    linear-gradient(90deg, transparent 0 4.9%, rgb(84 51 32 / 8%) 5%, transparent 5.1%),
     #e8dbc3;
   color: #2a1b14;
 }
@@ -832,7 +892,7 @@ h3 {
 .competition-entry__identity h3 { margin-block: .2rem; font-size: clamp(2.1rem, 3.6vw, 4rem); line-height: .9; }
 .competition-entry__identity > span:last-child { color: #74433b; font-size: .77rem; }
 .competition-entry__fixture { display: inline-flex; margin-bottom: .55rem !important; padding: .25rem .42rem; border: 1px solid rgb(96 28 30 / 25%); color: #7d2d25; font-family: var(--font-mono); font-size: .5rem; letter-spacing: .08em; text-transform: uppercase; }
-.competition-entry__provocation { max-width: 23rem; margin: 0; color: #6d5545; font-family: var(--font-display); font-size: 1.1rem; font-style: italic; line-height: 1.5; }
+.competition-entry__provocation { max-width: 23rem; margin: 0; color: #6d5545; font-family: var(--font-display); font-size: 1.05rem; line-height: 1.5; }
 .competition-entry__link { display: flex; min-height: 3rem; gap: .8rem; align-items: center; padding: .7rem 0; border-bottom: 1px solid #743029; color: #68241f; font-family: var(--font-mono); font-size: .62rem; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; }
 .competition-entry__link span:last-child { display: grid; width: 2rem; height: 2rem; border: 1px solid rgb(96 28 30 / 36%); border-radius: 50%; place-items: center; transition: transform .35s var(--ease-out), background .35s, color .35s; }
 .competition-entry__link:hover span:last-child,
@@ -997,7 +1057,7 @@ h3 {
 .competition-hero__title-row > span { color: rgb(232 215 184 / 14%); font-family: var(--font-display); font-size: clamp(8rem, 17vw, 18rem); line-height: .64; }
 .competition-hero__title-row p { margin-bottom: .65rem; color: var(--imperial-pale); font-family: var(--font-mono); font-size: .62rem; letter-spacing: .12em; text-transform: uppercase; }
 .competition-hero h1 { margin: 0; font-size: clamp(5rem, 11vw, 12rem); line-height: .66; }
-.competition-hero__provocation { max-width: 38rem; margin: 2rem 0 0 clamp(7rem, 14vw, 15rem); color: rgb(232 215 184 / 74%); font-family: var(--font-display); font-size: 1.25rem; font-style: italic; }
+.competition-hero__provocation { max-width: 38rem; margin: 2rem 0 0 clamp(7rem, 14vw, 15rem); color: rgb(232 215 184 / 74%); font-family: var(--font-display); font-size: 1.2rem; }
 .competition-brief { padding: clamp(6rem, 10vw, 10rem) 0; background: #eadfc9; color: #291b15; }
 .competition-brief .site-kicker,
 .competition-intel .site-kicker { color: #7d2d25; }
@@ -1006,7 +1066,7 @@ h3 {
 .competition-intel h2,
 .competition-cta h2 { margin: 0; font-size: clamp(3.5rem, 6vw, 6.8rem); line-height: .82; }
 .competition-brief__copy > p { margin-bottom: 3rem; color: #6d5848; font-size: 1.05rem; line-height: 1.9; }
-.competition-brief blockquote { margin: 0; padding: 2rem 0 2rem 2rem; border-left: 2px solid var(--oxblood); color: #48231d; font-family: var(--font-display); font-size: clamp(1.6rem, 2.6vw, 2.6rem); font-style: italic; line-height: 1.2; }
+.competition-brief blockquote { margin: 0; padding: 2rem 0 2rem 2rem; border-left: 2px solid var(--oxblood); color: #48231d; font-family: var(--font-display); font-size: clamp(1.6rem, 2.6vw, 2.6rem); line-height: 1.2; }
 .competition-intel { padding: clamp(6rem, 10vw, 10rem) 0; background: #f4ead7; color: #291b15; }
 .competition-intel header { display: grid; grid-template-columns: 1fr .7fr; gap: 4rem; align-items: end; margin-bottom: 4rem; }
 .competition-intel header .site-kicker { grid-column: 1 / -1; margin-bottom: -3rem; }
@@ -1100,7 +1160,7 @@ h3 {
 .portal-auth__note { margin: 1rem 0 0; color: rgb(243 233 211 / 48%); font-family: var(--font-mono); font-size: .56rem; letter-spacing: .06em; text-transform: uppercase; }
 .portal-auth__aside { display: flex; min-height: 100svh; flex-direction: column; justify-content: center; padding: clamp(3rem, 6vw, 7rem); background: var(--travertine); color: var(--ink); }
 .portal-auth__aside .portal-eyebrow { color: var(--oxblood); }
-.portal-auth__aside blockquote { margin: 4rem 0; color: #542820; font-family: var(--font-display); font-size: clamp(2.8rem, 4.5vw, 5.2rem); font-style: italic; line-height: .92; }
+.portal-auth__aside blockquote { margin: 4rem 0; color: #542820; font-family: var(--font-display); font-size: clamp(2.8rem, 4.5vw, 5.2rem); line-height: .92; }
 .portal-auth__facts { margin: 0 0 3rem; border-top: 1px solid rgb(51 31 23 / 24%); }
 .portal-auth__facts > div { display: grid; min-height: 4rem; grid-template-columns: 1fr 1fr; align-items: center; border-bottom: 1px solid rgb(51 31 23 / 24%); }
 .portal-auth__facts dt { color: #806b5b; font-family: var(--font-mono); font-size: .59rem; letter-spacing: .08em; text-transform: uppercase; }

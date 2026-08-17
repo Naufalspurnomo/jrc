@@ -3,10 +3,13 @@ import { Link, useParams } from 'react-router-dom';
 import { SiteFooter } from '../components/public/SiteFooter';
 import { SiteHeader } from '../components/public/SiteHeader';
 import { findCompetition } from '../content/jrc';
+import { useScrollReveal } from '../hooks/useScrollReveal';
 
 export default function CompetitionPage() {
   const { slug } = useParams<{ slug: string }>();
   const competition = findCompetition(slug);
+
+  useScrollReveal({ disabled: !competition });
 
   if (!competition) {
     return (

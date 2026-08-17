@@ -11,6 +11,7 @@ const primaryNavigation = [
 export function SiteHeader() {
   const [isOpen, setIsOpen] = useState(false);
   const toggleRef = useRef<HTMLButtonElement>(null);
+  const [activeSection, setActiveSection] = useState('');
 
   useEffect(() => {
     if (!isOpen) return;
@@ -25,6 +26,26 @@ export function SiteHeader() {
     window.addEventListener('keydown', closeOnEscape);
     return () => window.removeEventListener('keydown', closeOnEscape);
   }, [isOpen]);
+
+  useEffect(() => {
+    const sections = primaryNavigation
+      .map((item) => document.getElementById(item.href.split('#')[1]))
+      .filter((element): element is HTMLElement => Boolean(element));
+
+    if (sections.length === 0) return undefined;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) setActiveSection(`#${entry.target.id}`);
+        });
+      },
+      { rootMargin: '-35% 0px -55% 0px' },
+    );
+
+    sections.forEach((section) => observer.observe(section));
+    return () => observer.disconnect();
+  }, []);
 
   return (
     <header className="site-header" data-menu-open={isOpen ? 'true' : 'false'}>
@@ -57,7 +78,12 @@ export function SiteHeader() {
           <ol className="site-header__nav-list">
             {primaryNavigation.map((item, index) => (
               <li key={item.href}>
-                <a href={item.href} onClick={() => setIsOpen(false)}>
+                <a
+                  href={item.href}
+                  onClick={() => setIsOpen(false)}
+                  aria-current={activeSection === item.href ? 'true' : undefined}
+                  data-active={activeSection === item.href ? 'true' : 'false'}
+                >
                   <span aria-hidden="true">0{index + 1}</span>
                   {item.label}
                 </a>

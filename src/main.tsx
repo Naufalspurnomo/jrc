@@ -1,4 +1,4 @@
-import '@fontsource-variable/cormorant-garamond';
+import '@fontsource-variable/cinzel';
 import '@fontsource-variable/manrope';
 import '@fontsource/ibm-plex-mono/500.css';
 

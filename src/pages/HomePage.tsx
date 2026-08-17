@@ -8,8 +8,11 @@ import { PartnersSection } from '../components/public/PartnersSection';
 import { ScheduleSection } from '../components/public/ScheduleSection';
 import { SiteFooter } from '../components/public/SiteFooter';
 import { SiteHeader } from '../components/public/SiteHeader';
+import { useScrollReveal } from '../hooks/useScrollReveal';
 
 export default function HomePage() {
+  useScrollReveal();
+
   return (
     <div className="site-page site-page--home">
       <a className="site-skip-link skip-link" href="#main-content">

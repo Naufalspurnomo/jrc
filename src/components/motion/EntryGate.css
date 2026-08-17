@@ -80,7 +80,7 @@
 
 .gate-entry__eyebrow { color: rgb(241 223 187 / 58%); }
 .gate-entry__mark {
-  font: 500 clamp(4rem, 12vw, 8rem)/0.82 'Cormorant Garamond', Georgia, serif;
+  font: 500 clamp(4rem, 12vw, 8rem)/0.82 'Cinzel Variable', Georgia, serif;
   color: #e4b951;
   text-shadow: 0 0 42px rgb(213 125 49 / 26%);
 }

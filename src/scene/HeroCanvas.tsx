@@ -34,7 +34,7 @@ const HEAT_FRAGMENT = /* glsl */ `
     float lift = smoothstep(0.0, .2, vUv.y) * smoothstep(0.0, .3, 1.0 - vUv.y);
     float wave = sin((vUv.x * 18.0) + uTime * 1.7 + sin(vUv.y * 9.0)) * .5 + .5;
     vec3 warm = mix(vec3(.62, .16, .035), vec3(1.0, .68, .22), wave);
-    gl_FragColor = vec4(warm, edge * lift * (.025 + wave * .055) * uEnergy);
+    gl_FragColor = vec4(warm, edge * lift * (.02 + wave * .045) * uEnergy);
   }
 `;
 
@@ -285,9 +285,9 @@ function ArenaScene({ activeRef, onFirstFrame }: ArenaSceneProps) {
         <points ref={dustRef} geometry={dust.geometry}>
           <pointsMaterial
             color="#d8ad63"
-            size={0.036}
+            size={0.03}
             transparent
-            opacity={0.38}
+            opacity={0.3}
             depthWrite={false}
             blending={AdditiveBlending}
           />
@@ -295,9 +295,9 @@ function ArenaScene({ activeRef, onFirstFrame }: ArenaSceneProps) {
         <points ref={sparksRef} geometry={sparks.geometry}>
           <pointsMaterial
             color="#f1b33f"
-            size={0.028}
+            size={0.022}
             transparent
-            opacity={0.82}
+            opacity={0.66}
             depthWrite={false}
             blending={AdditiveBlending}
           />

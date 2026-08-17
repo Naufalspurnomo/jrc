@@ -26,6 +26,11 @@ export function HeroSection() {
           <p className="hero-section__declaration">
             Enam disiplin. Satu arena. Tempat rekayasa diuji di hadapan keberanian.
           </p>
+          <span className="hero-section__laurel" aria-hidden="true">
+            <i />
+            <b />
+            <i />
+          </span>
         </div>
 
         <div className="hero-section__actions" aria-label="Aksi utama">
