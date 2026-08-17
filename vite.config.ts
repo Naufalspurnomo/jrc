@@ -9,9 +9,14 @@ export default defineConfig({
     cssCodeSplit: true,
     rollupOptions: {
       output: {
-        manualChunks: {
-          motion: ['gsap', 'lenis'],
-          three: ['three', '@react-three/fiber'],
+        manualChunks(id) {
+          if (id.includes('/node_modules/three/') || id.includes('/node_modules/@react-three/fiber/')) {
+            return 'three';
+          }
+          if (id.includes('/node_modules/gsap/') || id.includes('/node_modules/lenis/')) {
+            return 'motion';
+          }
+          return undefined;
         },
       },
     },
@@ -19,6 +24,7 @@ export default defineConfig({
   test: {
     environment: 'jsdom',
     setupFiles: './src/test/setup.ts',
+    exclude: ['e2e/**', 'node_modules/**', 'dist/**'],
     css: true,
   },
 });

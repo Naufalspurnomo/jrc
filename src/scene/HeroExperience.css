@@ -1,0 +1,100 @@
+.scene-hero.hero-scene {
+  position: absolute;
+  inset: 0;
+  isolation: isolate;
+  overflow: clip;
+  background: #6f655e;
+}
+
+.hero-scene__static,
+.hero-scene__canvas,
+.hero-scene__background-picture,
+.hero-scene__veil {
+  position: absolute;
+  inset: 0;
+}
+
+.hero-scene__static {
+  z-index: 0;
+  overflow: hidden;
+  transition: opacity 900ms ease;
+}
+
+.hero-scene__background-picture {
+  display: block;
+}
+
+.hero-scene__background-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
+}
+
+.hero-scene__foreground-image {
+  position: absolute;
+  bottom: -7.25%;
+  left: 50%;
+  width: auto;
+  height: 114.55%;
+  max-width: none;
+  object-fit: contain;
+  transform: translateX(-50%);
+  transform-origin: 50% 100%;
+}
+
+.hero-scene--webgl .hero-scene__static {
+  opacity: 0;
+}
+
+.hero-scene__canvas {
+  z-index: 1;
+  pointer-events: none;
+}
+
+.hero-scene__canvas canvas {
+  display: block;
+  width: 100% !important;
+  height: 100% !important;
+}
+
+.hero-scene__veil {
+  z-index: 2;
+  pointer-events: none;
+  background:
+    linear-gradient(90deg, rgb(15 10 10 / 25%), transparent 26%, transparent 72%, rgb(15 10 10 / 24%)),
+    linear-gradient(0deg, rgb(15 9 8 / 46%), transparent 23%, transparent 76%, rgb(20 15 18 / 14%));
+  mix-blend-mode: multiply;
+}
+
+.hero-scene__content {
+  position: relative;
+  z-index: 3;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+.hero-scene__content > * {
+  pointer-events: auto;
+}
+
+@media (max-width: 720px) {
+  .hero-scene__foreground-image {
+    bottom: -7%;
+    left: 14%;
+    height: 92%;
+  }
+
+  .hero-scene__veil {
+    background:
+      linear-gradient(90deg, rgb(15 10 10 / 32%), transparent 68%),
+      linear-gradient(0deg, rgb(15 9 8 / 46%), transparent 30%);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hero-scene__static { transition: none; }
+  .hero-scene__canvas { display: none; }
+  .hero-scene--webgl .hero-scene__static { opacity: 1; }
+}

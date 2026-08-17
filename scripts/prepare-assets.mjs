@@ -6,9 +6,10 @@ import sharp from 'sharp';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const assets = path.join(root, 'public', 'assets');
+const sourceAssets = path.join(root, 'asset', 'generated-source');
 
 async function createWideSet(inputName, outputName) {
-  const input = path.join(assets, inputName);
+  const input = path.join(sourceAssets, inputName);
   const base = sharp(input).resize(3840, 2160, { fit: 'cover', position: 'centre', kernel: sharp.kernel.lanczos3 });
 
   await Promise.all([
@@ -48,13 +49,35 @@ async function createDepthHints() {
   ]);
 }
 
+async function createForegroundComposite() {
+  const width = 2880;
+  const height = 2346;
+  const edgeFeather = Buffer.from(`
+    <svg width="${width}" height="${height}" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <linearGradient id="edge" x1="0" y1="0" x2="1" y2="0">
+          <stop offset="0" stop-color="white" stop-opacity="0"/>
+          <stop offset="0.055" stop-color="white" stop-opacity="1"/>
+          <stop offset="0.945" stop-color="white" stop-opacity="1"/>
+          <stop offset="1" stop-color="white" stop-opacity="0"/>
+        </linearGradient>
+      </defs>
+      <rect width="${width}" height="${height}" fill="url(#edge)"/>
+    </svg>
+  `);
+
+  await sharp(path.join(assets, 'batu-knight.png'))
+    .resize(width, height, { kernel: sharp.kernel.lanczos3 })
+    .ensureAlpha()
+    .composite([{ input: edgeFeather, blend: 'dest-in' }])
+    .webp({ quality: 94, alphaQuality: 100, smartSubsample: true })
+    .toFile(path.join(assets, 'batu-knight@2x.webp'));
+}
+
 await Promise.all([
   createWideSet('hero-rome-wide-source.png', 'hero-rome-wide'),
   createWideSet('arena-interior-wide-source.png', 'arena-interior-wide'),
-  sharp(path.join(assets, 'batu-knight.png'))
-    .resize(2880, 2346, { kernel: sharp.kernel.lanczos3 })
-    .webp({ quality: 94, alphaQuality: 100, smartSubsample: true })
-    .toFile(path.join(assets, 'batu-knight@2x.webp')),
+  createForegroundComposite(),
   createDepthHints(),
 ]);
 
