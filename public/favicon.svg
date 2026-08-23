@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-labelledby="title">
+  <title>JRC XIV</title>
+  <rect width="64" height="64" rx="32" fill="#173a5e"/>
+  <circle cx="32" cy="32" r="27" fill="none" stroke="#d7a63b" stroke-width="2"/>
+  <circle cx="32" cy="32" r="22" fill="none" stroke="#f2cc74" stroke-width="1" opacity="0.6"/>
+  <text x="32" y="27" fill="#f3e9d3" font-family="Georgia, serif" font-size="11" font-weight="700" text-anchor="middle">JRC</text>
+  <text x="32" y="43" fill="#f2cc74" font-family="Georgia, serif" font-size="18" font-weight="700" text-anchor="middle">XIV</text>
+</svg>

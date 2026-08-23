@@ -16,8 +16,10 @@ interface RevealOptions {
 const DEFAULT_SELECTORS = [
   '.arena-facts__statement',
   '.arena-facts__list',
-  '.competition-explorer__header',
-  '.competition-entry',
+  '.arena-facts__header',
+  '.arena-facts__row',
+  '.character-select__header',
+  '.cs-card',
   '.schedule-section__header',
   '.schedule-section__timeline li',
   '.history-section__header',
@@ -40,7 +42,9 @@ const DEFAULT_SELECTORS = [
  */
 export function useScrollReveal({ scope, extra = [], disabled = false }: RevealOptions = {}) {
   useEffect(() => {
-    if (disabled) return undefined;
+    const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const useNativeMotion = window.innerWidth < 768 || navigator.maxTouchPoints > 0;
+    if (disabled || reducedMotion || useNativeMotion) return undefined;
     const root = scope ?? document.body;
     const targets = root.querySelectorAll(
       [...DEFAULT_SELECTORS, ...extra].filter((selector) => selector.startsWith('.')).join(','),

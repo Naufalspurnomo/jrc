@@ -7,6 +7,13 @@ export default defineConfig({
   build: {
     target: 'es2022',
     cssCodeSplit: true,
+    modulePreload: {
+      resolveDependencies: (_filename, dependencies, context) => (
+        context.hostType === 'html'
+          ? dependencies.filter((dependency) => !dependency.includes('three-'))
+          : dependencies
+      ),
+    },
     rollupOptions: {
       output: {
         manualChunks(id) {

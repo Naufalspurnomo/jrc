@@ -35,7 +35,7 @@ test('public arena is navigable, complete, and has no horizontal overflow', asyn
 
   await page.locator('#perlombaan').scrollIntoViewIfNeeded();
   await page.waitForTimeout(500);
-  await page.locator('.competition-entry__link').first().click();
+  await page.getByRole('link', { name: /lihat divisi/i }).click();
   await expect(page).toHaveURL(/\/perlombaan\//);
   await expect(page.getByRole('heading', { level: 1 })).toBeInViewport();
   await page.getByRole('link', { name: /kembali ke enam arena/i }).click();

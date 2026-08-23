@@ -127,8 +127,9 @@ export function useCinematicMotion<T extends HTMLElement>({
 
   useEffect(() => {
     const media = window.matchMedia('(prefers-reduced-motion: reduce)');
-    reducedMotionRef.current = media.matches;
-    if (disabled || media.matches) {
+    const useNativeMotion = media.matches || window.innerWidth < 768 || navigator.maxTouchPoints > 0;
+    reducedMotionRef.current = useNativeMotion;
+    if (disabled || useNativeMotion) {
       setSceneActive(false);
       return undefined;
     }

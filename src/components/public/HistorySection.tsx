@@ -13,25 +13,40 @@ export function HistorySection() {
           </p>
         </header>
 
-        <ol className="history-section__chapters">
-          {historyChapters.map((chapter) => (
-            <li key={chapter.numeral}>
-              <span className="history-section__numeral" aria-hidden="true">
+        <div className="history-editorial">
+          {historyChapters.map((chapter, index) => (
+            <article
+              className={`history-editorial__entry${index % 2 === 1 ? ' history-editorial__entry--flip' : ''}`}
+              key={chapter.numeral}
+            >
+              <span className="history-editorial__numeral" aria-hidden="true">
                 {chapter.numeral}
               </span>
-              <div>
+              <div className="history-editorial__body">
                 <p>{chapter.eyebrow}</p>
                 <h3>{chapter.title}</h3>
                 <span>{chapter.copy}</span>
               </div>
-            </li>
+              <i className="history-editorial__dot" aria-hidden="true" />
+            </article>
           ))}
-        </ol>
+        </div>
 
-        <div className="history-festival" aria-labelledby="festival-title">
+        <div
+          className="history-festival"
+          aria-labelledby="festival-title"
+          tabIndex={0}
+        >
           <header>
-            <p className="site-kicker kicker">J-Fest · Conventus</p>
-            <h3 id="festival-title">Lebih dari pertandingan.</h3>
+            <div>
+              <p className="site-kicker kicker">J-Fest · Conventus</p>
+              <h3 id="festival-title">Lebih dari pertandingan.</h3>
+            </div>
+            <span className="history-festival__stamp" aria-hidden="true">
+              <i />
+              CONVENTUS
+              <i />
+            </span>
           </header>
           <ol>
             {festivalMoments.map((moment) => (

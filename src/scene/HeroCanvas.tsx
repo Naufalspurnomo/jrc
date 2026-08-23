@@ -101,7 +101,6 @@ function ArenaScene({ activeRef, onFirstFrame }: ArenaSceneProps) {
   const dustRef = useRef<Points>(null);
   const sparksRef = useRef<Points>(null);
   const heatRef = useRef<ShaderMaterial>(null);
-  const shieldRef = useRef<Mesh>(null);
   const impactRef = useRef<Mesh>(null);
   const pointerRef = useRef({ x: 0, y: 0 });
   const scrollRef = useRef(0);
@@ -114,13 +113,16 @@ function ArenaScene({ activeRef, onFirstFrame }: ArenaSceneProps) {
     viewport.height,
     mobile ? 1440 / 1920 : 16 / 9,
   );
-  const referenceHeight = viewport.height * (mobile ? 0.92 : 1.1455);
-  const foregroundSize = [referenceHeight * (1440 / 1173), referenceHeight] as const;
-  const foregroundY = mobile
-    ? -viewport.height / 2 + foregroundSize[1] / 2 - viewport.height * 0.07
-    : 0;
-  const foregroundX = viewport.width * (mobile ? -0.36 : 0.035);
-
+  const foregroundZoom = 1.18;
+  const foregroundSize = coverScale(viewport.width, viewport.height, 2880 / 1665);
+  const foregroundScaled = [
+    foregroundSize[0] * foregroundZoom,
+    foregroundSize[1] * foregroundZoom,
+  ] as const;
+  const foregroundY =
+    -viewport.height / 2 + foregroundScaled[1] / 2 - viewport.height * (mobile ? 0.07 : 0) -
+    foregroundScaled[1] * 0.17;
+  const foregroundX = 0;
   useFrame((state, delta) => {
     if (!hasReportedFirstFrame.current) {
       hasReportedFirstFrame.current = true;
@@ -177,14 +179,6 @@ function ArenaScene({ activeRef, onFirstFrame }: ArenaSceneProps) {
       heatRef.current.uniforms.uEnergy.value = 1 + scrollRef.current * 0.8;
     }
 
-    const shieldDistance = Math.hypot(state.pointer.x - 0.3, state.pointer.y - 0.03);
-    const shieldEnergy = Math.max(0, 1 - shieldDistance / 0.7);
-    if (shieldRef.current) {
-      const material = shieldRef.current.material as MeshBasicMaterial;
-      material.opacity += (0.11 + shieldEnergy * 0.24 - material.opacity) * (1 - Math.exp(-dt * 6));
-      const scale = 0.72 + shieldEnergy * 0.15;
-      shieldRef.current.scale.setScalar(scale);
-    }
     if (impactRef.current) {
       const pulse = (state.clock.elapsedTime % 2.8) / 2.8;
       impactRef.current.scale.set(0.65 + pulse * 0.95, 0.24 + pulse * 0.36, 1);
@@ -268,7 +262,7 @@ function ArenaScene({ activeRef, onFirstFrame }: ArenaSceneProps) {
         ref={foregroundGroup}
         position={[foregroundX, foregroundY, 0]}
       >
-        <mesh scale={[foregroundSize[0], foregroundSize[1], 1]}>
+        <mesh scale={[foregroundScaled[0], foregroundScaled[1], 1]}>
           <planeGeometry args={[1, 1, 72, 58]} />
           <meshStandardMaterial
             map={foreground}
@@ -328,16 +322,7 @@ function ArenaScene({ activeRef, onFirstFrame }: ArenaSceneProps) {
         />
       </mesh>
 
-      <mesh ref={shieldRef} position={[viewport.width * 0.175, viewport.height * 0.03, 0.9]} scale={0.72}>
-        <circleGeometry args={[0.72, 64]} />
-        <meshBasicMaterial
-          color="#eebd57"
-          transparent
-          opacity={0.11}
-          depthWrite={false}
-          blending={AdditiveBlending}
-        />
-      </mesh>
+
     </>
   );
 }

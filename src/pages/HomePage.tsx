@@ -1,4 +1,3 @@
-import { CompetitionExplorer } from '../components/public/CompetitionExplorer';
 import { EventFacts } from '../components/public/EventFacts';
 import { FAQSection } from '../components/public/FAQSection';
 import { FinalCTA } from '../components/public/FinalCTA';
@@ -6,12 +5,15 @@ import { HeroSection } from '../components/public/HeroSection';
 import { HistorySection } from '../components/public/HistorySection';
 import { PartnersSection } from '../components/public/PartnersSection';
 import { ScheduleSection } from '../components/public/ScheduleSection';
+import { ShowcaseHero } from '../components/public/ShowcaseHero';
 import { SiteFooter } from '../components/public/SiteFooter';
 import { SiteHeader } from '../components/public/SiteHeader';
 import { useScrollReveal } from '../hooks/useScrollReveal';
+import { useScheduleVia } from '../hooks/useScheduleVia';
 
 export default function HomePage() {
   useScrollReveal();
+  useScheduleVia();
 
   return (
     <div className="site-page site-page--home">
@@ -22,7 +24,7 @@ export default function HomePage() {
       <main id="main-content">
         <HeroSection />
         <EventFacts />
-        <CompetitionExplorer />
+        <ShowcaseHero />
         <ScheduleSection />
         <HistorySection />
         <PartnersSection />

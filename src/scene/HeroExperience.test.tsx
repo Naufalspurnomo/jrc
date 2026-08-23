@@ -12,7 +12,7 @@ describe('HeroExperience', () => {
 
     const fallback = screen.getByTestId('hero-static-fallback');
     expect(fallback).toBeVisible();
-    expect(screen.getByAltText('Ksatria JRC XIV memasuki arena Roma')).toHaveAttribute(
+    expect(screen.getByAltText('Arena Roma: raksasa batu melawan Ksatria JRC XIV')).toHaveAttribute(
       'src',
       HERO_ASSETS.foreground,
     );
@@ -28,11 +28,13 @@ describe('HeroExperience', () => {
     createElement.mockRestore();
   });
 
-  it('declares the single authoritative foreground and both depth hints', () => {
+  it('declares responsive foreground sources and both depth hints', () => {
     expect(HERO_ASSETS).toEqual(
       expect.objectContaining({
         background: '/assets/hero-rome-wide.webp',
-        foreground: '/assets/batu-knight@2x.webp',
+        foreground: '/assets/batu-knight-1920.webp',
+        foregroundMedium: '/assets/batu-knight-1280.webp',
+        foregroundSmall: '/assets/batu-knight-960.webp',
         backgroundDepth: '/assets/hero-rome-depth.png',
         foregroundDepth: '/assets/batu-knight-depth.png',
       }),

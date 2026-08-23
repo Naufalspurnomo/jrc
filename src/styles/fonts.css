@@ -1,0 +1,31 @@
+@font-face {
+  font-family: 'Cinzel Variable';
+  font-style: normal;
+  font-display: swap;
+  font-weight: 400 900;
+  src: url('../../node_modules/@fontsource-variable/cinzel/files/cinzel-latin-wght-normal.woff2') format('woff2-variations');
+}
+
+@font-face {
+  font-family: 'Cormorant Garamond Variable';
+  font-style: italic;
+  font-display: swap;
+  font-weight: 300 700;
+  src: url('../../node_modules/@fontsource-variable/cormorant-garamond/files/cormorant-garamond-latin-wght-italic.woff2') format('woff2-variations');
+}
+
+@font-face {
+  font-family: 'Manrope Variable';
+  font-style: normal;
+  font-display: swap;
+  font-weight: 200 800;
+  src: url('../../node_modules/@fontsource-variable/manrope/files/manrope-latin-wght-normal.woff2') format('woff2-variations');
+}
+
+@font-face {
+  font-family: 'IBM Plex Mono';
+  font-style: normal;
+  font-display: swap;
+  font-weight: 500;
+  src: url('../../node_modules/@fontsource/ibm-plex-mono/files/ibm-plex-mono-latin-500-normal.woff2') format('woff2');
+}

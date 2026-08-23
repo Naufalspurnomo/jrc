@@ -2,12 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 
 import './EntryGate.css';
 
-export const DEFAULT_ENTRY_ASSETS = [
-  '/assets/hero-rome-wide.webp',
-  '/assets/hero-rome-depth.png',
-  '/assets/batu-knight@2x.webp',
-  '/assets/batu-knight-depth.png',
-] as const;
+export const DEFAULT_ENTRY_ASSETS = [] as const;
 
 export async function preloadImages(
   assets: readonly string[],
@@ -48,7 +43,7 @@ interface EntryGateProps {
 export function EntryGate({
   assets = DEFAULT_ENTRY_ASSETS,
   imageConstructor,
-  minDuration = 850,
+  minDuration = 420,
   onReady,
 }: EntryGateProps) {
   const [progress, setProgress] = useState(0);

@@ -15,7 +15,9 @@ export const HERO_ASSETS = {
   backgroundAvif: '/assets/hero-rome-wide.avif',
   backgroundMobile: '/assets/hero-rome-wide-mobile.webp',
   backgroundDepth: '/assets/hero-rome-depth.png',
-  foreground: '/assets/batu-knight@2x.webp',
+  foreground: '/assets/batu-knight-1920.webp',
+  foregroundMedium: '/assets/batu-knight-1280.webp',
+  foregroundSmall: '/assets/batu-knight-960.webp',
   foregroundFallback: '/assets/batu-knight.png',
   foregroundDepth: '/assets/batu-knight-depth.png',
 } as const;
@@ -78,20 +80,30 @@ export function HeroExperience({
   const [hasRenderedFrame, setHasRenderedFrame] = useState(false);
 
   useEffect(() => {
-    if (forceStatic || reducedMotion || !hasWebGLSupport()) return undefined;
+    if (
+      forceStatic
+      || reducedMotion
+      || window.innerWidth < 768
+      || !hasWebGLSupport()
+    ) return undefined;
+
     let active = true;
-    void import('./HeroCanvas')
-      .then(({ default: HeroCanvas }) => {
-        if (active) setCanvasLayer(() => HeroCanvas);
-      })
-      .catch(() => {
-        if (active) {
-          setHasRenderedFrame(false);
-          setCanvasLayer(null);
-        }
-      });
+    const loadCanvas = window.setTimeout(() => {
+      void import('./HeroCanvas')
+        .then(({ default: HeroCanvas }) => {
+          if (active) setCanvasLayer(() => HeroCanvas);
+        })
+        .catch(() => {
+          if (active) {
+            setHasRenderedFrame(false);
+            setCanvasLayer(null);
+          }
+        });
+    }, 1200);
+
     return () => {
       active = false;
+      window.clearTimeout(loadCanvas);
     };
   }, [forceStatic, reducedMotion]);
 
@@ -124,14 +136,18 @@ export function HeroExperience({
             fetchPriority="high"
           />
         </picture>
-        <img
-          className="hero-scene__foreground-image"
-          src={HERO_ASSETS.foreground}
-          alt="Ksatria JRC XIV memasuki arena Roma"
-          width="2880"
-          height="2346"
-          fetchPriority="high"
-        />
+        <picture className="hero-scene__foreground-picture">
+          <source media="(max-width: 640px)" srcSet={HERO_ASSETS.foregroundSmall} />
+          <source media="(max-width: 1200px)" srcSet={HERO_ASSETS.foregroundMedium} />
+          <img
+            className="hero-scene__foreground-image"
+            src={HERO_ASSETS.foreground}
+            alt="Arena Roma: raksasa batu melawan Ksatria JRC XIV"
+            width="1920"
+            height="1110"
+            fetchPriority="high"
+          />
+        </picture>
       </div>
 
       {canMountWebGL && CanvasLayer ? (

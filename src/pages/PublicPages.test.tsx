@@ -22,10 +22,9 @@ describe('HomePage', () => {
     expect(screen.getAllByRole('heading', { level: 1 })).toHaveLength(1);
     expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent(/java robot contest/i);
     expect(screen.getByTestId('hero-experience')).toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: /enam arena/i })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: /jalan menuju arena/i })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: /empat belas babak/i })).toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: /masuki arena/i })).toBeInTheDocument();
+    expect(screen.getAllByRole('heading', { name: /masuki arena/i }).length).toBeGreaterThanOrEqual(1);
     expect(screen.getByRole('contentinfo')).toBeInTheDocument();
   });
 });
