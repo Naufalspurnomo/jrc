@@ -1,0 +1,15 @@
+/* Keep refresh responsive by deferring layout and paint work outside the initial viewport. */
+.site-page--home main > :not(.hero-section) {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 72rem;
+}
+
+.site-page--home .legacy-world {
+  contain-intrinsic-size: auto 280rem;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .site-page--home main > :not(.hero-section) {
+    content-visibility: visible;
+  }
+}

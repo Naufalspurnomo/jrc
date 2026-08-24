@@ -2,107 +2,103 @@ import { useEffect, useRef, useState } from 'react';
 
 import './EntryGate.css';
 
-export const DEFAULT_ENTRY_ASSETS = [] as const;
-
-export async function preloadImages(
-  assets: readonly string[],
-  onProgress: (progress: number) => void,
-  ImageConstructor: typeof Image = Image,
-): Promise<void> {
-  if (assets.length === 0) {
-    onProgress(1);
-    return;
-  }
-
-  let complete = 0;
-  await Promise.all(
-    assets.map(
-      (asset) =>
-        new Promise<void>((resolve) => {
-          const image = new ImageConstructor();
-          const settle = () => {
-            complete += 1;
-            onProgress(complete / assets.length);
-            resolve();
-          };
-          image.onload = settle;
-          image.onerror = settle;
-          image.src = asset;
-        }),
-    ),
-  );
-}
-
 interface EntryGateProps {
-  assets?: readonly string[];
-  imageConstructor?: typeof Image;
-  minDuration?: number;
-  onReady?: () => void;
+  duration?: number;
+  reducedMotion?: boolean;
+  onComplete?: () => void;
 }
 
 export function EntryGate({
-  assets = DEFAULT_ENTRY_ASSETS,
-  imageConstructor,
-  minDuration = 420,
-  onReady,
+  duration = 2300,
+  reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches,
+  onComplete,
 }: EntryGateProps) {
-  const [progress, setProgress] = useState(0);
-  const [ready, setReady] = useState(false);
-  const onReadyRef = useRef(onReady);
-  onReadyRef.current = onReady;
+  const [visible, setVisible] = useState(!reducedMotion);
+  const [active, setActive] = useState(false);
+  const onCompleteRef = useRef(onComplete);
+  const completedRef = useRef(false);
+  onCompleteRef.current = onComplete;
 
   useEffect(() => {
-    let cancelled = false;
-    const startedAt = performance.now();
-
-    const finish = async () => {
-      await preloadImages(
-        assets,
-        (nextProgress) => {
-          if (!cancelled) setProgress(nextProgress);
-        },
-        imageConstructor,
-      );
-      const remainder = Math.max(0, minDuration - (performance.now() - startedAt));
-      await new Promise((resolve) => window.setTimeout(resolve, remainder));
-      if (!cancelled) {
-        setReady(true);
-        onReadyRef.current?.();
-      }
+    const complete = () => {
+      if (completedRef.current) return;
+      completedRef.current = true;
+      setVisible(false);
+      onCompleteRef.current?.();
     };
 
-    void finish();
+    if (reducedMotion) {
+      complete();
+      return undefined;
+    }
+
+    let activationTimer = 0;
+    let completionTimer = 0;
+    let secondFrame = 0;
+    const firstFrame = window.requestAnimationFrame(() => {
+      secondFrame = window.requestAnimationFrame(() => {
+        activationTimer = window.setTimeout(() => {
+          setActive(true);
+          completionTimer = window.setTimeout(complete, duration);
+        }, 120);
+      });
+    });
+
     return () => {
-      cancelled = true;
+      window.cancelAnimationFrame(firstFrame);
+      window.cancelAnimationFrame(secondFrame);
+      window.clearTimeout(activationTimer);
+      window.clearTimeout(completionTimer);
     };
-  }, [assets, imageConstructor, minDuration]);
+  }, [duration, reducedMotion]);
 
-  const percentage = Math.round(progress * 100);
+  if (!visible) return null;
+
+  const half = (side: 'left' | 'right') => (
+    <div className={`gate-entry__leaf gate-entry__leaf--${side}`}>
+      <div className="gate-entry__wall"><span className="gate-entry__masonry" /></div>
+      <div className="gate-entry__door"><i /><b /></div>
+      <div className="gate-entry__pier">
+        <i className="gate-entry__impost" />
+        <i className="gate-entry__capital" />
+        <i className="gate-entry__shaft" />
+        <i className="gate-entry__base" />
+        <i className="gate-entry__plinth" />
+      </div>
+    </div>
+  );
 
   return (
     <div
-      className={`gate-entry${ready ? ' gate-entry--ready' : ''}`}
+      className={`gate-entry${active ? ' gate-entry--active' : ''}`}
       data-testid="entry-gate"
-      aria-hidden={ready ? 'true' : undefined}
+      aria-hidden="true"
+      style={{ '--gate-duration': `${duration}ms` } as React.CSSProperties}
     >
-      <div className="gate-entry__architecture" aria-hidden="true">
-        <span className="gate-entry__column gate-entry__column--left" />
-        <span className="gate-entry__arch" />
-        <span className="gate-entry__column gate-entry__column--right" />
+      <div className="gate-entry__ambient" />
+      <div className="gate-entry__portal"><i /></div>
+      <div className="gate-entry__light" />
+      {half('left')}
+      {half('right')}
+      <div className="gate-entry__arch" role="presentation">
+        <div className="gate-entry__arch-half gate-entry__arch-half--left"><i /></div>
+        <div className="gate-entry__arch-half gate-entry__arch-half--right"><i /></div>
       </div>
-      <div className="gate-entry__content" role="status" aria-live="polite">
-        <span className="gate-entry__eyebrow">JRC XIV · MMXXVI</span>
-        <strong className="gate-entry__mark">XIV</strong>
-        <span className="gate-entry__label">Mempersiapkan arena</span>
-        <span className="gate-entry__progress" aria-label={`${percentage}%`}>
-          <span
-            className="gate-entry__progress-fill"
-            style={{ '--gate-progress': progress } as React.CSSProperties}
-          />
-        </span>
-        <span className="gate-entry__number" aria-hidden="true">
-          {percentage.toString().padStart(2, '0')}
-        </span>
+      <div className="gate-entry__entablature">
+        <i className="gate-entry__cornice" />
+        <i className="gate-entry__frieze" />
+        <span>JRC XIV · MMXXVI</span>
+      </div>
+      <div className="gate-entry__standard gate-entry__standard--left"><i /><b /></div>
+      <div className="gate-entry__standard gate-entry__standard--right"><i /><b /></div>
+      <div className="gate-entry__seal">
+        <i className="gate-entry__bracket gate-entry__bracket--left" />
+        <i className="gate-entry__bracket gate-entry__bracket--right" />
+        <i className="gate-entry__stud gate-entry__stud--nw" />
+        <i className="gate-entry__stud gate-entry__stud--ne" />
+        <i className="gate-entry__stud gate-entry__stud--sw" />
+        <i className="gate-entry__stud gate-entry__stud--se" />
+        <img src="/assets/brand/jrc14-logo-transparent-512.webp" alt="" width="256" height="442" />
       </div>
     </div>
   );

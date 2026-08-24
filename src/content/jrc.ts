@@ -1,4 +1,5 @@
 export const pendingAnnouncement = 'Akan diumumkan' as const;
+export const registrationPeriod = '15 September–15 Oktober 2026' as const;
 
 export type CompetitionLevel = 'SD' | 'SMP' | 'SMA' | 'Umum';
 
@@ -122,8 +123,8 @@ export const competitions: readonly Competition[] = [
 ] as const;
 
 export const eventFacts = {
-  edition: 'XIV',
-  registration: pendingAnnouncement,
+  edition: '14',
+  registration: registrationPeriod,
   eventDate: pendingAnnouncement,
   venue: 'Politeknik Elektronika Negeri Surabaya',
   theme: 'Imperium Machina',
@@ -132,16 +133,16 @@ export const eventFacts = {
 export interface ScheduleItem {
   numeral: string;
   title: string;
-  date: typeof pendingAnnouncement;
+  date: string;
   description: string;
 }
 
 export const eventSchedule: readonly ScheduleItem[] = [
   {
     numeral: 'I',
-    title: 'Gerbang pendaftaran dibuka',
-    date: pendingAnnouncement,
-    description: 'Pilih arena, bentuk tim, dan siapkan dokumen sebelum memasuki tahap verifikasi.',
+    title: 'Periode pendaftaran',
+    date: registrationPeriod,
+    description: 'Pilih arena, bentuk tim, dan siapkan dokumen sebelum pendaftaran ditutup.',
   },
   {
     numeral: 'II',
@@ -217,7 +218,7 @@ export const partnerTiers = [
 export const faqItems = [
   {
     question: 'Kapan pendaftaran dibuka?',
-    answer: pendingAnnouncement,
+    answer: 'Pendaftaran JRC XIV dibuka pada 15 September dan ditutup pada 15 Oktober 2026.',
   },
   {
     question: 'Apakah kategori JRC XIV sudah final?',

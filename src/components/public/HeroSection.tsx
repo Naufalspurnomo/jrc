@@ -6,6 +6,16 @@ export function HeroSection() {
       <div className="hero-section__visual" aria-hidden="true">
         <HeroExperience />
       </div>
+      <div className="hero-section__engravings" aria-hidden="true">
+        <picture className="hero-section__engraving hero-section__engraving--colosseum">
+          <source srcSet="/assets/hero-roman/colosseum-engraving.avif" type="image/avif" />
+          <img src="/assets/hero-roman/colosseum-engraving.webp" width="1600" height="1045" alt="" />
+        </picture>
+        <picture className="hero-section__engraving hero-section__engraving--arch">
+          <source srcSet="/assets/hero-roman/triumphal-arch.avif" type="image/avif" />
+          <img src="/assets/hero-roman/triumphal-arch.webp" width="871" height="1500" alt="" />
+        </picture>
+      </div>
       <div className="hero-section__shade" aria-hidden="true" />
       <div className="hero-section__content site-shell page-shell">
         <p className="hero-section__serial">
@@ -26,11 +36,6 @@ export function HeroSection() {
           <p className="hero-section__declaration">
             Enam disiplin. Satu arena. Tempat rekayasa diuji di hadapan keberanian.
           </p>
-          <span className="hero-section__laurel" aria-hidden="true">
-            <i />
-            <b />
-            <i />
-          </span>
         </div>
 
         <div className="hero-section__actions" aria-label="Aksi utama">
@@ -44,7 +49,7 @@ export function HeroSection() {
         </div>
 
         <div className="hero-section__threshold" aria-hidden="true">
-          <span>Scroll untuk memasuki arena</span>
+          <span>Scroll</span>
           <i />
         </div>
       </div>

@@ -1,0 +1,233 @@
+/* Event facts: Roman civic archive, built as one monumental information axis. */
+.arena-facts {
+  --facts-ink: var(--jrc-ink, #1e1713);
+  --facts-stone: var(--jrc-surface, #2a201a);
+  --facts-clay: var(--jrc-terracotta, #9e6032);
+  --facts-red: var(--jrc-imperial, #972c19);
+  --facts-gold: var(--jrc-gold, #f4c852);
+  --facts-parchment: var(--jrc-parchment, #e8d4a1);
+  --facts-ivory: var(--jrc-ivory, #f3ebdd);
+  padding: clamp(6rem, 10vw, 10rem) 0 clamp(6.5rem, 10vw, 9rem);
+  background:
+    linear-gradient(90deg, transparent calc(50% - .5px), rgb(244 200 82 / 13%) 50%, transparent calc(50% + .5px)),
+    repeating-linear-gradient(0deg, rgb(243 235 221 / 2%) 0 1px, transparent 1px 4.75rem),
+    radial-gradient(circle at 50% 10%, rgb(158 96 50 / 18%), transparent 36rem),
+    var(--facts-ink);
+  color: var(--facts-ivory);
+}
+
+.arena-facts::before {
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 180 180' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.7' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.32'/%3E%3C/svg%3E");
+  mix-blend-mode: soft-light;
+  opacity: .14;
+}
+
+.arena-facts::after {
+  inset: 1rem;
+  border-block: 1px solid rgb(232 212 161 / 22%);
+  background: none;
+}
+
+.arena-facts__depth-image,
+.arena-facts__grid,
+.arena-facts__imperial-glow,
+.arena-facts__signal-line { display: none; }
+
+.arena-facts__architecture {
+  inset: 0;
+  width: auto;
+  height: auto;
+  border: 0;
+  border-radius: 0;
+  opacity: 1;
+  transform: none;
+}
+
+.arena-facts__architecture::before {
+  inset: 3rem clamp(1rem, 5vw, 5rem);
+  border: 1px solid rgb(232 212 161 / 10%);
+  border-radius: 0;
+}
+
+.arena-facts__architecture::after {
+  inset: 0;
+  border: 0;
+  background: linear-gradient(90deg, var(--facts-red) 0 1.25%, transparent 1.25% 98.75%, var(--facts-clay) 98.75%);
+  opacity: .72;
+}
+
+.arena-facts__architecture-pillar { display: none; }
+.arena-facts__architecture-axis {
+  top: 0;
+  bottom: 0;
+  width: 1px;
+  background: rgb(232 212 161 / 12%);
+}
+
+.arena-facts__sheet::before {
+  position: absolute;
+  top: clamp(-4rem, -4vw, -2rem);
+  right: 0;
+  z-index: -1;
+  color: rgb(232 212 161 / 4.5%);
+  content: "XIV";
+  font-family: "Cinzel Variable", Georgia, serif;
+  font-size: clamp(16rem, 37vw, 38rem);
+  font-weight: 650;
+  letter-spacing: -.12em;
+  line-height: .72;
+  pointer-events: none;
+}
+
+.arena-facts__intro {
+  grid-template-columns: minmax(12rem, 17rem) minmax(0, 1fr);
+  gap: clamp(3rem, 8vw, 10rem);
+  padding-bottom: clamp(4rem, 8vw, 7.5rem);
+  border-bottom: 1px solid rgb(232 212 161 / 42%);
+}
+
+.arena-facts__spine {
+  padding-right: clamp(1.5rem, 3vw, 3rem);
+  border-right-color: rgb(232 212 161 / 32%);
+}
+
+.arena-facts__spine-code,
+.arena-facts__section-label,
+.arena-facts__fact dt { color: var(--facts-gold); }
+
+.arena-facts__edition {
+  margin-block: clamp(3rem, 6vw, 6rem) clamp(3rem, 5vw, 5rem);
+  color: var(--facts-parchment);
+  font-family: "Cinzel Variable", Georgia, serif;
+  font-size: clamp(7rem, 14vw, 13.5rem);
+  font-weight: 500;
+  letter-spacing: -.08em;
+  line-height: .58;
+}
+
+.arena-facts__spine-name { color: var(--facts-ivory); }
+.arena-facts__spine-place { color: rgb(243 235 221 / 58%); }
+
+.arena-facts__section-label { letter-spacing: .18em; }
+.arena-facts__title {
+  max-width: 13ch;
+  color: var(--facts-ivory);
+  font-family: "Cormorant Garamond Variable", Georgia, serif;
+  font-size: clamp(3.6rem, 7vw, 7.8rem);
+  font-weight: 520;
+  letter-spacing: -.045em;
+  line-height: .88;
+}
+
+.arena-facts__register { margin-top: clamp(4rem, 8vw, 7rem); }
+.arena-facts__register-head {
+  padding: 0 0 1rem;
+  border-bottom-color: rgb(232 212 161 / 45%);
+  color: rgb(232 212 161 / 62%);
+  letter-spacing: .16em;
+}
+
+.arena-facts__table { border-bottom-color: rgb(232 212 161 / 45%); }
+.arena-facts__fact {
+  grid-template-columns: minmax(9rem, 22%) minmax(0, 1fr);
+  gap: clamp(1rem, 3vw, 3rem);
+  padding: clamp(1.8rem, 3vw, 3rem) 0;
+  border-bottom-color: rgb(232 212 161 / 18%);
+}
+.arena-facts__fact::after {
+  position: absolute;
+  bottom: -1px;
+  left: 0;
+  width: .42rem;
+  height: .42rem;
+  border: 1px solid rgb(232 212 161 / 48%);
+  background: var(--facts-ink);
+  content: "";
+  transform: translateY(50%) rotate(45deg);
+}
+.arena-facts__fact:last-child::after { display: none; }
+.arena-facts__fact[data-state="pending"]::before {
+  left: 0;
+  width: clamp(2.5rem, 6vw, 6rem);
+  background: var(--facts-red);
+}
+
+.arena-facts__fact dt { letter-spacing: .13em; }
+.arena-facts__fact dd {
+  color: var(--facts-parchment);
+  font-family: "Cormorant Garamond Variable", Georgia, serif;
+  font-size: clamp(2rem, 4.1vw, 4.7rem);
+  font-weight: 560;
+  letter-spacing: -.035em;
+  line-height: .92;
+  overflow-wrap: normal;
+  word-break: normal;
+}
+.arena-facts__fact[data-fact="venue"] dd {
+  font-size: clamp(1.8rem, 3.25vw, 3.65rem);
+  line-height: .98;
+}
+.arena-facts__pending-mark {
+  border-color: var(--facts-red);
+  opacity: .9;
+}
+
+@media (max-width: 43.75rem) {
+  .arena-facts {
+    padding: 5.75rem 0 5.5rem;
+    background:
+      linear-gradient(90deg, transparent 1.45rem, rgb(244 200 82 / 15%) 1.5rem, transparent 1.55rem),
+      radial-gradient(circle at 70% 12%, rgb(158 96 50 / 18%), transparent 22rem),
+      var(--facts-ink);
+  }
+  .arena-facts::after { inset: .6rem; }
+  .arena-facts__architecture::before { inset: 2rem .6rem; }
+  .arena-facts__architecture::after { background: linear-gradient(90deg, var(--facts-red) 0 .35rem, transparent .35rem); }
+  .arena-facts__architecture-axis { left: 1.5rem; }
+  .arena-facts__sheet::before {
+    top: -1rem;
+    right: -.05em;
+    font-size: clamp(11rem, 55vw, 15rem);
+  }
+  .arena-facts__intro { padding-left: 1rem; }
+  .arena-facts__spine {
+    grid-template-columns: minmax(4.75rem, 5.5rem) minmax(0, 1fr);
+    border-bottom-color: rgb(232 212 161 / 32%);
+  }
+  .arena-facts__edition {
+    font-size: clamp(5rem, 23vw, 6.75rem);
+    letter-spacing: -.07em;
+  }
+  .arena-facts__heading { padding-top: 3.25rem; }
+  .arena-facts__title {
+    max-width: 12ch;
+    font-size: clamp(2.8rem, 12.5vw, 4rem);
+    line-height: .9;
+  }
+  .arena-facts__register { margin-top: 3.75rem; padding-left: 1rem; }
+  .arena-facts__register-head { padding-left: 0; }
+  .arena-facts__fact {
+    grid-template-columns: minmax(0, 1fr);
+    gap: .45rem .75rem;
+    padding: 1.45rem 0 1.6rem;
+  }
+  .arena-facts__fact dt { grid-column: 1; grid-row: 1; }
+  .arena-facts__fact dd {
+    grid-column: 1;
+    grid-row: 2;
+    font-size: clamp(1.55rem, 7.1vw, 2rem);
+    line-height: 1.02;
+  }
+  .arena-facts__fact[data-fact="venue"] dd { font-size: clamp(1.55rem, 7vw, 1.95rem); }
+  .arena-facts__fact[data-state="pending"]::before { left: 0; width: 2.75rem; }
+  .arena-facts__fact::after { left: 0; }
+  .arena-facts__value-full--has-compact { display: inline; }
+  .arena-facts__value-compact { display: none; }
+}
+
+@media (max-width: 22rem) {
+  .arena-facts__register-head span:last-child { display: none; }
+  .arena-facts__title { font-size: 2.65rem; }
+  .arena-facts__fact dd,
+  .arena-facts__fact[data-fact="venue"] dd { font-size: 1.42rem; }
+}

@@ -14,10 +14,9 @@ interface RevealOptions {
 }
 
 const DEFAULT_SELECTORS = [
-  '.arena-facts__statement',
-  '.arena-facts__list',
-  '.arena-facts__header',
-  '.arena-facts__row',
+  '.arena-facts__intro',
+  '.arena-facts__register',
+  '.arena-facts__fact',
   '.character-select__header',
   '.cs-card',
   '.schedule-section__header',

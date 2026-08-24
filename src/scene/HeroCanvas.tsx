@@ -15,7 +15,7 @@ import {
   TextureLoader,
 } from 'three';
 
-import { HERO_ASSETS, type HeroCanvasProps } from './HeroExperience';
+import { HERO_ASSETS, type HeroCanvasProps } from './heroRuntime';
 
 const HEAT_VERTEX = /* glsl */ `
   varying vec2 vUv;

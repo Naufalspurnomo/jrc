@@ -2,6 +2,7 @@ import { lazy, Suspense, useCallback, useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom';
 
 import { competitions, type Competition } from '../../content/jrc';
+import { CompetitionModal } from './CompetitionModal';
 
 /* Roman-themed character portraits per discipline (Wikimedia Commons, CC). */
 
@@ -15,6 +16,15 @@ const ART_BY_SLUG: Record<string, string> = {
 };
 
 type AccentKey = Competition['accent'];
+
+const PORTRAIT_BY_SLUG: Record<string, string> = {
+  'donatopia-transporter': '/assets/roman-select/athena.webp',
+  'nightmaze-rescue-transporter': '/assets/roman-select/ares.webp',
+  'pirate-clash-transporter-shooter': '/assets/roman-select/apollo.webp',
+  'wacky-rally-line-follower-mikro': '/assets/roman-select/antinous.webp',
+  'ring-rumble-sumo': '/assets/roman-select/meleager.webp',
+  'goal-rush-soccer': '/assets/roman-select/hercules.webp',
+} as const;
 
 const ACCENTS: Record<AccentKey, { main: string; deep: string; text: string }> = {
   gold: { main: '#c99a3a', deep: '#8a6520', text: '#7a5b1c' },
@@ -115,6 +125,7 @@ function ArenaCard({
 
 export function CompetitionExplorer() {
   const [active, setActive] = useState(0);
+  const [modalOpen, setModalOpen] = useState(false);
   const [prevActive, setPrevActive] = useState(0);
   const stageRef = useRef<HTMLDivElement>(null);
 
@@ -264,18 +275,26 @@ export function CompetitionExplorer() {
             </dl>
 
             <div className="cs-hud__action">
-              <Link
+              <button
+                type="button"
                 className="cs-hud__cta"
-                to={`/perlombaan/${current.slug}`}
+                aria-haspopup="dialog"
+                aria-expanded={modalOpen}
                 aria-label={`Pilih ${current.shortName}`}
+                onClick={() => setModalOpen(true)}
               >
                 Pilih arena
                 <span aria-hidden="true">→</span>
+              </button>
+              <Link className="cs-hud__cta cs-hud__cta--ghost" to={`/perlombaan/${current.slug}`}>
+                Halaman penuh
               </Link>
             </div>
           </div>
         </div>
       </div>
+
+      <CompetitionModal competition={current} open={modalOpen} onClose={() => setModalOpen(false)} portraitSrc={PORTRAIT_BY_SLUG[current.slug]} />
 
       <div className="site-shell page-shell character-select__footer">
         <p className="character-select__hint">← → geser · klik tetangga · scroll bebas</p>

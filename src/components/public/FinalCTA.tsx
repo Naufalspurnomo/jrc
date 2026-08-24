@@ -31,7 +31,7 @@ export function FinalCTA() {
         </p>
         <div className="cta-section__actions">
           <Link className="site-action site-action--primary button-primary" to="/portal/masuk">
-            Buka portal peserta
+            Buka demo portal peserta
             <span aria-hidden="true">↗</span>
           </Link>
           <a className="site-action site-action--quiet button-secondary" href="#perlombaan">

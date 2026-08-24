@@ -1,110 +1,165 @@
 .gate-entry {
+  --gate-duration: 2300ms;
+  --door-half-width: min(25vw, 380px);
+  --stone-light: #ead8b7;
+  --stone: #bda27d;
+  --stone-shadow: #67503a;
+  --bronze: #a66a2d;
   position: fixed;
   inset: 0;
   z-index: 1000;
-  display: grid;
-  place-items: center;
-  overflow: clip;
-  color: #f1dfbb;
-  background:
-    radial-gradient(circle at 50% 42%, rgb(103 42 25 / 42%), transparent 34%),
-    #100c0b;
-  transition: opacity 600ms cubic-bezier(0.22, 1, 0.36, 1),
-    visibility 600ms;
-}
-
-.gate-entry--ready {
-  visibility: hidden;
-  pointer-events: none;
-  opacity: 0;
-}
-
-.gate-entry__architecture {
-  position: absolute;
-  inset: 8% max(5vw, 24px) 0;
-  opacity: 0.36;
-}
-
-.gate-entry__column {
-  position: absolute;
-  bottom: -2%;
-  width: clamp(32px, 4.5vw, 78px);
-  height: 72%;
-  border-inline: 1px solid rgb(216 169 76 / 32%);
-  background: linear-gradient(90deg, transparent, rgb(220 179 99 / 10%), transparent);
-}
-
-.gate-entry__column::before,
-.gate-entry__column::after {
-  position: absolute;
-  left: -24%;
-  width: 148%;
-  height: 12px;
-  content: '';
-  border: 1px solid rgb(216 169 76 / 36%);
-}
-
-.gate-entry__column::before { top: 0; }
-.gate-entry__column::after { bottom: 0; }
-.gate-entry__column--left { left: 10%; }
-.gate-entry__column--right { right: 10%; }
-
-.gate-entry__arch {
-  position: absolute;
-  top: 2%;
-  left: 50%;
-  width: min(66vw, 720px);
-  aspect-ratio: 1.65;
-  border: 1px solid rgb(216 169 76 / 34%);
-  border-bottom: 0;
-  border-radius: 50% 50% 0 0;
-  transform: translateX(-50%);
-  box-shadow: inset 0 1px rgb(255 226 159 / 13%), 0 -12px 48px rgb(182 102 42 / 10%);
-}
-
-.gate-entry__content {
-  position: relative;
-  display: grid;
-  width: min(72vw, 360px);
-  justify-items: center;
-  gap: 12px;
-}
-
-.gate-entry__eyebrow,
-.gate-entry__label,
-.gate-entry__number {
-  font: 600 0.68rem/1.2 'IBM Plex Mono', ui-monospace, monospace;
-  letter-spacing: 0.18em;
-  text-transform: uppercase;
-}
-
-.gate-entry__eyebrow { color: rgb(241 223 187 / 58%); }
-.gate-entry__mark {
-  font: 500 clamp(4rem, 12vw, 8rem)/0.82 'Cinzel Variable', Georgia, serif;
-  color: #e4b951;
-  text-shadow: 0 0 42px rgb(213 125 49 / 26%);
-}
-.gate-entry__label { margin-top: 12px; }
-
-.gate-entry__progress {
-  width: 100%;
-  height: 1px;
   overflow: hidden;
-  background: rgb(241 223 187 / 18%);
+  pointer-events: none;
+  contain: strict;
+  isolation: isolate;
+  transform-origin: 50% 58%;
+  animation: gate-camera var(--gate-duration) cubic-bezier(.65, 0, .35, 1) both paused;
+  will-change: transform, opacity;
 }
 
-.gate-entry__progress-fill {
-  display: block;
-  width: calc(var(--gate-progress) * 100%);
-  height: 100%;
-  background: #d7a63b;
-  transform-origin: left center;
-  transition: width 180ms ease-out;
+.gate-entry--active,
+.gate-entry--active .gate-entry__door,
+.gate-entry--active .gate-entry__light,
+.gate-entry--active .gate-entry__seal { animation-play-state: running; }
+
+.gate-entry__ambient {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(115deg, rgb(255 226 174 / 18%), transparent 36%), linear-gradient(180deg, rgb(49 28 17 / 10%), rgb(23 12 8 / 28%));
 }
 
-.gate-entry__number { color: rgb(241 223 187 / 48%); }
-
-@media (prefers-reduced-motion: reduce) {
-  .gate-entry,
-  .gate-entry__progress-fill { transition: none; }
+.gate-entry__portal {
+  position: absolute;
+  left: 50%;
+  bottom: 0;
+  width: min(50vw, 760px);
+  height: 82vh;
+  transform: translateX(-50%);
+  border-radius: 50% 50% 0 0 / 31% 31% 0 0;
+  background: linear-gradient(90deg, rgb(34 19 12 / 68%), rgb(12 8 7 / 8%) 16% 84%, rgb(34 19 12 / 68%));
+  box-shadow: 0 0 0 clamp(14px, 2vw, 34px) rgb(72 51 35 / 72%), inset 0 20px 30px rgb(8 5 4 / 50%);
 }
+.gate-entry__portal i { position: absolute; inset: 3%; border: 2px solid rgb(240 194 119 / 20%); border-bottom: 0; border-radius: inherit; }
+
+.gate-entry__light {
+  position: absolute;
+  z-index: 1;
+  inset: 6% 47% 0;
+  transform-origin: center;
+  background: linear-gradient(90deg, transparent, rgb(255 206 115 / 68%) 45%, rgb(255 244 200 / 85%) 52%, transparent);
+  opacity: 0;
+  animation: gate-light var(--gate-duration) ease-out both paused;
+}
+
+.gate-entry__leaf {
+  position: absolute;
+  z-index: 2;
+  inset-block: 0;
+  width: 50.15%;
+  overflow: hidden;
+
+}
+.gate-entry__leaf--left { left: 0; }
+.gate-entry__leaf--right { right: 0; }
+
+.gate-entry__wall {
+  position: absolute;
+  inset-block: 0;
+  background: linear-gradient(105deg, rgb(255 245 215 / 28%), transparent 28%), linear-gradient(90deg, #c9b18c, #aa8e69 75%, #796047);
+  box-shadow: inset -2vw 0 2.5vw rgb(49 31 20 / 36%);
+}
+.gate-entry__leaf--left .gate-entry__wall { left: 0; right: var(--door-half-width); }
+.gate-entry__leaf--right .gate-entry__wall { right: 0; left: var(--door-half-width); transform: scaleX(-1); }
+.gate-entry__masonry {
+  position: absolute;
+  inset: 0;
+  background: repeating-linear-gradient(0deg, transparent 0 12.1vh, rgb(83 61 43 / 28%) 12.3vh 12.7vh), linear-gradient(93deg, transparent 19%, rgb(77 55 39 / 22%) 19.3% 19.7%, transparent 20% 63%, rgb(77 55 39 / 18%) 63.3% 63.7%, transparent 64%);
+}
+
+.gate-entry__door {
+  position: absolute;
+  bottom: 0;
+  width: var(--door-half-width);
+  height: 70vh;
+  background: linear-gradient(90deg, #322018, #64412b 12%, #38241a 40%, #17100d 92%);
+  border-inline: clamp(5px, .65vw, 11px) solid #6c4d33;
+  box-shadow: inset -18px 0 24px rgb(9 5 4 / 62%), 0 0 20px rgb(17 9 6 / 58%);
+  animation-duration: var(--gate-duration);
+  animation-fill-mode: both;
+  animation-play-state: paused;
+  will-change: transform;
+}
+.gate-entry__leaf--left .gate-entry__door { right: 0; animation-name: gate-door-left; }
+.gate-entry__leaf--right .gate-entry__door { left: 0; animation-name: gate-door-right; }
+.gate-entry__door i { position: absolute; inset: 0; background: repeating-linear-gradient(90deg, transparent 0 18%, rgb(211 152 77 / 15%) 18.5% 19%, transparent 19.5%); }
+.gate-entry__door b { position: absolute; top: 48%; right: 9%; width: 12px; aspect-ratio: 1; border-radius: 50%; background: radial-gradient(circle at 35% 30%, #e0ad58, #71401d 70%); box-shadow: 0 0 0 6px #4f2d18; }
+
+.gate-entry__pier { position: absolute; bottom: 0; width: clamp(108px, 12vw, 190px); height: 76%; box-shadow: 12px 9px 14px rgb(37 23 15 / 22%); }
+.gate-entry__leaf--left .gate-entry__pier { right: var(--door-half-width); }
+.gate-entry__leaf--right .gate-entry__pier { left: var(--door-half-width); transform: scaleX(-1); }
+.gate-entry__pier i { position: absolute; left: 50%; transform: translateX(-50%); }
+.gate-entry__shaft { bottom: 13%; width: 55%; height: 65%; background: linear-gradient(90deg, #69513b, #c5ad88 16%, #e1cfaa 39%, #a98c67 74%, #5d4634); border-inline: 2px solid #654d39; }
+.gate-entry__capital { top: 13%; width: 88%; height: 10%; background: linear-gradient(#e7d4ae 0 18%, #806447 21% 31%, #c9ae83 34% 67%, #6a4e37 71%); clip-path: polygon(8% 0,92% 0,100% 28%,82% 100%,18% 100%,0 28%); }
+.gate-entry__impost { top: 6%; width: 112%; height: 8%; background: linear-gradient(#eddbb7 0 20%, #826449 24% 46%, #c6aa80 50% 78%, #634933 82%); }
+.gate-entry__base { bottom: 7%; width: 78%; height: 8%; background: linear-gradient(#d9c29b, #72563e 42%, #b69a71 48%, #5a4231); clip-path: polygon(10% 0,90% 0,100% 100%,0 100%); }
+.gate-entry__plinth { bottom: 0; width: 100%; height: 8%; background: linear-gradient(#dfc9a1 0 18%, #775940 22% 48%, #b5976d 52% 78%, #55402f 82%); }
+
+.gate-entry__arch { position: absolute; z-index: 3; left: 50%; bottom: 65vh; width: min(58vw, 900px); height: min(35vw, 540px); transform: translateX(-50%); pointer-events: none; }
+.gate-entry__arch-half { position: absolute; inset-block: 0; width: 50.2%; overflow: hidden; }
+.gate-entry__arch-half--left { left: 0; }
+.gate-entry__arch-half--right { right: 0; }
+.gate-entry__arch-half::before { content: ''; position: absolute; top: 0; width: 200%; height: 100%; border-radius: 50% 50% 0 0 / 100% 100% 0 0; background: linear-gradient(105deg,#ead7b1 0 12%,#9a7b58 13% 20%,#d5bc91 21% 42%,#806148 43% 48%,#c5a77d 49% 70%,#72533d 71% 76%,#b99a70 77%); clip-path: polygon(0 100%,0 88%,5% 55%,17% 28%,35% 7%,50% 0,65% 7%,83% 28%,95% 55%,100% 88%,100% 100%,85% 100%,81% 63%,69% 36%,50% 25%,31% 36%,19% 63%,15% 100%); box-shadow: inset 0 -13px 12px rgb(38 24 15 / 30%); }
+.gate-entry__arch-half--left::before { left: 0; }
+.gate-entry__arch-half--right::before { right: 0; }
+.gate-entry__arch-half i { position: absolute; bottom: 0; height: 74%; width: 11%; background: linear-gradient(90deg,#493426,#9c7b59,#4d3728); }
+.gate-entry__arch-half--left i { right: 0; }.gate-entry__arch-half--right i { left: 0; }
+
+.gate-entry__entablature { position: absolute; z-index: 5; top: 0; left: 50%; width: 100%; height: clamp(76px, 12vh, 130px); transform: translateX(-50%); background: linear-gradient(#ead7b1 0 12%,#87694b 15% 22%,#c8ad82 25% 66%,#6b4e37 70% 77%,#d4ba8e 81%); box-shadow: 0 14px 18px rgb(37 22 14 / 38%); }
+.gate-entry__cornice { position: absolute; inset: 10% 0 auto; height: 18%; border-block: 3px solid #785b40; background: #dfc69b; }
+.gate-entry__frieze { position: absolute; inset: auto 0 12%; height: 8%; background: linear-gradient(#76583f,#d5bb8d,#684a34); }
+.gate-entry__entablature span { position: absolute; top: 57%; left: 50%; transform: translate(-50%,-50%); color: #53331f; text-shadow: 0 1px #f2ddba; font: 700 clamp(.62rem,1vw,.88rem)/1 'Cinzel Variable',Georgia,serif; letter-spacing: .34em; white-space: nowrap; }
+
+.gate-entry__standard { position: absolute; z-index: 6; top: 23%; width: clamp(70px,7vw,112px); height: 37%; background: linear-gradient(90deg,#3e0d15,#8c2832 18%,#bd5553 43%,#7b202a 72%,#350a10); clip-path: polygon(0 0,100% 0,100% 83%,50% 100%,0 83%); box-shadow: 10px 13px 13px rgb(33 18 12 / 42%); }
+.gate-entry__standard::before { content:''; position:absolute; top:-10px; left:-22%; width:144%; height:9px; border-radius:5px; background:linear-gradient(#edbd66,#77451f); box-shadow:0 5px 5px rgb(37 20 12 / 42%); }
+.gate-entry__standard::after { content:''; position:absolute; top:-17px; right:-27%; width:13px; height:20px; border-radius:50%; background:radial-gradient(circle at 35% 30%,#efc06b,#7a451e); }
+.gate-entry__standard i { position:absolute; inset:0 43%; background:rgb(255 226 181 / 14%); transform:skewX(-5deg); }
+.gate-entry__standard b { position:absolute; inset:auto 0 17%; height:6px; background:#3c0d14; border-top:2px solid #d18070; }
+.gate-entry__standard--left { left:9%; }.gate-entry__standard--right { right:9%; }
+
+.gate-entry__seal { position:absolute; z-index:8; top:51%; left:50%; display:grid; place-items:center; width:clamp(132px,14vw,208px); aspect-ratio:.7; padding:clamp(.8rem,1.4vw,1.25rem); transform:translate3d(-50%,-50%,0); border:clamp(6px,.65vw,10px) ridge var(--bronze); background:linear-gradient(135deg,#341b13,#100807 62%,#2a160f); box-shadow:-6px -5px 0 #c68a43,11px 16px 20px rgb(25 12 7 / 58%),inset 0 0 0 2px #61351c; animation:gate-seal var(--gate-duration) both paused; will-change:transform,opacity; }
+.gate-entry__seal img { display:block; width:100%; height:100%; object-fit:contain; }
+.gate-entry__bracket { position:absolute; top:43%; width:25%; height:13%; background:linear-gradient(#dda64d,#69401f); z-index:-1; }.gate-entry__bracket--left { right:100%; clip-path:polygon(0 40%,100% 0,100% 100%,0 60%); }.gate-entry__bracket--right { left:100%; clip-path:polygon(0 0,100% 40%,100% 60%,0 100%); }
+.gate-entry__stud { position:absolute; width:7px; aspect-ratio:1; border-radius:50%; background:radial-gradient(circle at 30% 25%,#f3d083,#70401d 70%); }.gate-entry__stud--nw{top:3%;left:5%}.gate-entry__stud--ne{top:3%;right:5%}.gate-entry__stud--sw{bottom:3%;left:5%}.gate-entry__stud--se{bottom:3%;right:5%}
+
+@keyframes gate-door-left { 0%,18%{transform:translate3d(0,0,0)} 25%{transform:translate3d(-1.5%,0,0)} 62%,100%{transform:translate3d(-104%,0,0)} }
+@keyframes gate-door-right { 0%,18%{transform:translate3d(0,0,0) scaleX(-1)} 25%{transform:translate3d(1.5%,0,0) scaleX(-1)} 62%,100%{transform:translate3d(104%,0,0) scaleX(-1)} }
+@keyframes gate-light { 0%,15%{transform:scaleX(.05);opacity:0} 25%{transform:scaleX(.18);opacity:.5} 56%{transform:scaleX(4);opacity:.62} 80%,100%{transform:scaleX(9);opacity:0} }
+@keyframes gate-seal { 0%,15%{transform:translate3d(-50%,-50%,0) scale(1);opacity:1} 21%{transform:translate3d(-50%,-50%,0) scale(1.025);opacity:1} 38%{transform:translate3d(-50%,-50%,0) scale(.96);opacity:.72} 52%,100%{transform:translate3d(-50%,-50%,0) scale(.92);opacity:0} }
+@keyframes gate-camera {
+  0%, 66% { transform: translate3d(0,0,0) scale(1); opacity: 1; }
+  82% { transform: translate3d(0,0,0) scale(1.16); opacity: 1; }
+  94% { transform: translate3d(0,0,0) scale(1.62); opacity: .78; }
+  100% { transform: translate3d(0,0,0) scale(1.95); opacity: 0; }
+}
+
+@media (max-width:800px) {
+  .gate-entry { --door-half-width: 36vw; }
+  .gate-entry__portal { width:72vw; height:76vh; }
+  .gate-entry__door { width:36vw; height:65vh; }
+  .gate-entry__pier { width:clamp(74px,19vw,124px); height:69%; }
+  .gate-entry__leaf--left .gate-entry__pier { right:36vw; }.gate-entry__leaf--right .gate-entry__pier { left:36vw; }
+  .gate-entry__arch { width:92vw; height:54vw; bottom:61vh; }
+  .gate-entry__standard { top:30%; height:31%; width:clamp(55px,13vw,82px); }
+  .gate-entry__standard--left { left:4%; }.gate-entry__standard--right { right:4%; }
+  .gate-entry__seal { width:clamp(116px,29vw,170px); }
+  .gate-entry__masonry { background:repeating-linear-gradient(0deg,transparent 0 10vh,rgb(83 61 43 / 28%) 10.2vh 10.55vh),linear-gradient(93deg,transparent 48%,rgb(77 55 39 / 20%) 48.5% 49%,transparent 49.5%); }
+}
+@media (max-width:420px) {
+  .gate-entry { --door-half-width: 39vw; }
+  .gate-entry__entablature { height:72px; }.gate-entry__entablature span { letter-spacing:.18em; font-size:.55rem; }
+  .gate-entry__portal { width:78vw; height:72vh; }.gate-entry__door { width:39vw; height:60vh; }
+  .gate-entry__pier { width:72px; height:65%; }.gate-entry__leaf--left .gate-entry__pier { right:39vw; }.gate-entry__leaf--right .gate-entry__pier { left:39vw; }
+  .gate-entry__arch { width:105vw; height:62vw; bottom:56vh; }
+  .gate-entry__standard { top:32%; height:27%; }.gate-entry__seal { top:53%; }
+}
+@media (prefers-reduced-motion:reduce) { .gate-entry { display:none; } }

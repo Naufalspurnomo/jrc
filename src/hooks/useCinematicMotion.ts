@@ -5,7 +5,7 @@ import { useEffect, useRef, useState, type RefObject } from 'react';
 
 gsap.registerPlugin(ScrollTrigger);
 
-type LenisLike = Pick<Lenis, 'raf' | 'on' | 'off' | 'start' | 'stop' | 'destroy'>;
+type LenisLike = Pick<Lenis, 'raf' | 'on' | 'off' | 'start' | 'stop' | 'scrollTo' | 'destroy'>;
 
 interface TickerLike {
   add(callback: (time: number) => void): void;
@@ -34,6 +34,18 @@ interface ControllerOptions {
   dependencies?: CinematicMotionDependencies;
   reducedMotion?: boolean;
   onSceneActivityChange?: (active: boolean) => void;
+}
+
+const MODAL_LOCK_EVENT = 'jrc:modal-lock';
+const ROUTE_SCROLL_EVENT = 'jrc:route-scroll';
+
+function isStaticMotionEnvironment() {
+  if (typeof window === 'undefined') return false;
+  return (
+    window.matchMedia('(prefers-reduced-motion: reduce)').matches
+    || window.innerWidth < 768
+    || navigator.maxTouchPoints > 0
+  );
 }
 
 const defaultDependencies: CinematicMotionDependencies = {
@@ -66,19 +78,38 @@ export function createCinematicMotionController({
   let documentVisible = true;
   let heroVisible = true;
   let destroyed = false;
+  let hashFrame = 0;
 
   const publishSceneActivity = () => {
     onSceneActivityChange?.(documentVisible && heroVisible);
   };
   const onScroll = () => dependencies.scrollTrigger.update();
+  const onModalLock = (event: Event) => {
+    const locked = (event as CustomEvent<{ locked?: boolean }>).detail?.locked === true;
+    if (locked) lenis.stop();
+    else if (documentVisible) lenis.start();
+  };
+  const onRouteScroll = (event: Event) => {
+    const targetId = (event as CustomEvent<{ targetId?: string }>).detail?.targetId;
+    const target = targetId ? document.getElementById(targetId) : null;
+    if (target) lenis.scrollTo(target, { immediate: true, force: true });
+  };
   const tick = (time: number) => {
     if (!destroyed && documentVisible) lenis.raf(time * 1000);
   };
 
   lenis.on('scroll', onScroll);
+  window.addEventListener(MODAL_LOCK_EVENT, onModalLock);
+  window.addEventListener(ROUTE_SCROLL_EVENT, onRouteScroll);
   dependencies.ticker.lagSmoothing(0);
   dependencies.ticker.add(tick);
   dependencies.scrollTrigger.refresh();
+  if (window.location.hash) {
+    hashFrame = window.requestAnimationFrame(() => {
+      const target = document.getElementById(decodeURIComponent(window.location.hash.slice(1)));
+      if (target) lenis.scrollTo(target, { immediate: true, force: true });
+    });
+  }
   publishSceneActivity();
 
   return {
@@ -97,8 +128,11 @@ export function createCinematicMotionController({
     destroy() {
       if (destroyed) return;
       destroyed = true;
+      window.cancelAnimationFrame(hashFrame);
       dependencies.ticker.remove(tick);
       lenis.off('scroll', onScroll);
+      window.removeEventListener(MODAL_LOCK_EVENT, onModalLock);
+      window.removeEventListener(ROUTE_SCROLL_EVENT, onRouteScroll);
       lenis.destroy();
     },
   };
@@ -122,14 +156,21 @@ export function useCinematicMotion<T extends HTMLElement>({
   disabled = false,
 }: UseCinematicMotionOptions = {}): CinematicMotionResult<T> {
   const rootRef = useRef<T>(null);
-  const [sceneActive, setSceneActive] = useState(!disabled);
-  const reducedMotionRef = useRef(false);
+  const [reducedMotion, setReducedMotion] = useState(() => isStaticMotionEnvironment());
+  const [sceneActive, setSceneActive] = useState(() => !disabled && !isStaticMotionEnvironment());
 
   useEffect(() => {
     const media = window.matchMedia('(prefers-reduced-motion: reduce)');
-    const useNativeMotion = media.matches || window.innerWidth < 768 || navigator.maxTouchPoints > 0;
-    reducedMotionRef.current = useNativeMotion;
-    if (disabled || useNativeMotion) {
+    const syncMotionPreference = () => setReducedMotion(
+      media.matches || window.innerWidth < 768 || navigator.maxTouchPoints > 0,
+    );
+    syncMotionPreference();
+    media.addEventListener('change', syncMotionPreference);
+    return () => media.removeEventListener('change', syncMotionPreference);
+  }, []);
+
+  useEffect(() => {
+    if (disabled || reducedMotion) {
       setSceneActive(false);
       return undefined;
     }
@@ -156,12 +197,12 @@ export function useCinematicMotion<T extends HTMLElement>({
       document.removeEventListener('visibilitychange', onVisibilityChange);
       controller.destroy();
     };
-  }, [disabled]);
+  }, [disabled, reducedMotion]);
 
   return {
     rootRef,
     sceneActive,
-    reducedMotion: reducedMotionRef.current,
+    reducedMotion,
   };
 }
 

@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 
 import HeroExperience, {
@@ -12,9 +12,9 @@ describe('HeroExperience', () => {
 
     const fallback = screen.getByTestId('hero-static-fallback');
     expect(fallback).toBeVisible();
-    expect(screen.getByAltText('Arena Roma: raksasa batu melawan Ksatria JRC XIV')).toHaveAttribute(
+    expect(screen.getByAltText('Maskot robot gladiator JRC XIV di arena Roma')).toHaveAttribute(
       'src',
-      HERO_ASSETS.foreground,
+      HERO_ASSETS.foregroundFallback,
     );
     expect(screen.queryByTestId('hero-webgl-canvas')).not.toBeInTheDocument();
   });
@@ -28,13 +28,21 @@ describe('HeroExperience', () => {
     createElement.mockRestore();
   });
 
+  it('never mounts WebGL automatically after first interaction', () => {
+    render(<HeroExperience />);
+    fireEvent.pointerDown(window);
+    fireEvent.wheel(window);
+    fireEvent.keyDown(window, { key: 'ArrowDown' });
+    expect(screen.queryByTestId('hero-webgl-canvas')).not.toBeInTheDocument();
+  });
+
   it('declares responsive foreground sources and both depth hints', () => {
     expect(HERO_ASSETS).toEqual(
       expect.objectContaining({
         background: '/assets/hero-rome-wide.webp',
-        foreground: '/assets/batu-knight-1920.webp',
-        foregroundMedium: '/assets/batu-knight-1280.webp',
-        foregroundSmall: '/assets/batu-knight-960.webp',
+        foreground: '/assets/brand/jrc14-gladiator-mascot.webp',
+        foregroundMedium: '/assets/brand/jrc14-gladiator-mascot.webp',
+        foregroundSmall: '/assets/brand/jrc14-gladiator-mascot.webp',
         backgroundDepth: '/assets/hero-rome-depth.png',
         foregroundDepth: '/assets/batu-knight-depth.png',
       }),

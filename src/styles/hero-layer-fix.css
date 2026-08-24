@@ -1,0 +1,39 @@
+/* Explicit hero stacking: engravings support the official mascot, never cover it. */
+.hero-section__visual {
+  z-index: 3;
+}
+
+.hero-section__visual .hero-scene,
+.hero-section__visual .hero-scene__static {
+  background: transparent;
+}
+
+.hero-section__visual .hero-scene__background-picture {
+  opacity: .08;
+}
+
+.hero-section__engravings {
+  z-index: 2;
+}
+
+.hero-section__shade {
+  z-index: 1;
+}
+
+.hero-section__content {
+  z-index: 5;
+}
+
+.hero-section__visual .hero-scene__foreground-picture {
+  z-index: 4;
+}
+
+@media (max-width: 48rem) {
+  .hero-section__visual .hero-scene__background-picture {
+    opacity: .04;
+  }
+
+  .hero-section__visual .hero-scene__foreground-image {
+    right: .35rem;
+  }
+}

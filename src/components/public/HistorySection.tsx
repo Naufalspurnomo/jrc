@@ -2,63 +2,50 @@ import { festivalMoments, historyChapters } from '../../content/jrc';
 
 export function HistorySection() {
   return (
-    <section id="sejarah" className="history-section" aria-labelledby="history-title">
-      <div className="site-shell page-shell">
-        <header className="history-section__header">
-          <p className="site-kicker kicker">Annales JRC</p>
-          <h2 id="history-title">Empat belas babak. Satu warisan yang terus bergerak.</h2>
-          <p>
-            Bukan museum pencapaian. Ini jejak orang-orang yang pernah merakit, gagal, memperbaiki,
-            lalu kembali memasuki arena.
-          </p>
-        </header>
+    <section id="sejarah" className="history-procession" aria-labelledby="history-title">
+      <header className="history-procession__opening site-shell page-shell">
+        <p>Perjalanan JRC</p>
+        <h2 id="history-title">Empat belas babak membentuk satu warisan.</h2>
+        <span>
+          Jejak orang-orang yang merakit, gagal, memperbaiki, lalu kembali memasuki arena.
+        </span>
+      </header>
 
-        <div className="history-editorial">
-          {historyChapters.map((chapter, index) => (
-            <article
-              className={`history-editorial__entry${index % 2 === 1 ? ' history-editorial__entry--flip' : ''}`}
-              key={chapter.numeral}
-            >
-              <span className="history-editorial__numeral" aria-hidden="true">
-                {chapter.numeral}
-              </span>
-              <div className="history-editorial__body">
-                <p>{chapter.eyebrow}</p>
-                <h3>{chapter.title}</h3>
-                <span>{chapter.copy}</span>
-              </div>
-              <i className="history-editorial__dot" aria-hidden="true" />
-            </article>
-          ))}
-        </div>
-
-        <div
-          className="history-festival"
-          aria-labelledby="festival-title"
-          tabIndex={0}
-        >
-          <header>
-            <div>
-              <p className="site-kicker kicker">J-Fest · Conventus</p>
-              <h3 id="festival-title">Lebih dari pertandingan.</h3>
+      <div className="history-procession__route" aria-label="Tonggak perjalanan JRC">
+        {historyChapters.map((chapter, index) => (
+          <article className="history-procession__chapter" key={chapter.numeral}>
+            <div className="history-procession__mark" aria-hidden="true">
+              <span>{chapter.numeral}</span>
+              <i />
             </div>
-            <span className="history-festival__stamp" aria-hidden="true">
-              <i />
-              CONVENTUS
-              <i />
-            </span>
-          </header>
-          <ol>
-            {festivalMoments.map((moment) => (
-              <li key={moment.numeral}>
-                <span>{moment.numeral}</span>
+            <div className="history-procession__inscription">
+              <p>{chapter.eyebrow}</p>
+              <h3>{chapter.title}</h3>
+              <span>{chapter.copy}</span>
+              <small>{String(index + 1).padStart(2, '0')} / {String(historyChapters.length).padStart(2, '0')}</small>
+            </div>
+          </article>
+        ))}
+      </div>
+
+      <section className="civic-assembly" aria-labelledby="festival-title">
+        <div className="civic-assembly__manifesto">
+          <p>Di luar arena</p>
+          <h3 id="festival-title">Lebih dari pertandingan.</h3>
+          <span>JRC juga menjadi tempat karya diperlihatkan dan komunitas bertemu.</span>
+        </div>
+        <ol className="civic-assembly__pillars">
+          {festivalMoments.map((moment) => (
+            <li key={moment.numeral}>
+              <span>{moment.numeral}</span>
+              <div>
                 <h4>{moment.title}</h4>
                 <p>{moment.copy}</p>
-              </li>
-            ))}
-          </ol>
-        </div>
-      </div>
+              </div>
+            </li>
+          ))}
+        </ol>
+      </section>
     </section>
   );
 }

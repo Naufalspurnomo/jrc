@@ -11,13 +11,25 @@ const sourceAssets = path.join(root, 'asset', 'generated-source');
 async function createWideSet(inputName, outputName) {
   const input = path.join(sourceAssets, inputName);
   const base = sharp(input).resize(3840, 2160, { fit: 'cover', position: 'centre', kernel: sharp.kernel.lanczos3 });
+  const isHero = outputName === 'hero-rome-wide';
 
   await Promise.all([
-    base.clone().avif({ quality: 74, effort: 6 }).toFile(path.join(assets, `${outputName}.avif`)),
+    sharp(input)
+      .resize(isHero ? 2560 : 3840, isHero ? 1440 : 2160, {
+        fit: 'cover',
+        position: 'centre',
+        kernel: sharp.kernel.lanczos3,
+      })
+      .avif({ quality: isHero ? 55 : 74, effort: 6 })
+      .toFile(path.join(assets, `${outputName}.avif`)),
     base.clone().webp({ quality: 88, smartSubsample: true }).toFile(path.join(assets, `${outputName}.webp`)),
     sharp(input)
-      .resize(1440, 1920, { fit: 'cover', position: 'centre', kernel: sharp.kernel.lanczos3 })
-      .webp({ quality: 84, smartSubsample: true })
+      .resize(isHero ? 720 : 1440, isHero ? 960 : 1920, {
+        fit: 'cover',
+        position: 'centre',
+        kernel: sharp.kernel.lanczos3,
+      })
+      .webp({ quality: isHero ? 76 : 84, effort: 6, smartSubsample: true })
       .toFile(path.join(assets, `${outputName}-mobile.webp`)),
   ]);
 }
@@ -47,6 +59,18 @@ async function createDepthHints() {
       .png()
       .toFile(path.join(assets, 'batu-knight-depth.png')),
   ]);
+}
+
+async function optimizeRomanSelectionPlates() {
+  const names = ['athena', 'ares', 'apollo', 'antinous', 'meleager', 'hercules'];
+  await Promise.all(names.map(async (name) => {
+    const file = path.join(assets, 'roman-select', `${name}.webp`);
+    const optimized = await sharp(file)
+      .resize({ width: 700, withoutEnlargement: true })
+      .webp({ quality: 76, effort: 6, smartSubsample: true })
+      .toBuffer();
+    await sharp(optimized).toFile(file);
+  }));
 }
 
 async function createForegroundComposite() {
@@ -79,10 +103,12 @@ await Promise.all([
   createWideSet('arena-interior-wide-source.png', 'arena-interior-wide'),
   createForegroundComposite(),
   createDepthHints(),
+  optimizeRomanSelectionPlates(),
 ]);
 
 const checks = [
-  ['hero-rome-wide.webp', 3840, 2160],
+  ['hero-rome-wide.avif', 2560, 1440],
+  ['hero-rome-wide-mobile.webp', 720, 960],
   ['arena-interior-wide.webp', 3840, 2160],
   ['batu-knight@2x.webp', 2880, 2346],
 ];

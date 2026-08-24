@@ -34,13 +34,93 @@ test('public arena is navigable, complete, and has no horizontal overflow', asyn
   }
 
   await page.locator('#perlombaan').scrollIntoViewIfNeeded();
-  await page.waitForTimeout(500);
-  await page.getByRole('link', { name: /lihat divisi/i }).click();
+  const openArena = page.getByRole('button', { name: /lihat divisi/i });
+  await expect(openArena).toBeVisible();
+  await openArena.click();
+  const arenaDialog = page.getByRole('dialog');
+  await expect(arenaDialog).toBeVisible();
+
+  if (testInfo.project.name === 'mobile') {
+    const panel = arenaDialog.locator('.arena-modal__panel');
+    await expect
+      .poll(() => panel.evaluate((element) => element.scrollHeight > element.clientHeight), {
+        message: 'expected the mobile arena panel to have scrollable overflow',
+      })
+      .toBe(true);
+
+    await panel.evaluate((element) => element.scrollTo({ top: element.scrollHeight }));
+    await expect
+      .poll(
+        () =>
+          panel.evaluate(
+            (element) => element.scrollTop + element.clientHeight >= element.scrollHeight - 1,
+          ),
+        { message: 'expected the mobile arena panel to reach its scroll boundary' },
+      )
+      .toBe(true);
+
+    const bottomAction = arenaDialog.getByRole('button', { name: 'Tutup', exact: true });
+    await expect(bottomAction).toBeInViewport();
+    await expect(bottomAction).toBeEnabled();
+    await bottomAction.click();
+  } else {
+    await page.getByRole('button', { name: /tutup detail arena/i }).click();
+  }
+  await expect(arenaDialog).toHaveCount(0);
+  // Detail page still reachable directly or via modal's "Halaman penuh"
+  await openArena.click();
+  await page.getByRole('link', { name: /halaman penuh/i }).click();
   await expect(page).toHaveURL(/\/perlombaan\//);
   await expect(page.getByRole('heading', { level: 1 })).toBeInViewport();
   await page.getByRole('link', { name: /kembali ke enam arena/i }).click();
   await expect(page).toHaveURL(/\/#perlombaan$/);
-  await expect(page.locator('#perlombaan')).toBeInViewport();
+  const competitionSection = page.locator('#perlombaan');
+  await expect(competitionSection).toBeAttached();
+  await expect
+    .poll(
+      () =>
+        competitionSection.evaluate((section) => {
+          const bounds = section.getBoundingClientRect();
+          return bounds.top < window.innerHeight && bounds.bottom > 0;
+        }),
+      { message: 'expected #perlombaan to be in the viewport after returning from its detail page' },
+    )
+    .toBe(true);
+  expect(consoleErrors).toEqual([]);
+});
+
+test('desktop keeps the static hero after user interaction', async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== 'desktop', 'The WebGL layer is desktop-only.');
+
+  const consoleErrors: string[] = [];
+  const heroRuntimeRequests: string[] = [];
+  page.on('console', (message) => {
+    if (message.type() === 'error') consoleErrors.push(message.text());
+  });
+  page.on('request', (request) => {
+    if (/\/assets\/(?:HeroCanvas|three)-.*\.js(?:\?|$)/.test(request.url())) {
+      heroRuntimeRequests.push(request.url());
+    }
+  });
+
+  await page.goto('/');
+  const staticFallback = page.locator('[data-testid="hero-static-fallback"]');
+  const webglContainer = page.locator('[data-testid="hero-webgl-canvas"]');
+  await expect(staticFallback).toBeVisible();
+  await page.waitForLoadState('networkidle');
+  await expect(webglContainer).toHaveCount(0);
+  await expect(page.locator('canvas')).toHaveCount(0);
+  expect(heroRuntimeRequests).toEqual([]);
+
+  await page.mouse.wheel(0, 240);
+  await page.mouse.down();
+  await page.mouse.up();
+  await page.keyboard.press('Tab');
+  await page.waitForTimeout(1_000);
+  await expect(webglContainer).toHaveCount(0);
+  await expect(page.locator('canvas')).toHaveCount(0);
+  await expect(staticFallback).toBeVisible();
+  expect(heroRuntimeRequests).toEqual([]);
   expect(consoleErrors).toEqual([]);
 });
 

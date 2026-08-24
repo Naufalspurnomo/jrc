@@ -1,46 +1,68 @@
-import { render, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, render, screen } from '@testing-library/react';
+import { readFileSync } from 'node:fs';
 import { describe, expect, it, vi } from 'vitest';
 
-import EntryGate, { preloadImages } from './EntryGate';
-
-class SuccessfulImage {
-  onload: null | (() => void) = null;
-  onerror: null | (() => void) = null;
-
-  set src(_value: string) {
-    queueMicrotask(() => this.onload?.());
-  }
-}
-
-describe('preloadImages', () => {
-  it('reports real asset progress and resolves at 100 percent', async () => {
-    const progress: number[] = [];
-
-    await preloadImages(
-      ['/one.webp', '/two.webp'],
-      (value) => progress.push(value),
-      SuccessfulImage as unknown as typeof Image,
-    );
-
-    expect(progress).toEqual([0.5, 1]);
-  });
-});
+import EntryGate from './EntryGate';
 
 describe('EntryGate', () => {
-  it('announces loading, completes, and releases the experience', async () => {
-    const onReady = vi.fn();
-    render(
-      <EntryGate
-        assets={['/one.webp']}
-        imageConstructor={SuccessfulImage as unknown as typeof Image}
-        minDuration={0}
-        onReady={onReady}
-      />,
+  it('shows the complete logo for the full opening lifecycle, then unmounts', () => {
+    vi.useFakeTimers();
+    const onComplete = vi.fn();
+    render(<EntryGate duration={1600} reducedMotion={false} onComplete={onComplete} />);
+
+    const gate = screen.getByTestId('entry-gate');
+    expect(gate).toHaveAttribute('aria-hidden', 'true');
+    expect(gate).toHaveStyle({ pointerEvents: 'none' });
+    expect(gate.querySelector('img')).toHaveAttribute(
+      'src',
+      '/assets/brand/jrc14-logo-transparent-512.webp',
     );
 
-    expect(screen.getByRole('status')).toHaveTextContent('Mempersiapkan arena');
+    act(() => vi.advanceTimersByTime(170));
+    expect(screen.getByTestId('entry-gate')).toHaveClass('gate-entry--active');
 
-    await waitFor(() => expect(onReady).toHaveBeenCalledOnce());
-    expect(screen.getByTestId('entry-gate')).toHaveAttribute('aria-hidden', 'true');
+    act(() => vi.advanceTimersByTime(1600));
+    expect(screen.queryByTestId('entry-gate')).not.toBeInTheDocument();
+    expect(onComplete).toHaveBeenCalledOnce();
+    vi.useRealTimers();
+  });
+
+  it('does not disappear from an incidental mobile touch or wheel', () => {
+    vi.useFakeTimers();
+    render(<EntryGate duration={1600} reducedMotion={false} />);
+    fireEvent.touchStart(window);
+    fireEvent.pointerDown(window);
+    fireEvent.wheel(window);
+    expect(screen.getByTestId('entry-gate')).toBeInTheDocument();
+    vi.useRealTimers();
+  });
+
+  it('plays again after a remount instead of skipping the session', () => {
+    vi.useFakeTimers();
+    const first = render(<EntryGate duration={1600} reducedMotion={false} />);
+    first.unmount();
+    render(<EntryGate duration={1600} reducedMotion={false} />);
+    expect(screen.getByTestId('entry-gate')).toBeInTheDocument();
+    vi.useRealTimers();
+  });
+
+  it('keeps architecture static and limits animation to compositor-safe properties', () => {
+    const css = readFileSync('src/components/motion/EntryGate.css', 'utf8');
+
+    expect(css).not.toMatch(/filter:\s*drop-shadow/);
+    expect(css).not.toMatch(/repeating-conic-gradient/);
+    expect(css.match(/\.gate-entry__leaf \{([^}]*)\}/)?.[1]).not.toContain('animation');
+    expect(css.match(/\.gate-entry__arch-half \{([^}]*)\}/)?.[1]).not.toContain('animation');
+    expect(css).toMatch(/\.gate-entry__leaf--left \.gate-entry__door[^}]*animation-name:\s*gate-door-left/);
+    expect(css).toMatch(/@keyframes gate-camera/);
+    expect(css).toMatch(/\.gate-entry__leaf--left \.gate-entry__wall[^}]*right:\s*var\(--door-half-width\)/);
+
+  });
+
+  it('skips and remains unmounted for reduced motion', () => {
+    const onComplete = vi.fn();
+    render(<EntryGate reducedMotion onComplete={onComplete} />);
+    expect(screen.queryByTestId('entry-gate')).not.toBeInTheDocument();
+    expect(onComplete).toHaveBeenCalledOnce();
   });
 });

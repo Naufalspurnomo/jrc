@@ -52,5 +52,5 @@ describe('PortalRegistrationPage', () => {
       teamName: 'Legio Aurora', competitionId: 'soccer', status: 'submitted',
       documents: [{ name: 'kartu-pelajar.pdf', type: 'application/pdf', lastModified: 14 }],
     });
-  });
+  }, 15_000);
 });

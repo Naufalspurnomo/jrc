@@ -5,9 +5,8 @@ import {
   useState,
   type TouchEvent,
 } from 'react';
-import { Link } from 'react-router-dom';
-
 import { competitions } from '../../content/jrc';
+import { CompetitionModal } from './CompetitionModal';
 
 const PORTRAIT_PATHS = [
   '/assets/roman-select/athena.webp',
@@ -42,6 +41,7 @@ export function ShowcaseHero() {
   const touchStartXRef = useRef<number | null>(null);
   const [activeIndex, setActiveIndex] = useState(0);
   const [transition, setTransition] = useState<PortraitTransition | null>(null);
+  const [modalOpen, setModalOpen] = useState(false);
 
   const finishTransition = useCallback(() => {
     if (transitionTimerRef.current) {
@@ -207,16 +207,18 @@ export function ShowcaseHero() {
                 alt=""
                 draggable={false}
                 aria-hidden="true"
-                loading={activeIndex === 0 ? 'eager' : 'lazy'}
-                fetchPriority={activeIndex === 0 ? 'high' : 'auto'}
+                loading="lazy"
+                decoding="async"
+                fetchPriority="low"
               />
               <img
                 className="character-selector__plate character-selector__plate--subject"
                 src={PORTRAIT_PATHS[activeIndex]}
                 alt={`${current.shortName} — ${current.discipline}`}
                 draggable={false}
-                loading={activeIndex === 0 ? 'eager' : 'lazy'}
-                fetchPriority={activeIndex === 0 ? 'high' : 'auto'}
+                loading="lazy"
+                decoding="async"
+                fetchPriority="low"
               />
             </div>
           </div>
@@ -269,11 +271,24 @@ export function ShowcaseHero() {
             <span className="character-selector__counter" aria-hidden="true">
               {formatPosition(activeIndex)}/{total}
             </span>
-            <Link className="character-selector__link" to={`/perlombaan/${current.slug}`}>
+            <button
+              type="button"
+              className="character-selector__link"
+              aria-haspopup="dialog"
+              aria-expanded={modalOpen}
+              onClick={() => setModalOpen(true)}
+            >
               Lihat divisi
-            </Link>
+            </button>
           </div>
         </div>
+
+        <CompetitionModal
+          competition={current}
+          open={modalOpen}
+          onClose={() => setModalOpen(false)}
+          portraitSrc={PORTRAIT_PATHS[activeIndex]}
+        />
 
         <p className="sr-only" role="status" aria-live="polite" aria-atomic="true">
           {current.shortName}, {current.discipline}, divisi {activeIndex + 1} dari {competitions.length}

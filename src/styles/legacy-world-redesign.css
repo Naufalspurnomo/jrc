@@ -1,0 +1,167 @@
+/* Hallmark · genre: editorial-atmospheric · macrostructure: processional archive · enrichment: architectural */
+.legacy-world {
+  position: relative;
+  isolation: isolate;
+  overflow: clip;
+  background: #cdbb9c;
+  color: #291b15;
+}
+
+.legacy-world__plate,
+.legacy-world__light {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.legacy-world__plate {
+  z-index: -2;
+  background: image-set(url('/assets/legacy-world/legacy-world-desktop.avif') type('image/avif'), url('/assets/legacy-world/legacy-world-desktop.webp') type('image/webp')) center top / cover no-repeat;
+  filter: saturate(.55) contrast(.88);
+  opacity: .42;
+}
+
+.legacy-world__light {
+  z-index: -1;
+  background: linear-gradient(180deg, rgb(240 228 204 / 82%) 0 43%, rgb(61 35 27 / 42%) 66%, #17100e 88%);
+}
+
+.legacy-world__content { position: relative; }
+
+.history-procession { padding: clamp(7rem, 11vw, 11rem) 0 0; }
+.history-procession__opening {
+  display: grid;
+  grid-template-columns: minmax(0, 1.45fr) minmax(16rem, .55fr);
+  gap: clamp(2rem, 6vw, 7rem);
+  align-items: end;
+  margin-bottom: clamp(6rem, 11vw, 11rem);
+}
+.history-procession__opening > p,
+.civic-assembly__manifesto > p,
+.patron-court__opening > p {
+  grid-column: 1 / -1;
+  margin: 0 0 -1rem;
+  color: #6f4037;
+  font: 600 .66rem/1 var(--font-mono);
+  letter-spacing: .16em;
+  text-transform: uppercase;
+}
+.history-procession__opening h2,
+.patron-court__opening h2 {
+  max-width: 12ch;
+  margin: 0;
+  font-size: clamp(3.9rem, 7vw, 7.4rem);
+  line-height: .84;
+}
+.history-procession__opening > span,
+.patron-court__opening > span {
+  max-width: 34rem;
+  color: #624e41;
+  font-size: 1rem;
+  line-height: 1.75;
+}
+
+.history-procession__route { position: relative; width: min(100% - 2rem, 92rem); margin-inline: auto; }
+.history-procession__route::before {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 50%;
+  width: 1px;
+  background: linear-gradient(180deg, transparent, rgb(78 45 37 / 32%) 8% 92%, transparent);
+  content: '';
+}
+.history-procession__chapter {
+  position: relative;
+  display: grid;
+  min-height: 30rem;
+  grid-template-columns: 1fr 1fr;
+  align-items: center;
+}
+.history-procession__mark { display: grid; justify-items: center; color: rgb(89 54 45 / 34%); }
+.history-procession__mark span { font: 600 clamp(7rem, 13vw, 13rem)/.72 var(--font-display); }
+.history-procession__mark i { width: 4rem; height: 1px; margin-top: 2rem; background: #81554a; }
+.history-procession__inscription {
+  position: relative;
+  max-width: 34rem;
+  padding: 2.2rem clamp(1.5rem, 3vw, 3rem);
+  border-block: 1px solid rgb(92 51 41 / 18%);
+  background: linear-gradient(90deg, rgb(244 235 216 / 94%), rgb(244 235 216 / 62%), transparent);
+}
+.history-procession__chapter:nth-child(even) .history-procession__mark { grid-column: 2; grid-row: 1; }
+.history-procession__chapter:nth-child(even) .history-procession__inscription {
+  grid-column: 1;
+  grid-row: 1;
+  justify-self: end;
+  text-align: right;
+  background: linear-gradient(270deg, rgb(244 235 216 / 94%), rgb(244 235 216 / 62%), transparent);
+}
+.history-procession__inscription > p { margin: 0 0 .8rem; color: #75453c; font: 600 .64rem/1 var(--font-mono); letter-spacing: .14em; text-transform: uppercase; }
+.history-procession__inscription h3 { max-width: 14ch; margin: 0 0 1rem; font-size: clamp(2.3rem, 3.8vw, 4rem); line-height: .92; }
+.history-procession__inscription > span { color: #624e41; font-size: .94rem; line-height: 1.7; }
+.history-procession__inscription small { display: block; margin-top: 2rem; color: #81554a; font: 500 .6rem/1 var(--font-mono); letter-spacing: .14em; }
+
+.civic-assembly {
+  display: grid;
+  width: min(100% - 2rem, 92rem);
+  margin: clamp(7rem, 12vw, 12rem) auto 0;
+  grid-template-columns: minmax(20rem, .85fr) minmax(0, 1.15fr);
+  background: linear-gradient(125deg, #251714, #4a211c 54%, #17100e);
+  color: #f1e2c5;
+}
+.civic-assembly__manifesto { padding: clamp(3rem, 6vw, 6.5rem); border-right: 1px solid rgb(218 172 85 / 24%); }
+.civic-assembly__manifesto > p { color: #d7a63b; }
+.civic-assembly__manifesto h3 { max-width: 8ch; margin: 2rem 0; font-size: clamp(3.3rem, 6vw, 6.6rem); line-height: .84; }
+.civic-assembly__manifesto > span { display: block; max-width: 28rem; color: rgb(241 226 197 / 68%); line-height: 1.7; }
+.civic-assembly__pillars { margin: 0; padding: 0; list-style: none; }
+.civic-assembly__pillars li { display: grid; min-height: 11rem; padding: 2rem 2.5rem; grid-template-columns: 3rem 1fr; gap: 1.5rem; align-items: center; border-bottom: 1px solid rgb(218 172 85 / 18%); }
+.civic-assembly__pillars li:last-child { border-bottom: 0; }
+.civic-assembly__pillars > li > span { color: #d7a63b; font: 500 .66rem/1 var(--font-mono); }
+.civic-assembly__pillars h4 { margin: 0 0 .5rem; font-size: 2rem; }
+.civic-assembly__pillars p { max-width: 38rem; margin: 0; color: rgb(241 226 197 / 64%); font-size: .88rem; line-height: 1.65; }
+
+.patron-court { padding: clamp(9rem, 15vw, 16rem) 0 clamp(7rem, 11vw, 11rem); background: linear-gradient(180deg, transparent, rgb(23 16 14 / 86%) 15%, #17100e 48%); color: #f1e2c5; }
+.patron-court__opening { display: grid; grid-template-columns: minmax(0, 1.35fr) minmax(16rem, .65fr); gap: clamp(2rem, 6vw, 7rem); align-items: end; margin-bottom: clamp(4rem, 8vw, 8rem); }
+.patron-court__opening > p { color: #d7a63b; }
+.patron-court__opening > span { color: rgb(241 226 197 / 68%); }
+.patron-court__colonnade { display: grid; grid-template-columns: 1.25fr 1fr .85fr; border-block: 1px solid rgb(218 172 85 / 26%); }
+.patron-court__bay { position: relative; display: grid; min-height: 19rem; padding: 2.5rem; align-content: space-between; border-right: 1px solid rgb(218 172 85 / 20%); }
+.patron-court__bay:last-child { border-right: 0; }
+.patron-court__bay > span { color: #d7a63b; font: 500 .62rem/1 var(--font-mono); letter-spacing: .14em; }
+.patron-court__bay i { width: 1px; height: 5rem; background: linear-gradient(#d7a63b, transparent); }
+.patron-court__bay h3 { max-width: 10ch; margin: 0; font-size: clamp(1.8rem, 3vw, 3rem); }
+.patron-court__bay p { margin: 0; color: rgb(241 226 197 / 52%); font: 500 .62rem/1 var(--font-mono); letter-spacing: .12em; text-transform: uppercase; }
+.patron-court__invitation { display: grid; padding: 2rem 0; grid-template-columns: 1fr 1fr; border-bottom: 1px solid rgb(218 172 85 / 18%); }
+.patron-court__invitation span { color: #d7a63b; font: 600 .62rem/1 var(--font-mono); letter-spacing: .14em; text-transform: uppercase; }
+.patron-court__invitation p { margin: 0; color: rgb(241 226 197 / 68%); }
+
+@media (max-width: 48rem), (pointer: coarse) {
+  .legacy-world__plate { background-image: image-set(url('/assets/legacy-world/legacy-world-mobile.avif') type('image/avif'), url('/assets/legacy-world/legacy-world-mobile.webp') type('image/webp')); opacity: .26; }
+  .history-procession { padding-top: 5rem; }
+  .history-procession__opening { display: block; width: calc(100% - 2rem); margin-bottom: 4rem; padding: 1.5rem; background: rgb(244 235 216 / 94%); }
+  .history-procession__opening > p { margin-bottom: 1rem; }
+  .history-procession__opening h2 { margin-bottom: 1.25rem; font-size: clamp(2.8rem, 9vw, 4.3rem); line-height: .88; }
+  .history-procession__route { width: calc(100% - 2rem); padding-left: 2rem; }
+  .history-procession__route::before { left: .35rem; }
+  .history-procession__chapter { display: block; min-height: 0; padding-bottom: 3rem; }
+  .history-procession__mark { position: absolute; top: .3rem; left: -2rem; display: block; }
+  .history-procession__mark span { display: grid; width: 2.75rem; min-height: 2rem; padding: .35rem; place-items: center; border: 1px solid rgb(89 54 45 / 22%); background: #eee0c5; color: #674239; font-size: 1.2rem; line-height: 1; }
+  .history-procession__mark i { display: none; }
+  .history-procession__inscription,
+  .history-procession__chapter:nth-child(even) .history-procession__inscription { max-width: none; padding: 1.4rem 1.2rem; text-align: left; background: rgb(247 239 222 / 96%); }
+  .history-procession__inscription h3 { font-size: clamp(1.9rem, 7vw, 2.7rem); }
+  .civic-assembly { display: block; width: calc(100% - 1rem); margin-top: 4rem; }
+  .civic-assembly__manifesto { padding: 2.5rem 1.5rem; border-right: 0; border-bottom: 1px solid rgb(218 172 85 / 24%); }
+  .civic-assembly__manifesto h3 { font-size: clamp(3rem, 11vw, 4.6rem); }
+  .civic-assembly__pillars li { min-height: 0; padding: 1.5rem; grid-template-columns: 2rem 1fr; }
+  .patron-court { padding-top: 7rem; }
+  .patron-court__opening { display: block; margin-bottom: 3rem; }
+  .patron-court__opening > p { margin-bottom: 1rem; }
+  .patron-court__opening h2 { margin-bottom: 1.25rem; font-size: clamp(2.8rem, 9vw, 4.3rem); }
+  .patron-court__colonnade { grid-template-columns: 1fr; }
+  .patron-court__bay { min-height: 9rem; padding: 1.5rem 0; grid-template-columns: 2rem 1fr auto; gap: 1rem; align-items: center; border-right: 0; border-bottom: 1px solid rgb(218 172 85 / 20%); }
+  .patron-court__bay:last-child { border-bottom: 0; }
+  .patron-court__bay i { width: 2rem; height: 1px; }
+  .patron-court__bay h3 { font-size: 1.8rem; }
+  .patron-court__invitation { grid-template-columns: 1fr; gap: 1rem; }
+}

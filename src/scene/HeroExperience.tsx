@@ -1,65 +1,17 @@
-import {
-  Component,
-  useEffect,
-  useState,
-  type ComponentType,
-  type PropsWithChildren,
-  type ReactNode,
-} from 'react';
+import type { PropsWithChildren } from 'react';
 
 import { useCinematicMotion } from '../hooks/useCinematicMotion';
+import { HERO_ASSETS } from './heroRuntime';
 import './HeroExperience.css';
 
-export const HERO_ASSETS = {
-  background: '/assets/hero-rome-wide.webp',
-  backgroundAvif: '/assets/hero-rome-wide.avif',
-  backgroundMobile: '/assets/hero-rome-wide-mobile.webp',
-  backgroundDepth: '/assets/hero-rome-depth.png',
-  foreground: '/assets/batu-knight-1920.webp',
-  foregroundMedium: '/assets/batu-knight-1280.webp',
-  foregroundSmall: '/assets/batu-knight-960.webp',
-  foregroundFallback: '/assets/batu-knight.png',
-  foregroundDepth: '/assets/batu-knight-depth.png',
-} as const;
+export { HERO_ASSETS } from './heroRuntime';
 
 export function hasWebGLSupport(): boolean {
   try {
     const canvas = document.createElement('canvas');
-    return Boolean(
-      window.WebGL2RenderingContext && canvas.getContext('webgl2'),
-    );
+    return Boolean(window.WebGL2RenderingContext && canvas.getContext('webgl2'));
   } catch {
     return false;
-  }
-}
-
-export interface HeroCanvasProps {
-  active: boolean;
-  maxDpr?: number;
-  onError?: () => void;
-  onReady?: () => void;
-}
-
-interface CanvasErrorBoundaryProps extends PropsWithChildren {
-  onError: () => void;
-}
-
-class CanvasErrorBoundary extends Component<
-  CanvasErrorBoundaryProps,
-  { failed: boolean }
-> {
-  state = { failed: false };
-
-  static getDerivedStateFromError() {
-    return { failed: true };
-  }
-
-  componentDidCatch() {
-    this.props.onError();
-  }
-
-  render(): ReactNode {
-    return this.state.failed ? null : this.props.children;
   }
 }
 
@@ -68,105 +20,25 @@ interface HeroExperienceProps extends PropsWithChildren {
   forceStatic?: boolean;
 }
 
-export function HeroExperience({
-  children,
-  className = '',
-  forceStatic = false,
-}: HeroExperienceProps) {
-  const { rootRef, sceneActive, reducedMotion } =
-    useCinematicMotion<HTMLDivElement>({ disabled: forceStatic });
-  const [CanvasLayer, setCanvasLayer] =
-    useState<ComponentType<HeroCanvasProps> | null>(null);
-  const [hasRenderedFrame, setHasRenderedFrame] = useState(false);
-
-  useEffect(() => {
-    if (
-      forceStatic
-      || reducedMotion
-      || window.innerWidth < 768
-      || !hasWebGLSupport()
-    ) return undefined;
-
-    let active = true;
-    const loadCanvas = window.setTimeout(() => {
-      void import('./HeroCanvas')
-        .then(({ default: HeroCanvas }) => {
-          if (active) setCanvasLayer(() => HeroCanvas);
-        })
-        .catch(() => {
-          if (active) {
-            setHasRenderedFrame(false);
-            setCanvasLayer(null);
-          }
-        });
-    }, 1200);
-
-    return () => {
-      active = false;
-      window.clearTimeout(loadCanvas);
-    };
-  }, [forceStatic, reducedMotion]);
-
-  const canMountWebGL = Boolean(CanvasLayer) && !forceStatic && !reducedMotion;
-  const webglReady = canMountWebGL && hasRenderedFrame;
-  const handleCanvasError = () => {
-    setHasRenderedFrame(false);
-    setCanvasLayer(null);
-  };
+export function HeroExperience({ children, className = '', forceStatic = false }: HeroExperienceProps) {
+  const { rootRef, sceneActive } = useCinematicMotion<HTMLDivElement>({ disabled: forceStatic });
+  const touchDevice = navigator.maxTouchPoints > 0
+    || window.matchMedia('(pointer: coarse), (any-pointer: coarse)').matches;
+  const backgroundSource = touchDevice ? HERO_ASSETS.backgroundMobile : HERO_ASSETS.background;
   return (
-    <div
-      ref={rootRef}
-      className={`scene-hero hero-scene${webglReady ? ' hero-scene--webgl' : ''} ${className}`.trim()}
-      data-scene-active={sceneActive ? 'true' : 'false'}
-    >
-      <div
-        className="hero-scene__static"
-        data-testid="hero-static-fallback"
-        aria-hidden={webglReady ? 'true' : undefined}
-      >
+    <div ref={rootRef} className={`scene-hero hero-scene ${className}`.trim()} data-scene-active={sceneActive ? 'true' : 'false'}>
+      <div className="hero-scene__static" data-testid="hero-static-fallback">
         <picture className="hero-scene__background-picture">
-          <source media="(max-width: 640px)" srcSet={HERO_ASSETS.backgroundMobile} />
-          <source srcSet={HERO_ASSETS.backgroundAvif} type="image/avif" />
-          <img
-            className="hero-scene__background-image"
-            src={HERO_ASSETS.background}
-            alt=""
-            width="3840"
-            height="2160"
-            fetchPriority="high"
-          />
+          {!touchDevice ? <source srcSet={HERO_ASSETS.backgroundAvif} type="image/avif" /> : null}
+          <img className="hero-scene__background-image" src={backgroundSource} alt="" width="3840" height="2160" fetchPriority="high" />
         </picture>
-        <picture className="hero-scene__foreground-picture">
-          <source media="(max-width: 640px)" srcSet={HERO_ASSETS.foregroundSmall} />
-          <source media="(max-width: 1200px)" srcSet={HERO_ASSETS.foregroundMedium} />
-          <img
-            className="hero-scene__foreground-image"
-            src={HERO_ASSETS.foreground}
-            alt="Arena Roma: raksasa batu melawan Ksatria JRC XIV"
-            width="1920"
-            height="1110"
-            fetchPriority="high"
-          />
-        </picture>
-      </div>
-
-      {canMountWebGL && CanvasLayer ? (
-        <div
-          className="hero-scene__canvas"
-          data-testid="hero-webgl-canvas"
-          aria-hidden="true"
-        >
-          <CanvasErrorBoundary onError={handleCanvasError}>
-            <CanvasLayer
-              active={sceneActive}
-              maxDpr={1.5}
-              onError={handleCanvasError}
-              onReady={() => setHasRenderedFrame(true)}
-            />
-          </CanvasErrorBoundary>
+        <div className="hero-scene__foreground-picture" data-video-ready="false">
+          <picture className="hero-scene__foreground-fallback">
+            <source srcSet={HERO_ASSETS.foreground} type="image/webp" />
+            <img className="hero-scene__foreground-image" src={HERO_ASSETS.foregroundFallback} alt="Maskot robot gladiator JRC XIV di arena Roma" width="553" height="1202" fetchPriority="high" decoding="async" />
+          </picture>
         </div>
-      ) : null}
-
+      </div>
       <div className="hero-scene__veil" aria-hidden="true" />
       <div className="hero-scene__content">{children}</div>
     </div>

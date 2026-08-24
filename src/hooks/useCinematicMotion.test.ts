@@ -12,6 +12,7 @@ function createDependencies() {
     off: vi.fn(),
     start: vi.fn(),
     stop: vi.fn(),
+    scrollTo: vi.fn(),
     destroy: vi.fn(),
   };
   const update = vi.fn();
@@ -80,5 +81,34 @@ describe('createCinematicMotionController', () => {
 
     controller.setHeroVisible(true);
     expect(onSceneActivityChange).toHaveBeenLastCalledWith(true);
+  });
+
+  it('pauses Lenis while a modal owns the document scroll lock', () => {
+    const { dependencies, lenis } = createDependencies();
+    const controller = createCinematicMotionController({ dependencies });
+
+    window.dispatchEvent(new CustomEvent('jrc:modal-lock', { detail: { locked: true } }));
+    expect(lenis.stop).toHaveBeenCalledOnce();
+
+    window.dispatchEvent(new CustomEvent('jrc:modal-lock', { detail: { locked: false } }));
+    expect(lenis.start).toHaveBeenCalledOnce();
+
+    controller.destroy();
+  });
+
+  it('synchronizes route hash navigation with Lenis', () => {
+    const { dependencies, lenis } = createDependencies();
+    const target = document.createElement('section');
+    target.id = 'perlombaan';
+    document.body.appendChild(target);
+    const controller = createCinematicMotionController({ dependencies });
+
+    window.dispatchEvent(new CustomEvent('jrc:route-scroll', {
+      detail: { targetId: 'perlombaan' },
+    }));
+    expect(lenis.scrollTo).toHaveBeenCalledWith(target, { immediate: true, force: true });
+
+    controller.destroy();
+    target.remove();
   });
 });
