@@ -117,7 +117,7 @@
   .hero-scene__foreground-image,
   .hero-scene__foreground-video {
     right: 0;
-    bottom: 5.5rem;
+    bottom: 7rem;
     width: clamp(7.5rem, 34vw, 10rem);
     height: auto;
     object-position: right bottom;
@@ -135,11 +135,18 @@
   }
 }
 
+@media (min-width: 36rem) and (max-width: 48rem) {
+  .hero-scene__foreground-image,
+  .hero-scene__foreground-video {
+    width: clamp(13rem, 30vw, 15rem);
+  }
+}
+
 @media (max-width: 23rem) {
   .hero-scene__foreground-image,
   .hero-scene__foreground-video {
     right: 0;
-    bottom: 5.7rem;
+    bottom: 7rem;
     width: clamp(7.5rem, 35vw, 8rem);
     height: auto;
   }
@@ -149,7 +156,7 @@
   .hero-scene__foreground-image,
   .hero-scene__foreground-video {
     right: 0;
-    bottom: 3.6rem;
+    bottom: 6rem;
     width: 7.5rem;
     height: auto;
   }

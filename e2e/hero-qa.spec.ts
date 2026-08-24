@@ -8,6 +8,7 @@ const sizes = [
   { name: '375', width: 375, height: 812, touch: true },
   { name: '390', width: 390, height: 844, touch: true },
   { name: '430', width: 430, height: 932, touch: true },
+  { name: '768', width: 768, height: 1024, touch: true },
   { name: '980-touch', width: 980, height: 844, touch: true },
   { name: '1280', width: 1280, height: 720, touch: false },
   { name: '1440', width: 1440, height: 900, touch: false },
@@ -37,10 +38,17 @@ for (const size of sizes) {
       const box = (s: string) => { const el = q(s); if (!el) return null; const r = el.getBoundingClientRect(); return { x: Math.round(r.x), y: Math.round(r.y), w: Math.round(r.width), h: Math.round(r.height) }; };
       const video = document.querySelector('[data-testid="hero-mascot-video"]') as HTMLVideoElement | null;
       const primary = q('.hero-section__actions .site-action--primary');
+      const mascot = q('.hero-scene__foreground-video') ?? q('.hero-scene__foreground-image');
+      const actions = q('.hero-section__actions');
+      const mascotBounds = mascot?.getBoundingClientRect();
+      const actionBounds = actions?.getBoundingClientRect();
       return {
         title: box('#hero-title'),
         mascot: box('.hero-scene__foreground-video') ?? box('.hero-scene__foreground-image'),
         actions: box('.hero-section__actions'),
+        mascotCtaClearance: mascotBounds && actionBounds
+          ? Math.round((actionBounds.top - mascotBounds.bottom) * 100) / 100
+          : null,
         engravings: box('.hero-section__engravings'),
         assetCount: document.querySelectorAll('.hero-section__engraving img').length,
         assetComplete: [...document.querySelectorAll('.hero-section__engraving img')].every((image) => (image as HTMLImageElement).complete && (image as HTMLImageElement).naturalWidth > 0),
@@ -61,7 +69,16 @@ for (const size of sizes) {
     expect(probe.assetCount).toBe(2);
     expect(probe.assetComplete).toBe(true);
     expect(errors, 'console errors').toEqual([]);
-    if (size.touch) expect(probe.primaryHeight).toBeGreaterThanOrEqual(44);
+    if (size.touch) {
+      expect(probe.primaryHeight).toBeGreaterThanOrEqual(44);
+    }
+    if (size.width <= 768) {
+      expect(probe.mascotCtaClearance, 'mascot clears the CTA by at least 4px').toBeGreaterThanOrEqual(4);
+    }
+    if (size.width === 768) {
+      expect(probe.mascot?.w, 'tablet mascot width').toBeGreaterThanOrEqual(208);
+      expect(probe.mascot?.w, 'tablet mascot width').toBeLessThanOrEqual(240);
+    }
     await context.close();
   });
 }
