@@ -1,10 +1,13 @@
 import { useEffect } from 'react';
 
 const REVEAL_SELECTORS = [
-  '.arena-facts__intro',
-  '.arena-facts__register',
+  '.event-brief__intro',
+  '.event-brief__countdown',
+  '.event-brief__details',
   '.character-selector__stage',
   '.character-selector__name',
+  '.schedule-section__header',
+  '.schedule-via__card',
   '.history-section__header',
   '.history-editorial__entry',
   '.history-festival',
@@ -18,28 +21,36 @@ const REVEAL_SELECTORS = [
 export function ResponsiveMotionController() {
   useEffect(() => {
     const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    if (reducedMotion || !('IntersectionObserver' in window)) return undefined;
+    const compactMotion = window.matchMedia('(max-width: 64rem), (hover: none), (pointer: coarse)').matches;
+    if (reducedMotion || !compactMotion || !('IntersectionObserver' in window)) return undefined;
 
     const targets = Array.from(
       document.querySelectorAll<HTMLElement>(REVEAL_SELECTORS.join(',')),
     );
-    targets.forEach((target) => target.setAttribute('data-native-reveal', 'pending'));
+    targets.forEach((target, index) => {
+      target.setAttribute('data-native-reveal', 'pending');
+      target.style.setProperty('--native-reveal-order', String(index % 4));
+    });
 
     const observer = new IntersectionObserver(
       (entries) => {
         entries.forEach((entry) => {
-          if (!entry.isIntersecting) return;
-          (entry.target as HTMLElement).setAttribute('data-native-reveal', 'visible');
-          observer.unobserve(entry.target);
+          (entry.target as HTMLElement).setAttribute(
+            'data-native-reveal',
+            entry.isIntersecting ? 'visible' : 'pending',
+          );
         });
       },
-      { rootMargin: '0px 0px -8% 0px', threshold: 0.08 },
+      { rootMargin: '-8% 0px -8% 0px', threshold: 0.12 },
     );
 
     targets.forEach((target) => observer.observe(target));
     return () => {
       observer.disconnect();
-      targets.forEach((target) => target.removeAttribute('data-native-reveal'));
+      targets.forEach((target) => {
+        target.removeAttribute('data-native-reveal');
+        target.style.removeProperty('--native-reveal-order');
+      });
     };
   }, []);
 

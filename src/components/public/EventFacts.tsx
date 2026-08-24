@@ -1,99 +1,92 @@
+import { useEffect, useState } from 'react';
+
 import { eventFacts } from '../../content/jrc';
 
+const registrationDeadline = new Date('2026-10-15T23:59:59+07:00').getTime();
+
+interface RemainingTime {
+  days: number;
+  hours: number;
+  minutes: number;
+  seconds: number;
+  complete: boolean;
+}
+
+function getRemainingTime(now = Date.now()): RemainingTime {
+  const distance = Math.max(registrationDeadline - now, 0);
+  return {
+    days: Math.floor(distance / 86_400_000),
+    hours: Math.floor((distance % 86_400_000) / 3_600_000),
+    minutes: Math.floor((distance % 3_600_000) / 60_000),
+    seconds: Math.floor((distance % 60_000) / 1_000),
+    complete: distance === 0,
+  };
+}
+
 const facts = [
-  { key: 'edition', label: 'Edisi', value: eventFacts.edition, state: 'confirmed' },
-  { key: 'registration', label: 'Pendaftaran', value: eventFacts.registration, state: 'pending' },
-  { key: 'event-date', label: 'Hari pertandingan', value: eventFacts.eventDate, state: 'pending' },
-  {
-    key: 'venue',
-    label: 'Lokasi',
-    value: eventFacts.venue,
-    compactValue: 'PENS, Surabaya',
-    state: 'confirmed',
-  },
+  { key: 'period', label: 'Periode pendaftaran', value: eventFacts.registration },
+  { key: 'event-date', label: 'Hari pertandingan', value: eventFacts.eventDate },
+  { key: 'venue', label: 'Lokasi', value: 'PENS, Surabaya' },
 ] as const;
 
 export function EventFacts() {
-  return (
-    <section className="arena-facts" aria-labelledby="arena-facts-title">
-      <div className="arena-facts__atmosphere" aria-hidden="true">
-        <div className="arena-facts__depth-image" />
-        <div className="arena-facts__grid" />
-        <div className="arena-facts__imperial-glow" />
-        <div className="arena-facts__architecture">
-          <span className="arena-facts__architecture-pillar arena-facts__architecture-pillar--left" />
-          <span className="arena-facts__architecture-pillar arena-facts__architecture-pillar--right" />
-          <span className="arena-facts__architecture-axis" />
-        </div>
-        <div className="arena-facts__signal-line" />
-      </div>
-      <div className="arena-facts__sheet site-shell page-shell">
-        <header className="arena-facts__intro">
-          <div
-            className="arena-facts__spine"
-            aria-label={`Java Robot Contest, edisi ${eventFacts.edition}, PENS Surabaya`}
-          >
-            <p className="arena-facts__spine-code" aria-hidden="true">
-              JRC
-            </p>
-            <p className="arena-facts__edition" aria-label={`Edisi ke-${eventFacts.edition}`}>
-              {eventFacts.edition}
-            </p>
-            <p className="arena-facts__spine-name">Java Robot Contest</p>
-            <p className="arena-facts__spine-place">PENS · Surabaya</p>
-          </div>
+  const [remaining, setRemaining] = useState(() => getRemainingTime());
 
-          <div className="arena-facts__heading">
-            <p className="arena-facts__section-label">Informasi penyelenggaraan</p>
-            <h2
-              id="arena-facts-title"
-              className="arena-facts__title"
-              aria-label="JRC edisi 14. Pendaftaran dan hari pertandingan akan diumumkan."
-            >
-              <span>JRC edisi 14.</span>
-              <span>Pendaftaran dan hari pertandingan</span>
-              <span>akan diumumkan.</span>
-            </h2>
-          </div>
+  useEffect(() => {
+    const timer = window.setInterval(() => setRemaining(getRemainingTime()), 1_000);
+    return () => window.clearInterval(timer);
+  }, []);
+
+  const countdown = [
+    { label: 'Hari', value: remaining.days },
+    { label: 'Jam', value: remaining.hours },
+    { label: 'Menit', value: remaining.minutes },
+    { label: 'Detik', value: remaining.seconds },
+  ];
+
+  return (
+    <section id="informasi" className="event-brief" aria-labelledby="event-brief-title">
+      <div className="event-brief__glow" aria-hidden="true" />
+      <div className="event-brief__inner site-shell page-shell">
+        <header className="event-brief__intro">
+          <p className="event-brief__kicker">Informasi penyelenggaraan · JRC XIV</p>
+          <h2 id="event-brief-title">Pendaftaran ditutup dalam</h2>
+          <p className="event-brief__deadline">15 Oktober 2026</p>
+          <p className="event-brief__description">
+            Pastikan tim menyelesaikan pendaftaran sebelum hari terakhir.
+          </p>
         </header>
 
         <div
-          className="arena-facts__register arena-facts__civic-register"
-          role="region"
-          aria-label="Informasi utama JRC"
+          className="event-brief__countdown"
+          role="timer"
+          aria-live="polite"
+          aria-label={remaining.complete ? 'Pendaftaran telah ditutup' : 'Hitung mundur penutupan pendaftaran'}
+          data-complete={remaining.complete ? 'true' : 'false'}
         >
-          <div className="arena-facts__register-head" aria-hidden="true">
-            <span>Data utama</span>
-            <span>JRC / empat catatan</span>
-          </div>
-          <dl className="arena-facts__table">
-            {facts.map((fact) => (
-              <div
-                className="arena-facts__fact"
-                data-fact={fact.key}
-                data-state={fact.state}
-                key={fact.key}
-              >
-                <dt>{fact.label}</dt>
-                <dd>
-                  <span
-                    className={`arena-facts__value-full${
-                      'compactValue' in fact ? ' arena-facts__value-full--has-compact' : ''
-                    }`}
-                  >
-                    {fact.value}
-                  </span>
-                  {'compactValue' in fact ? (
-                    <span className="arena-facts__value-compact">{fact.compactValue}</span>
-                  ) : null}
-                  {fact.state === 'pending' ? (
-                    <span className="arena-facts__pending-mark" aria-hidden="true" />
-                  ) : null}
-                </dd>
-              </div>
-            ))}
-          </dl>
+          {remaining.complete ? (
+            <p className="event-brief__complete">Pendaftaran telah ditutup.</p>
+          ) : (
+            <ol className="event-brief__countdown-grid">
+              {countdown.map((unit) => (
+                <li className="event-brief__time-unit" key={unit.label}>
+                  <strong>{String(unit.value).padStart(2, '0')}</strong>
+                  <span>{unit.label}</span>
+                </li>
+              ))}
+            </ol>
+          )}
+          <p className="event-brief__countdown-note">Batas akhir: 15 Oktober 2026</p>
         </div>
+
+        <dl className="event-brief__details" aria-label="Informasi utama JRC">
+          {facts.map((fact) => (
+            <div className="event-brief__fact" data-fact={fact.key} key={fact.key}>
+              <dt>{fact.label}</dt>
+              <dd>{fact.value}</dd>
+            </div>
+          ))}
+        </dl>
       </div>
     </section>
   );

@@ -1,5 +1,5 @@
 .gate-entry {
-  --gate-duration: 2300ms;
+  --gate-duration: 2400ms;
   --door-half-width: min(25vw, 380px);
   --stone-light: #ead8b7;
   --stone: #bda27d;
@@ -12,43 +12,82 @@
   pointer-events: none;
   contain: strict;
   isolation: isolate;
-  transform-origin: 50% 58%;
-  animation: gate-camera var(--gate-duration) cubic-bezier(.65, 0, .35, 1) both paused;
+  perspective: 1800px;
+  perspective-origin: 50% 48%;
+  transform-origin: 50% 54%;
+  animation: gate-camera var(--gate-duration) cubic-bezier(.16, 1, .3, 1) both paused;
   will-change: transform, opacity;
+  transform: translateZ(0);
 }
 
 .gate-entry--active,
 .gate-entry--active .gate-entry__door,
 .gate-entry--active .gate-entry__light,
-.gate-entry--active .gate-entry__seal { animation-play-state: running; }
+.gate-entry--active .gate-entry__seal,
+.gate-entry--active .gate-entry__portal::after { animation-play-state: running; }
 
 .gate-entry__ambient {
   position: absolute;
   inset: 0;
-  background: linear-gradient(115deg, rgb(255 226 174 / 18%), transparent 36%), linear-gradient(180deg, rgb(49 28 17 / 10%), rgb(23 12 8 / 28%));
+  background-color: #1a0f0b;
+  background:
+    linear-gradient(90deg, rgb(14 11 9 / 92%) 0%, rgb(14 11 9 / 74%) 35%, rgb(96 28 30 / 30%) 74%, rgb(14 11 9 / 82%) 100%),
+    radial-gradient(ellipse at 50% 56%, rgb(248 188 76 / 12%), transparent 37%),
+    url('/assets/hero-rome-wide.webp') center 48% / cover no-repeat;
+  background-color: #1a0f0b;
 }
 
 .gate-entry__portal {
   position: absolute;
+  z-index: 0;
   left: 50%;
   bottom: 0;
-  width: min(50vw, 760px);
-  height: 82vh;
-  transform: translateX(-50%);
+  width: min(57vw, 860px);
+  height: 88vh;
+  transform: translate3d(-50%, 0, 0);
   border-radius: 50% 50% 0 0 / 31% 31% 0 0;
-  background: linear-gradient(90deg, rgb(34 19 12 / 68%), rgb(12 8 7 / 8%) 16% 84%, rgb(34 19 12 / 68%));
-  box-shadow: 0 0 0 clamp(14px, 2vw, 34px) rgb(72 51 35 / 72%), inset 0 20px 30px rgb(8 5 4 / 50%);
+  overflow: hidden;
+  background:
+    linear-gradient(180deg, rgb(15 9 7 / 92%), rgb(13 10 8 / 78%) 50%, rgb(7 6 5 / 90%)),
+    radial-gradient(ellipse at 50% 46%, rgb(255 209 119 / 14%), transparent 58%);
+  background-color: transparent;
+  box-shadow:
+    0 0 0 clamp(14px, 2vw, 34px) rgb(72 51 35 / 72%),
+    0 0 3rem rgb(255 190 74 / 12%),
+    inset 0 20px 30px rgb(8 5 4 / 50%);
 }
-.gate-entry__portal i { position: absolute; inset: 3%; border: 2px solid rgb(240 194 119 / 20%); border-bottom: 0; border-radius: inherit; }
+.gate-entry__portal-glow {
+  position: absolute;
+  z-index: 1;
+  inset: 22% 16% 0;
+  border-radius: 50% 50% 0 0 / 22% 22% 0 0;
+  background: radial-gradient(ellipse at 50% 45%, rgb(255 226 155 / 26%), transparent 68%);
+  opacity: .7;
+}
+.gate-entry__portal::after {
+  position: absolute;
+  z-index: 2;
+  inset: 0;
+  background:
+    linear-gradient(180deg, rgb(13 8 6 / 64%), rgb(8 5 4 / 22%) 44%, rgb(5 4 3 / 62%)),
+    radial-gradient(ellipse at 50% 46%, transparent 0 26%, rgb(5 3 2 / 26%) 74%);
+  opacity: .96;
+  animation: gate-portal-reveal var(--gate-duration) cubic-bezier(.2, .72, .28, 1) both paused;
+  will-change: opacity;
+  content: '';
+}
+.gate-entry__portal i { position: absolute; z-index: 3; inset: 3%; border: 2px solid rgb(240 194 119 / 20%); border-bottom: 0; border-radius: inherit; }
 
 .gate-entry__light {
   position: absolute;
   z-index: 1;
-  inset: 6% 47% 0;
+  inset: 9% 44% -4%;
   transform-origin: center;
-  background: linear-gradient(90deg, transparent, rgb(255 206 115 / 68%) 45%, rgb(255 244 200 / 85%) 52%, transparent);
+  background: linear-gradient(90deg, transparent, rgb(255 206 115 / 34%) 38%, rgb(255 244 200 / 82%) 50%, rgb(255 206 115 / 34%) 62%, transparent);
   opacity: 0;
-  animation: gate-light var(--gate-duration) ease-out both paused;
+  animation: gate-light var(--gate-duration) cubic-bezier(.2, .72, .28, 1) both paused;
+  will-change: transform, opacity;
+  transform: translateZ(0);
 }
 
 .gate-entry__leaf {
@@ -57,16 +96,16 @@
   inset-block: 0;
   width: 50.15%;
   overflow: hidden;
-
 }
 .gate-entry__leaf--left { left: 0; }
 .gate-entry__leaf--right { right: 0; }
 
 .gate-entry__wall {
   position: absolute;
+  z-index: 3;
   inset-block: 0;
-  background: linear-gradient(105deg, rgb(255 245 215 / 28%), transparent 28%), linear-gradient(90deg, #c9b18c, #aa8e69 75%, #796047);
-  box-shadow: inset -2vw 0 2.5vw rgb(49 31 20 / 36%);
+  background: linear-gradient(105deg, rgb(210 159 77 / 12%), transparent 28%), linear-gradient(90deg, #38271f, #2b211b 75%, #181310);
+  box-shadow: inset -2vw 0 2.5vw rgb(5 3 2 / 55%);
 }
 .gate-entry__leaf--left .gate-entry__wall { left: 0; right: var(--door-half-width); }
 .gate-entry__leaf--right .gate-entry__wall { right: 0; left: var(--door-half-width); transform: scaleX(-1); }
@@ -78,46 +117,70 @@
 
 .gate-entry__door {
   position: absolute;
+  z-index: 1;
   bottom: 0;
   width: var(--door-half-width);
   height: 70vh;
-  background: linear-gradient(90deg, #322018, #64412b 12%, #38241a 40%, #17100d 92%);
+  backface-visibility: hidden;
+  background:
+    linear-gradient(104deg, rgb(239 182 91 / 18%), transparent 14% 72%, rgb(0 0 0 / 38%)),
+    repeating-linear-gradient(90deg, #251711 0 7%, #49301f 7.5% 8.6%, #20130f 9.2% 15%);
   border-inline: clamp(5px, .65vw, 11px) solid #6c4d33;
-  box-shadow: inset -18px 0 24px rgb(9 5 4 / 62%), 0 0 20px rgb(17 9 6 / 58%);
+  box-shadow: inset -18px 0 24px rgb(9 5 4 / 62%), inset 0 0 0 1px rgb(239 185 98 / 25%), 0 0 20px rgb(17 9 6 / 58%);
   animation-duration: var(--gate-duration);
+  animation-timing-function: cubic-bezier(.4, 0, .2, 1);
   animation-fill-mode: both;
   animation-play-state: paused;
   will-change: transform;
 }
-.gate-entry__leaf--left .gate-entry__door { right: 0; animation-name: gate-door-left; }
-.gate-entry__leaf--right .gate-entry__door { left: 0; animation-name: gate-door-right; }
-.gate-entry__door i { position: absolute; inset: 0; background: repeating-linear-gradient(90deg, transparent 0 18%, rgb(211 152 77 / 15%) 18.5% 19%, transparent 19.5%); }
-.gate-entry__door b { position: absolute; top: 48%; right: 9%; width: 12px; aspect-ratio: 1; border-radius: 50%; background: radial-gradient(circle at 35% 30%, #e0ad58, #71401d 70%); box-shadow: 0 0 0 6px #4f2d18; }
+.gate-entry__door::before,
+.gate-entry__door::after {
+  position: absolute;
+  content: '';
+  pointer-events: none;
+}
+.gate-entry__door::before {
+  inset: 7% 9%;
+  border: 1px solid rgb(227 170 88 / 35%);
+  background:
+    linear-gradient(90deg, transparent 0 48.8%, rgb(213 152 77 / 25%) 49.3% 50.7%, transparent 51.2%),
+    linear-gradient(0deg, transparent 0 48.8%, rgb(213 152 77 / 20%) 49.3% 50.7%, transparent 51.2%);
+  box-shadow: inset 0 0 1.4rem rgb(5 3 2 / 58%), 0 0 0 4px rgb(42 24 15 / 42%);
+}
+.gate-entry__door::after {
+  inset: 9% 12%;
+  border: 1px solid rgb(247 201 116 / 18%);
+  box-shadow: inset 0 0 0 2px rgb(24 13 9 / 45%);
+}
+.gate-entry__leaf--left .gate-entry__door { right: 0; animation-name: gate-door-slide-left; }
+.gate-entry__leaf--right .gate-entry__door { left: 0; animation-name: gate-door-slide-right; }
+.gate-entry__door i { position: absolute; z-index: 2; inset: 0; background: linear-gradient(105deg, rgb(255 219 144 / 18%), transparent 18% 74%, rgb(0 0 0 / 28%)); }
+.gate-entry__door b { position: absolute; z-index: 3; top: 48%; right: 9%; width: 12px; aspect-ratio: 1; border-radius: 50%; background: radial-gradient(circle at 35% 30%, #e0ad58, #71401d 70%); box-shadow: 0 0 0 6px #4f2d18, 0 0 .7rem rgb(230 170 76 / 25%); }
+.gate-entry__leaf--right .gate-entry__door b { right: auto; left: 9%; }
 
-.gate-entry__pier { position: absolute; bottom: 0; width: clamp(108px, 12vw, 190px); height: 76%; box-shadow: 12px 9px 14px rgb(37 23 15 / 22%); }
+.gate-entry__pier { position: absolute; z-index: 4; bottom: 0; width: clamp(108px, 12vw, 190px); height: 76%; box-shadow: 12px 9px 14px rgb(37 23 15 / 22%); }
 .gate-entry__leaf--left .gate-entry__pier { right: var(--door-half-width); }
 .gate-entry__leaf--right .gate-entry__pier { left: var(--door-half-width); transform: scaleX(-1); }
 .gate-entry__pier i { position: absolute; left: 50%; transform: translateX(-50%); }
-.gate-entry__shaft { bottom: 13%; width: 55%; height: 65%; background: linear-gradient(90deg, #69513b, #c5ad88 16%, #e1cfaa 39%, #a98c67 74%, #5d4634); border-inline: 2px solid #654d39; }
-.gate-entry__capital { top: 13%; width: 88%; height: 10%; background: linear-gradient(#e7d4ae 0 18%, #806447 21% 31%, #c9ae83 34% 67%, #6a4e37 71%); clip-path: polygon(8% 0,92% 0,100% 28%,82% 100%,18% 100%,0 28%); }
-.gate-entry__impost { top: 6%; width: 112%; height: 8%; background: linear-gradient(#eddbb7 0 20%, #826449 24% 46%, #c6aa80 50% 78%, #634933 82%); }
-.gate-entry__base { bottom: 7%; width: 78%; height: 8%; background: linear-gradient(#d9c29b, #72563e 42%, #b69a71 48%, #5a4231); clip-path: polygon(10% 0,90% 0,100% 100%,0 100%); }
-.gate-entry__plinth { bottom: 0; width: 100%; height: 8%; background: linear-gradient(#dfc9a1 0 18%, #775940 22% 48%, #b5976d 52% 78%, #55402f 82%); }
+.gate-entry__shaft { bottom: 13%; width: 55%; height: 65%; background: linear-gradient(90deg, #241a15, #6d4d31 16%, #a77c45 39%, #61432d 74%, #1e1713); border-inline: 2px solid #4f3625; }
+.gate-entry__capital { top: 13%; width: 88%; height: 10%; background: linear-gradient(#a77a43 0 18%, #4c3425 21% 31%, #805b35 34% 67%, #2b1e17 71%); clip-path: polygon(8% 0,92% 0,100% 28%,82% 100%,18% 100%,0 28%); }
+.gate-entry__impost { top: 6%; width: 112%; height: 8%; background: linear-gradient(#b3854a 0 20%, #523725 24% 46%, #805b35 50% 78%, #2b1e17 82%); }
+.gate-entry__base { bottom: 7%; width: 78%; height: 8%; background: linear-gradient(#8f693d, #4d3425 42%, #755332 48%, #241a15); clip-path: polygon(10% 0,90% 0,100% 100%,0 100%); }
+.gate-entry__plinth { bottom: 0; width: 100%; height: 8%; background: linear-gradient(#9d7544 0 18%, #513725 22% 48%, #745333 52% 78%, #221914 82%); }
 
 .gate-entry__arch { position: absolute; z-index: 3; left: 50%; bottom: 65vh; width: min(58vw, 900px); height: min(35vw, 540px); transform: translateX(-50%); pointer-events: none; }
 .gate-entry__arch-half { position: absolute; inset-block: 0; width: 50.2%; overflow: hidden; }
 .gate-entry__arch-half--left { left: 0; }
 .gate-entry__arch-half--right { right: 0; }
-.gate-entry__arch-half::before { content: ''; position: absolute; top: 0; width: 200%; height: 100%; border-radius: 50% 50% 0 0 / 100% 100% 0 0; background: linear-gradient(105deg,#ead7b1 0 12%,#9a7b58 13% 20%,#d5bc91 21% 42%,#806148 43% 48%,#c5a77d 49% 70%,#72533d 71% 76%,#b99a70 77%); clip-path: polygon(0 100%,0 88%,5% 55%,17% 28%,35% 7%,50% 0,65% 7%,83% 28%,95% 55%,100% 88%,100% 100%,85% 100%,81% 63%,69% 36%,50% 25%,31% 36%,19% 63%,15% 100%); box-shadow: inset 0 -13px 12px rgb(38 24 15 / 30%); }
+.gate-entry__arch-half::before { content: ''; position: absolute; top: 0; width: 200%; height: 100%; border-radius: 50% 50% 0 0 / 100% 100% 0 0; background: linear-gradient(105deg,#2d2119 0 12%,#76512f 13% 20%,#483022 21% 42%,#211914 43% 48%,#67462b 49% 70%,#2a1e17 71% 76%,#553a25 77%); clip-path: polygon(0 100%,0 88%,5% 55%,17% 28%,35% 7%,50% 0,65% 7%,83% 28%,95% 55%,100% 88%,100% 100%,85% 100%,81% 63%,69% 36%,50% 25%,31% 36%,19% 63%,15% 100%); box-shadow: inset 0 -13px 12px rgb(8 5 3 / 42%); }
 .gate-entry__arch-half--left::before { left: 0; }
 .gate-entry__arch-half--right::before { right: 0; }
-.gate-entry__arch-half i { position: absolute; bottom: 0; height: 74%; width: 11%; background: linear-gradient(90deg,#493426,#9c7b59,#4d3728); }
-.gate-entry__arch-half--left i { right: 0; }.gate-entry__arch-half--right i { left: 0; }
+.gate-entry__arch-half i { display: none; }
 
-.gate-entry__entablature { position: absolute; z-index: 5; top: 0; left: 50%; width: 100%; height: clamp(76px, 12vh, 130px); transform: translateX(-50%); background: linear-gradient(#ead7b1 0 12%,#87694b 15% 22%,#c8ad82 25% 66%,#6b4e37 70% 77%,#d4ba8e 81%); box-shadow: 0 14px 18px rgb(37 22 14 / 38%); }
-.gate-entry__cornice { position: absolute; inset: 10% 0 auto; height: 18%; border-block: 3px solid #785b40; background: #dfc69b; }
-.gate-entry__frieze { position: absolute; inset: auto 0 12%; height: 8%; background: linear-gradient(#76583f,#d5bb8d,#684a34); }
-.gate-entry__entablature span { position: absolute; top: 57%; left: 50%; transform: translate(-50%,-50%); color: #53331f; text-shadow: 0 1px #f2ddba; font: 700 clamp(.62rem,1vw,.88rem)/1 'Cinzel Variable',Georgia,serif; letter-spacing: .34em; white-space: nowrap; }
+.gate-entry__entablature { position: absolute; z-index: 5; top: 0; left: 50%; width: 100%; height: clamp(76px, 12vh, 130px); transform: translateX(-50%); background: linear-gradient(#241a15 0 12%,#5b3c27 15% 22%,#33241b 25% 66%,#6f4b2c 70% 77%,#2a1d16 81%); box-shadow: 0 14px 18px rgb(5 3 2 / 58%); }
+.gate-entry__cornice { position: absolute; inset: 10% 0 auto; height: 18%; border-block: 3px solid #855a31; background: #35251b; }
+.gate-entry__frieze { position: absolute; inset: auto 0 12%; height: 8%; background: linear-gradient(#2a1e17,#80572f,#241a14); }
+.gate-entry__entablature span { position: absolute; top: 57%; left: 50%; transform: translate(-50%,-50%); color: #d8ae5e; text-shadow: 0 1px #1a0f0b; font: 700 clamp(.62rem,1vw,.88rem)/1 'Cinzel Variable',Georgia,serif; letter-spacing: .34em; white-space: nowrap; }
 
 .gate-entry__standard { position: absolute; z-index: 6; top: 23%; width: clamp(70px,7vw,112px); height: 37%; background: linear-gradient(90deg,#3e0d15,#8c2832 18%,#bd5553 43%,#7b202a 72%,#350a10); clip-path: polygon(0 0,100% 0,100% 83%,50% 100%,0 83%); box-shadow: 10px 13px 13px rgb(33 18 12 / 42%); }
 .gate-entry__standard::before { content:''; position:absolute; top:-10px; left:-22%; width:144%; height:9px; border-radius:5px; background:linear-gradient(#edbd66,#77451f); box-shadow:0 5px 5px rgb(37 20 12 / 42%); }
@@ -126,25 +189,25 @@
 .gate-entry__standard b { position:absolute; inset:auto 0 17%; height:6px; background:#3c0d14; border-top:2px solid #d18070; }
 .gate-entry__standard--left { left:9%; }.gate-entry__standard--right { right:9%; }
 
-.gate-entry__seal { position:absolute; z-index:8; top:51%; left:50%; display:grid; place-items:center; width:clamp(132px,14vw,208px); aspect-ratio:.7; padding:clamp(.8rem,1.4vw,1.25rem); transform:translate3d(-50%,-50%,0); border:clamp(6px,.65vw,10px) ridge var(--bronze); background:linear-gradient(135deg,#341b13,#100807 62%,#2a160f); box-shadow:-6px -5px 0 #c68a43,11px 16px 20px rgb(25 12 7 / 58%),inset 0 0 0 2px #61351c; animation:gate-seal var(--gate-duration) both paused; will-change:transform,opacity; }
+.gate-entry__seal { position:absolute; z-index:8; top:51%; left:50%; display:grid; place-items:center; width:clamp(132px,14vw,208px); aspect-ratio:.7; padding:clamp(.8rem,1.4vw,1.25rem); transform:translate3d(-50%,-50%,0); border:clamp(6px,.65vw,10px) ridge var(--bronze); background:linear-gradient(135deg,#341b13,#100807 62%,#2a160f); box-shadow:-6px -5px 0 #c68a43,11px 16px 20px rgb(25 12 7 / 58%),inset 0 0 0 2px #61351c; animation:gate-seal var(--gate-duration) both paused; will-change:transform,opacity; backface-visibility:hidden; }
 .gate-entry__seal img { display:block; width:100%; height:100%; object-fit:contain; }
 .gate-entry__bracket { position:absolute; top:43%; width:25%; height:13%; background:linear-gradient(#dda64d,#69401f); z-index:-1; }.gate-entry__bracket--left { right:100%; clip-path:polygon(0 40%,100% 0,100% 100%,0 60%); }.gate-entry__bracket--right { left:100%; clip-path:polygon(0 0,100% 40%,100% 60%,0 100%); }
 .gate-entry__stud { position:absolute; width:7px; aspect-ratio:1; border-radius:50%; background:radial-gradient(circle at 30% 25%,#f3d083,#70401d 70%); }.gate-entry__stud--nw{top:3%;left:5%}.gate-entry__stud--ne{top:3%;right:5%}.gate-entry__stud--sw{bottom:3%;left:5%}.gate-entry__stud--se{bottom:3%;right:5%}
 
-@keyframes gate-door-left { 0%,18%{transform:translate3d(0,0,0)} 25%{transform:translate3d(-1.5%,0,0)} 62%,100%{transform:translate3d(-104%,0,0)} }
-@keyframes gate-door-right { 0%,18%{transform:translate3d(0,0,0) scaleX(-1)} 25%{transform:translate3d(1.5%,0,0) scaleX(-1)} 62%,100%{transform:translate3d(104%,0,0) scaleX(-1)} }
-@keyframes gate-light { 0%,15%{transform:scaleX(.05);opacity:0} 25%{transform:scaleX(.18);opacity:.5} 56%{transform:scaleX(4);opacity:.62} 80%,100%{transform:scaleX(9);opacity:0} }
-@keyframes gate-seal { 0%,15%{transform:translate3d(-50%,-50%,0) scale(1);opacity:1} 21%{transform:translate3d(-50%,-50%,0) scale(1.025);opacity:1} 38%{transform:translate3d(-50%,-50%,0) scale(.96);opacity:.72} 52%,100%{transform:translate3d(-50%,-50%,0) scale(.92);opacity:0} }
+@keyframes gate-door-slide-left { 0%,12%{transform:translate3d(0,0,0)} 76%,100%{transform:translate3d(-100%,0,0)} }
+@keyframes gate-door-slide-right { 0%,12%{transform:translate3d(0,0,0)} 76%,100%{transform:translate3d(100%,0,0)} }
+@keyframes gate-light { 0%,16%{transform:scaleX(.04);opacity:0} 56%{transform:scaleX(3.6);opacity:.66} 100%{transform:scaleX(6.2);opacity:0} }
+@keyframes gate-portal-reveal { 0%,16%{opacity:.96} 68%{opacity:.38} 100%{opacity:.1} }
+@keyframes gate-seal { 0%,14%{transform:translate3d(-50%,-50%,0) scale(1);opacity:1} 64%{transform:translate3d(-50%,-50%,0) scale(.94);opacity:.16} 100%{transform:translate3d(-50%,-50%,0) scale(.92);opacity:0} }
 @keyframes gate-camera {
-  0%, 66% { transform: translate3d(0,0,0) scale(1); opacity: 1; }
-  82% { transform: translate3d(0,0,0) scale(1.16); opacity: 1; }
-  94% { transform: translate3d(0,0,0) scale(1.62); opacity: .78; }
-  100% { transform: translate3d(0,0,0) scale(1.95); opacity: 0; }
+  0%, 26% { transform: translate3d(0,0,0) scale(1); opacity: 1; }
+  72% { transform: translate3d(0,0,0) scale(1.035); opacity: 1; }
+  100% { transform: translate3d(0,0,0) scale(1.11); opacity: 0; }
 }
 
 @media (max-width:800px) {
   .gate-entry { --door-half-width: 36vw; }
-  .gate-entry__portal { width:72vw; height:76vh; }
+  .gate-entry__portal { width:76vw; height:78vh; }
   .gate-entry__door { width:36vw; height:65vh; }
   .gate-entry__pier { width:clamp(74px,19vw,124px); height:69%; }
   .gate-entry__leaf--left .gate-entry__pier { right:36vw; }.gate-entry__leaf--right .gate-entry__pier { left:36vw; }
@@ -157,7 +220,7 @@
 @media (max-width:420px) {
   .gate-entry { --door-half-width: 39vw; }
   .gate-entry__entablature { height:72px; }.gate-entry__entablature span { letter-spacing:.18em; font-size:.55rem; }
-  .gate-entry__portal { width:78vw; height:72vh; }.gate-entry__door { width:39vw; height:60vh; }
+  .gate-entry__portal { width:80vw; height:72vh; }.gate-entry__door { width:39vw; height:60vh; }
   .gate-entry__pier { width:72px; height:65%; }.gate-entry__leaf--left .gate-entry__pier { right:39vw; }.gate-entry__leaf--right .gate-entry__pier { left:39vw; }
   .gate-entry__arch { width:105vw; height:62vw; bottom:56vh; }
   .gate-entry__standard { top:32%; height:27%; }.gate-entry__seal { top:53%; }

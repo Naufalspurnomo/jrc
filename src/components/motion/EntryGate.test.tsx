@@ -46,14 +46,22 @@ describe('EntryGate', () => {
     vi.useRealTimers();
   });
 
-  it('keeps architecture static and limits animation to compositor-safe properties', () => {
+  it('slides the doors behind the wall and pier using compositor-safe properties', () => {
     const css = readFileSync('src/components/motion/EntryGate.css', 'utf8');
 
     expect(css).not.toMatch(/filter:\s*drop-shadow/);
     expect(css).not.toMatch(/repeating-conic-gradient/);
     expect(css.match(/\.gate-entry__leaf \{([^}]*)\}/)?.[1]).not.toContain('animation');
     expect(css.match(/\.gate-entry__arch-half \{([^}]*)\}/)?.[1]).not.toContain('animation');
-    expect(css).toMatch(/\.gate-entry__leaf--left \.gate-entry__door[^}]*animation-name:\s*gate-door-left/);
+    expect(css).toMatch(/\.gate-entry__leaf \{[^}]*overflow:\s*hidden/);
+    expect(css).toMatch(/\.gate-entry__wall \{[^}]*z-index:\s*3/);
+    expect(css).toMatch(/\.gate-entry__door \{[^}]*z-index:\s*1/);
+    expect(css).toMatch(/\.gate-entry__pier \{[^}]*z-index:\s*4/);
+    expect(css).toMatch(/\.gate-entry__leaf--left \.gate-entry__door[^}]*animation-name:\s*gate-door-slide-left/);
+    expect(css).toContain('@keyframes gate-door-slide-left');
+    expect(css).toContain('translate3d(-100%,0,0)');
+    expect(css).toContain('@keyframes gate-door-slide-right');
+    expect(css).toContain('translate3d(100%,0,0)');
     expect(css).toMatch(/@keyframes gate-camera/);
     expect(css).toMatch(/\.gate-entry__leaf--left \.gate-entry__wall[^}]*right:\s*var\(--door-half-width\)/);
 

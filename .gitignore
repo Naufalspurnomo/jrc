@@ -3,5 +3,6 @@ dist/
 playwright-report/
 test-results/
 .vite/
+.pnpm-store/
 coverage/
 *.log

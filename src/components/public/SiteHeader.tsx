@@ -10,6 +10,7 @@ const primaryNavigation = [
 
 export function SiteHeader() {
   const [isOpen, setIsOpen] = useState(false);
+  const [isCondensed, setIsCondensed] = useState(false);
   const toggleRef = useRef<HTMLButtonElement>(null);
   const navRef = useRef<HTMLElement>(null);
   const [activeSection, setActiveSection] = useState('');
@@ -62,6 +63,25 @@ export function SiteHeader() {
   }, [isOpen]);
 
   useEffect(() => {
+    let frame = 0;
+    const syncHeaderState = () => {
+      frame = 0;
+      setIsCondensed(window.scrollY > 28);
+    };
+    const onScroll = () => {
+      if (frame) return;
+      frame = window.requestAnimationFrame(syncHeaderState);
+    };
+
+    syncHeaderState();
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => {
+      window.removeEventListener('scroll', onScroll);
+      window.cancelAnimationFrame(frame);
+    };
+  }, []);
+
+  useEffect(() => {
     const sections = primaryNavigation
       .map((item) => document.getElementById(item.href.split('#')[1]))
       .filter((element): element is HTMLElement => Boolean(element));
@@ -82,17 +102,21 @@ export function SiteHeader() {
   }, []);
 
   return (
-    <header className="site-header" data-menu-open={isOpen ? 'true' : 'false'}>
+    <header
+      className="site-header"
+      data-menu-open={isOpen ? 'true' : 'false'}
+      data-scrolled={isCondensed ? 'true' : 'false'}
+    >
       <div className="site-header__inner">
         <Link className="site-header__crest" to="/" aria-label="JRC 14 — Beranda">
           <img
             className="site-header__logo"
-            src="/assets/brand/jrc14-emblem-transparent-128.webp"
-            srcSet="/assets/brand/jrc14-emblem-transparent-128.webp 128w, /assets/brand/jrc14-emblem-transparent-256.webp 256w"
-            sizes="(max-width: 48rem) 60px, 64px"
+            src="/assets/brand/jrc14-logo-transparent-128.webp"
+            srcSet="/assets/brand/jrc14-logo-transparent-128.webp 128w, /assets/brand/jrc14-logo-transparent-256.webp 256w"
+            sizes="(max-width: 64rem) 36px, 44px"
             alt=""
             width="128"
-            height="183"
+            height="221"
             decoding="async"
           />
         </Link>

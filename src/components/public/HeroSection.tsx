@@ -11,9 +11,8 @@ export function HeroSection() {
           <source srcSet="/assets/hero-roman/colosseum-engraving.avif" type="image/avif" />
           <img src="/assets/hero-roman/colosseum-engraving.webp" width="1600" height="1045" alt="" />
         </picture>
-        <picture className="hero-section__engraving hero-section__engraving--arch">
-          <source srcSet="/assets/hero-roman/triumphal-arch.avif" type="image/avif" />
-          <img src="/assets/hero-roman/triumphal-arch.webp" width="871" height="1500" alt="" />
+        <picture className="hero-section__engraving hero-section__engraving--arch-left">
+          <img src="/assets/hero-roman/roman-triumphal-arch.jpg" width="1310" height="930" alt="" />
         </picture>
       </div>
       <div className="hero-section__shade" aria-hidden="true" />

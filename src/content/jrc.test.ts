@@ -22,9 +22,10 @@ describe('JRC XIV public content', () => {
     }
   });
 
-  it('does not fabricate dates that have not been officially confirmed', () => {
-    expect(eventFacts.registration).toBe('Akan diumumkan');
+  it('exposes the confirmed registration deadline while keeping other dates pending', () => {
+    expect(eventFacts.registration).toBe('15 September–15 Oktober 2026');
     expect(eventFacts.eventDate).toBe('Akan diumumkan');
-    expect(eventSchedule.every((item) => item.date === 'Akan diumumkan')).toBe(true);
+    expect(eventSchedule[0]?.date).toBe(eventFacts.registration);
+    expect(eventSchedule.slice(1).every((item) => item.date === 'Akan diumumkan')).toBe(true);
   });
 });

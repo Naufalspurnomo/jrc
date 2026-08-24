@@ -9,7 +9,7 @@ interface EntryGateProps {
 }
 
 export function EntryGate({
-  duration = 2300,
+  duration = 2400,
   reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches,
   onComplete,
 }: EntryGateProps) {
@@ -40,7 +40,7 @@ export function EntryGate({
         activationTimer = window.setTimeout(() => {
           setActive(true);
           completionTimer = window.setTimeout(complete, duration);
-        }, 120);
+          }, 50);
       });
     });
 
@@ -76,7 +76,10 @@ export function EntryGate({
       style={{ '--gate-duration': `${duration}ms` } as React.CSSProperties}
     >
       <div className="gate-entry__ambient" />
-      <div className="gate-entry__portal"><i /></div>
+      <div className="gate-entry__portal">
+        <div className="gate-entry__portal-glow" />
+        <i />
+      </div>
       <div className="gate-entry__light" />
       {half('left')}
       {half('right')}

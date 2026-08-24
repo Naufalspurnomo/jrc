@@ -20,43 +20,30 @@ const getFact = (label: string) => {
 };
 
 describe('EventFacts', () => {
-  it('renders the signal sheet and factual information register', () => {
+  it('renders a clear registration countdown and factual information register', () => {
     render(<EventFacts />);
 
-    expect(
-      screen.getByRole('heading', {
-        name: 'JRC edisi 14. Pendaftaran dan hari pertandingan akan diumumkan.',
-      }),
-    ).toBeInTheDocument();
-    expect(screen.getByText('Java Robot Contest')).toBeInTheDocument();
-    expect(screen.getByText('Informasi penyelenggaraan')).toBeInTheDocument();
-    expect(screen.getByText('PENS · Surabaya')).toBeInTheDocument();
-    expect(screen.getByRole('region', { name: /informasi utama jrc/i })).toHaveClass(
-      'arena-facts__civic-register',
+    expect(screen.getByRole('heading', { name: 'Pendaftaran ditutup dalam' })).toBeInTheDocument();
+    expect(screen.getByText('15 Oktober 2026')).toBeInTheDocument();
+    expect(screen.getByRole('timer')).toHaveAttribute('data-complete', 'false');
+    expect(screen.getByRole('timer')).toHaveTextContent(/hari.*jam.*menit.*detik/i);
+    expect(document.querySelector('.event-brief__details')).toHaveAttribute(
+      'aria-label',
+      'Informasi utama JRC',
     );
 
-    expect(getFact('Edisi')).toHaveTextContent('14');
-    expect(getFact('Pendaftaran')).toHaveAttribute('data-state', 'pending');
-    expect(getFact('Pendaftaran')).toHaveTextContent(eventFacts.registration);
-    expect(getFact('Hari pertandingan')).toHaveAttribute('data-state', 'pending');
+    expect(getFact('Periode pendaftaran')).toHaveTextContent(eventFacts.registration);
     expect(getFact('Hari pertandingan')).toHaveTextContent(eventFacts.eventDate);
-    expect(getFact('Lokasi')).toHaveTextContent(eventFacts.venue);
+    expect(getFact('Lokasi')).toHaveTextContent('PENS, Surabaya');
   });
 
-  it('omits the superseded arena ornaments and decorative metadata', () => {
+  it('omits the superseded signal-sheet headline and arena ornaments', () => {
     render(<EventFacts />);
 
-    expect(screen.queryByText('Status arena')).not.toBeInTheDocument();
-    expect(screen.queryByText('Roma · JRC XIV')).not.toBeInTheDocument();
-    expect(screen.queryByText('Imperium Machina')).not.toBeInTheDocument();
-    expect(screen.queryByText('Gerbang dibuka')).not.toBeInTheDocument();
-    expect(screen.queryByText('Satu arena')).not.toBeInTheDocument();
-    expect(screen.queryByText('XIV')).not.toBeInTheDocument();
-    expect(screen.queryByText('01')).not.toBeInTheDocument();
-    expect(screen.queryByText('02')).not.toBeInTheDocument();
-    expect(screen.queryByText('03')).not.toBeInTheDocument();
-    expect(screen.queryByText('04')).not.toBeInTheDocument();
-    expect(screen.queryByText('↓')).not.toBeInTheDocument();
+    expect(screen.queryByText('JRC edisi 14.')).not.toBeInTheDocument();
+    expect(screen.queryByText('Pendaftaran dan hari pertandingan')).not.toBeInTheDocument();
+    expect(document.querySelector('.arena-facts__architecture-axis')).not.toBeInTheDocument();
+    expect(document.querySelector('.arena-facts__signal-line')).not.toBeInTheDocument();
   });
 });
 

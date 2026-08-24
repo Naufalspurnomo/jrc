@@ -14,12 +14,12 @@ The production derivatives in this directory were cropped, recolored, and optimi
 
 ## Triumphal arch engraving
 
-- **Title:** *Reverse of the Arcus Caroli on the Vrijdagmarkt, entry of Ferdinand in Ghent, 1635 (no. 27)*
-- **Creator:** Anonymous
-- **Institution:** Rijksmuseum
-- **Wikimedia Commons:** https://commons.wikimedia.org/wiki/File:Arcus_Caroli_02.jpg
-- **License:** Public domain / CC0 source collection
-- **License URL:** https://creativecommons.org/publicdomain/zero/1.0/
-- **Production files:** `triumphal-arch.avif`, `triumphal-arch.webp`
+- **Title:** *Arch of Septimius Severus, Rome*
+- **Creator:** Unknown; from the 1911 Encyclopaedia Britannica
+- **Wikimedia Commons:** https://commons.wikimedia.org/wiki/File:EB1911_Triumphal_Arch,_Plate,_5.jpg
+- **License:** Public domain
+- **Production file:** `roman-triumphal-arch.jpg`
+
+The previous `triumphal-arch.avif` and `triumphal-arch.webp` placeholders remain in the directory for backwards compatibility but are not used by the public hero.
 
 Source scans remain in `scripts/hero-assets/research/`. Production derivatives are reproducible with `node scripts/process-hero-engravings.mjs`.
