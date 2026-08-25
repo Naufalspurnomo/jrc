@@ -27,4 +27,13 @@ describe('LegacyWorld', () => {
     expect(container.querySelector('.patron-court__bay > span')).not.toBeInTheDocument();
     expect(container.querySelector('.patron-court__bay > i')).not.toBeInTheDocument();
   });
+
+  it('maps every editorial beat to an independent background scene', () => {
+    const { container } = render(<LegacyWorld />);
+
+    expect(container.querySelector('.journey-scene--opening')).toBeInTheDocument();
+    expect(container.querySelectorAll('[class*="journey-scene--chapter-"]')).toHaveLength(4);
+    expect(container.querySelector('.journey-scene--civic')).toBeInTheDocument();
+    expect(container.querySelector('.journey-scene--partners')).toBeInTheDocument();
+  });
 });

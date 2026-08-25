@@ -58,7 +58,7 @@ export function SiteHeader() {
       window.removeEventListener('keydown', closeOnEscape);
       if (previousBodyStyles === null) document.body.removeAttribute('style');
       else document.body.setAttribute('style', previousBodyStyles);
-      window.scrollTo(0, scrollY);
+      if (scrollY > 0) window.scrollTo(0, scrollY);
     };
   }, [isOpen]);
 

@@ -21,8 +21,8 @@ function DesktopMotionLoader() {
     const compactLayout = window.innerWidth < 768 || navigator.maxTouchPoints > 0;
     if (reducedMotion || compactLayout) return undefined;
 
-    const timer = window.setTimeout(() => setIsReady(true), 350);
-    return () => window.clearTimeout(timer);
+    const frame = window.requestAnimationFrame(() => setIsReady(true));
+    return () => window.cancelAnimationFrame(frame);
   }, []);
 
   if (!isReady) return null;

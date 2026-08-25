@@ -72,7 +72,18 @@ export function HeroSection() {
             <strong>XIV</strong>
           </h1>
           <p className="hero-section__declaration">
-            Rise as Engineers, Fight as Gladiators
+            <span className="hero-section__declaration-clause">
+              <span>Rise as</span>
+              {' '}
+              <strong>Engineers</strong>
+            </span>
+            <span className="sr-only">, </span>
+            <i className="hero-section__declaration-divider" aria-hidden="true" />
+            <span className="hero-section__declaration-clause">
+              <span>Fight as</span>
+              {' '}
+              <strong>Gladiators</strong>
+            </span>
           </p>
 
           <div

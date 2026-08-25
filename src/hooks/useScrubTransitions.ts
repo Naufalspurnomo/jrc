@@ -4,536 +4,286 @@ import { useEffect } from 'react';
 
 gsap.registerPlugin(ScrollTrigger);
 
-interface ScrubOptions {
-  disabled?: boolean;
+interface ScrubOptions { disabled?: boolean; }
+type MotionTarget = HTMLElement | HTMLElement[] | NodeListOf<HTMLElement>;
+
+interface SceneMotionOptions {
+  trigger: HTMLElement;
+  targets: MotionTarget;
+  from?: gsap.TweenVars;
+  settle?: gsap.TweenVars;
+  leave?: gsap.TweenVars;
+  start?: string;
+  end?: string;
+  scrub?: number;
+  stagger?: number;
+  enterDuration?: number;
+  leaveAt?: number;
+}
+
+const managedElements = new Set<HTMLElement>();
+const resolveTargets = (targets: MotionTarget) => gsap.utils.toArray<HTMLElement>(targets);
+
+function setMotionBudget(targets: HTMLElement[], active: boolean) {
+  targets.forEach((target) => {
+    managedElements.add(target);
+    target.dataset.motionManaged = '';
+    target.style.willChange = active ? 'transform, opacity' : 'auto';
+  });
+}
+
+/** Reversible enter → hold → exit scene. Up-scroll is the exact inverse. */
+function createSceneMotion({
+  trigger,
+  targets,
+  from = { y: 42, opacity: 0.18 },
+  settle = { y: 0, opacity: 1 },
+  leave = { y: -24, opacity: 0.55 },
+  start = 'top 92%',
+  end = 'bottom 8%',
+  scrub = 0.72,
+  stagger = 0.045,
+  enterDuration = 0.25,
+  leaveAt = 0.78,
+}: SceneMotionOptions) {
+  const elements = resolveTargets(targets);
+  if (!elements.length) return null;
+
+  const timeline = gsap.timeline({
+    defaults: { ease: 'none' },
+    scrollTrigger: {
+      trigger,
+      start,
+      end,
+      scrub,
+      invalidateOnRefresh: true,
+      onToggle: (self) => setMotionBudget(elements, self.isActive),
+    },
+  });
+
+  timeline.fromTo(elements, from, {
+    ...settle,
+    duration: enterDuration,
+    stagger,
+    immediateRender: false,
+  }, 0);
+  timeline.to(elements, {
+    ...leave,
+    duration: 1 - leaveAt,
+    stagger: stagger ? stagger * 0.45 : 0,
+  }, leaveAt);
+  return timeline;
+}
+
+function createParallax(
+  trigger: HTMLElement,
+  targets: MotionTarget,
+  from: gsap.TweenVars,
+  to: gsap.TweenVars,
+  start = 'top bottom',
+  end = 'bottom top',
+  scrub = 1.15,
+) {
+  const elements = resolveTargets(targets);
+  if (!elements.length) return null;
+  return gsap.fromTo(elements, from, {
+    ...to,
+    ease: 'none',
+    immediateRender: false,
+    scrollTrigger: {
+      trigger,
+      start,
+      end,
+      scrub,
+      invalidateOnRefresh: true,
+      onToggle: (self) => setMotionBudget(elements, self.isActive),
+    },
+  });
 }
 
 /**
- * Imperium Machina — modern scrub transitions.
- * Rome × Robotic: clip-reveal, depth parallax, HUD line draw, scale/blur deploy.
- * Desktop only. GPU: transform / opacity / clipPath. Scrub tied to scroll.
+ * Imperium Machina — ceremonial momentum.
+ * One desktop choreography, reversible scrub, temporary compositor promotion,
+ * and no competing one-shot reveal systems.
  */
 export function useScrubTransitions({ disabled = false }: ScrubOptions = {}) {
   useEffect(() => {
     if (disabled) return undefined;
     const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    const isMobile = window.innerWidth < 768 || navigator.maxTouchPoints > 0;
-    if (reducedMotion || isMobile) return undefined;
+    const compactPointer = window.matchMedia('(max-width: 64rem), (hover: none), (pointer: coarse)').matches;
+    if (reducedMotion || compactPointer) return undefined;
 
-    const triggers: ScrollTrigger[] = [];
-    const tweens: gsap.core.Tween[] = [];
-    const timelines: gsap.core.Timeline[] = [];
+    const root = document.documentElement;
+    root.dataset.motionSystem = 'ceremonial';
 
-    const track = (t: gsap.core.Tween | gsap.core.Timeline) => {
-      const st = (t as unknown as { scrollTrigger?: ScrollTrigger }).scrollTrigger;
-      if (st) triggers.push(st);
-      if ((t as unknown as { then?: unknown }).then === undefined && 'duration' in (t as object)) {
-        tweens.push(t as gsap.core.Tween);
-      } else {
-        timelines.push(t as gsap.core.Timeline);
-      }
-    };
+    const context = gsap.context(() => {
+      // Hero: foreground withdraws while the architectural layers drift deeper.
+      const hero = document.querySelector<HTMLElement>('.hero-section');
+      const heroContent = hero?.querySelector<HTMLElement>('.hero-section__content');
+      const heroVisual = hero?.querySelector<HTMLElement>('.hero-section__visual');
+      const heroShade = hero?.querySelector<HTMLElement>('.hero-section__shade');
+      const heroEngravings = hero?.querySelectorAll<HTMLElement>('.hero-section__engraving');
+      if (hero && heroContent) createParallax(hero, heroContent, { y: 0, scale: 1, opacity: 1 }, { y: -84, scale: 0.975, opacity: 0.48 }, 'top top', 'bottom top', 0.85);
+      if (hero && heroVisual) createParallax(hero, heroVisual, { yPercent: 0, scale: 1 }, { yPercent: 8, scale: 1.055 }, 'top top', 'bottom top', 1.15);
+      if (hero && heroShade) createParallax(hero, heroShade, { opacity: 0.82 }, { opacity: 1 }, 'top top', 'bottom top', 0.8);
+      if (hero && heroEngravings?.length) createParallax(hero, heroEngravings, { yPercent: 0, scale: 1 }, { yPercent: 13, scale: 1.025 }, 'top top', 'bottom top', 1.35);
 
-    // ── HERO — depth deploy (parallax + scale + clip) ──
-    const hero = document.querySelector<HTMLElement>('.hero-section');
-    const heroContent = document.querySelector<HTMLElement>('.hero-section__content');
-    const heroVisual = document.querySelector<HTMLElement>('.hero-section__visual');
-    const heroTitle = document.querySelector<HTMLElement>('.hero-section__title-lockup h1');
-    const heroTheme = document.querySelector<HTMLElement>('.hero-section__theme');
-    const heroShade = document.querySelector<HTMLElement>('.hero-section__shade');
-
-    if (hero && heroContent) {
-      // Content lifts & fades with subtle scale — like HUD retracting
-      track(
-        gsap.fromTo(
-          heroContent,
-          { y: 0, scale: 1, opacity: 1, filter: 'blur(0px)' },
-          {
-            y: -90,
-            scale: 0.96,
-            opacity: 0.65,
-            filter: 'blur(3px)',
-            ease: 'none',
-            scrollTrigger: { trigger: hero, start: 'top top', end: 'bottom top', scrub: 1.1 },
-          },
-        ),
-      );
-    }
-    if (hero && heroVisual) {
-      track(
-        gsap.fromTo(
-          heroVisual,
-          { yPercent: 0, scale: 1 },
-          {
-            yPercent: 10,
-            scale: 1.06,
-            ease: 'none',
-            scrollTrigger: { trigger: hero, start: 'top top', end: 'bottom top', scrub: 1.4 },
-          },
-        ),
-      );
-    }
-    if (heroShade && hero) {
-      track(
-        gsap.fromTo(
-          heroShade,
-          { opacity: 1 },
-          {
-            opacity: 0.35,
-            ease: 'none',
-            scrollTrigger: { trigger: hero, start: 'top top', end: 'bottom 20%', scrub: 1 },
-          },
-        ),
-      );
-    }
-    if (heroTheme && hero) {
-      gsap.set(heroTheme, { clipPath: 'inset(0 100% 0 0)' });
-      track(
-        gsap.to(heroTheme, {
-          clipPath: 'inset(0 0% 0 0)',
-          ease: 'none',
-          scrollTrigger: { trigger: hero, start: 'top 92%', end: 'top 62%', scrub: 1 },
-        }),
-      );
-    }
-    if (heroTitle && hero) {
-      gsap.set(heroTitle, { y: 28, opacity: 0, clipPath: 'inset(0 0 100% 0)' });
-      track(
-        gsap.to(heroTitle, {
-          y: 0,
-          opacity: 1,
-          clipPath: 'inset(0 0 0% 0)',
-          ease: 'none',
-          scrollTrigger: { trigger: hero, start: 'top 88%', end: 'top 42%', scrub: 1.1 },
-        }),
-      );
-    }
-
-    // ── EVENT BRIEF — registration countdown arrives in layers. ──
-    const eventBrief = document.querySelector<HTMLElement>('.event-brief');
-    if (eventBrief) {
-      const kicker = eventBrief.querySelector<HTMLElement>('.event-brief__kicker');
-      const title = eventBrief.querySelector<HTMLElement>('.event-brief__intro h2');
-      const deadline = eventBrief.querySelector<HTMLElement>('.event-brief__deadline');
-      const countdown = eventBrief.querySelector<HTMLElement>('.event-brief__countdown');
-      const facts = eventBrief.querySelectorAll<HTMLElement>('.event-brief__fact');
-
-      if (kicker) {
-        gsap.set(kicker, { y: 15, opacity: 0, letterSpacing: '0.26em' });
-        track(
-          gsap.to(kicker, {
-            y: 0,
-            opacity: 1,
-            letterSpacing: '0.16em',
-            ease: 'none',
-            scrollTrigger: { trigger: eventBrief, start: 'top 84%', end: 'top 56%', scrub: 1 },
-          }),
-        );
-      }
-      if (title) {
-        gsap.set(title, { y: 36, opacity: 0, clipPath: 'inset(0 0 100% 0)' });
-        track(
-          gsap.to(title, {
-            y: 0,
-            opacity: 1,
-            clipPath: 'inset(0 0 0% 0)',
-            ease: 'none',
-            scrollTrigger: { trigger: eventBrief, start: 'top 80%', end: 'top 38%', scrub: 1.1 },
-          }),
-        );
-      }
-      if (deadline) {
-        gsap.set(deadline, { y: 18, opacity: 0 });
-        track(
-          gsap.to(deadline, {
-            y: 0,
-            opacity: 1,
-            ease: 'none',
-            scrollTrigger: { trigger: eventBrief, start: 'top 70%', end: 'top 38%', scrub: 1 },
-          }),
-        );
-      }
-      if (countdown) {
-        gsap.set(countdown, { y: 42, scale: 0.97, opacity: 0, clipPath: 'inset(8% 6% 8% 6%)' });
-        track(
-          gsap.to(countdown, {
-            y: 0,
-            scale: 1,
-            opacity: 1,
-            clipPath: 'inset(0% 0% 0% 0%)',
-            ease: 'none',
-            scrollTrigger: { trigger: eventBrief, start: 'top 78%', end: 'top 26%', scrub: 1.15 },
-          }),
-        );
-      }
-      facts.forEach((fact) => {
-        gsap.set(fact, { y: 22, opacity: 0, clipPath: 'inset(0 0 100% 0)' });
-        track(
-          gsap.to(fact, {
-            y: 0,
-            opacity: 1,
-            clipPath: 'inset(0 0 0% 0)',
-            ease: 'none',
-            scrollTrigger: { trigger: fact, start: 'top 91%', end: 'top 60%', scrub: 1 },
-          }),
-        );
+      // Event brief: editorial intro, followed by the three date/location markers.
+      const eventBrief = document.querySelector<HTMLElement>('.event-brief');
+      const eventIntro = eventBrief?.querySelector<HTMLElement>('.event-brief__intro');
+      const eventFacts = eventBrief?.querySelectorAll<HTMLElement>('.event-brief__fact');
+      const eventGlow = eventBrief?.querySelector<HTMLElement>('.event-brief__glow');
+      if (eventBrief && eventIntro) createSceneMotion({
+        trigger: eventBrief, targets: eventIntro,
+        from: { x: -42, y: 20, opacity: 0.2 }, settle: { x: 0, y: 0, opacity: 1 },
+        leave: { x: 22, y: -20, opacity: 0.58 }, start: 'top 90%', end: 'bottom 12%',
       });
-    }
-
-    // ── SHOWCASE — character stage mech deploy (3D tilt + scan) ──
-    const showcase = document.querySelector<HTMLElement>('.showcase-hero');
-    const charSelector = document.querySelector<HTMLElement>('.character-selector');
-    const charStage = document.querySelector<HTMLElement>('.character-selector__stage');
-    const charPortal = document.querySelector<HTMLElement>('.character-selector__portal');
-    const charName = document.querySelector<HTMLElement>('.character-selector__name');
-    const charFooter = document.querySelector<HTMLElement>('.character-selector__footer');
-    const charEyebrow = document.querySelector<HTMLElement>('.character-selector__eyebrow');
-
-    if (showcase) {
-      // Atmospheric bg parallax — robotic depth
-      track(
-        gsap.fromTo(
-          showcase,
-          { backgroundPositionY: '54%' },
-          {
-            backgroundPositionY: '42%',
-            ease: 'none',
-            scrollTrigger: { trigger: showcase, start: 'top bottom', end: 'bottom top', scrub: 1.6 },
-          },
-        ),
-      );
-      if (charEyebrow) {
-        gsap.set(charEyebrow, { y: 18, opacity: 0, letterSpacing: '0.28em', filter: 'blur(4px)' });
-        track(
-          gsap.to(charEyebrow, {
-            y: 0,
-            opacity: 1,
-            letterSpacing: '0.18em',
-            filter: 'blur(0px)',
-            ease: 'none',
-            scrollTrigger: { trigger: showcase, start: 'top 86%', end: 'top 56%', scrub: 1 },
-          }),
-        );
-      }
-      if (charStage || charPortal) {
-        const target = charStage ?? charPortal ?? charSelector;
-        if (target) {
-          gsap.set(target, {
-            y: 48,
-            scale: 0.92,
-            rotateX: 8,
-            opacity: 0,
-            clipPath: 'inset(12% 8% 12% 8% round 1.25rem)',
-          } as unknown as object);
-          track(
-            gsap.to(target, {
-              y: 0,
-              scale: 1,
-              rotateX: 0,
-              opacity: 1,
-              clipPath: 'inset(0% 0% 0% 0% round 1.25rem)',
-              ease: 'none',
-              scrollTrigger: { trigger: showcase, start: 'top 78%', end: 'top 22%', scrub: 1.3 },
-            }),
-          );
-        }
-      }
-      if (charSelector && charStage) {
-        // Portal light sweep — scan line tied to scroll
-        const sweep = showcase.querySelector<HTMLElement>('.character-selector__light-sweep');
-        if (sweep) {
-          track(
-            gsap.fromTo(
-              sweep,
-              { xPercent: -120, opacity: 0 },
-              {
-                xPercent: 420,
-                opacity: 0.9,
-                ease: 'none',
-                scrollTrigger: { trigger: showcase, start: 'top 72%', end: 'top 18%', scrub: 1.1 },
-              },
-            ),
-          );
-        }
-      }
-      if (charName) {
-        gsap.set(charName, { y: 32, opacity: 0, clipPath: 'inset(0 0 100% 0)', scale: 0.97 });
-        track(
-          gsap.to(charName, {
-            y: 0,
-            opacity: 1,
-            clipPath: 'inset(0 0 0% 0)',
-            scale: 1,
-            ease: 'none',
-            scrollTrigger: { trigger: showcase, start: 'top 52%', end: 'top 16%', scrub: 1 },
-          }),
-        );
-      }
-      if (charFooter) {
-        gsap.set(charFooter, { y: 22, opacity: 0 });
-        track(
-          gsap.to(charFooter, {
-            y: 0,
-            opacity: 1,
-            ease: 'none',
-            scrollTrigger: { trigger: showcase, start: 'top 38%', end: 'top 10%', scrub: 1 },
-          }),
-        );
-      }
-    }
-
-    // ── SCHEDULE — Roman road + milestone deploy with glow ──
-    const schedule = document.querySelector<HTMLElement>('#jadwal');
-    const viaTrack = document.getElementById('schedule-via-track') as unknown as HTMLElement | null;
-    const milestones = document.querySelectorAll<HTMLElement>('#jadwal .schedule-via__milestones li');
-    const schedPath = document.querySelector<HTMLElement>('.schedule-via__path');
-
-    if (schedPath && schedule) {
-      track(
-        gsap.fromTo(
-          schedPath,
-          { opacity: 0.45 },
-          { opacity: 1, ease: 'none', scrollTrigger: { trigger: schedule, start: 'top 78%', end: 'bottom 55%', scrub: 1 } },
-        ),
-      );
-    }
-    if (schedule && viaTrack) {
-      const len = (viaTrack as unknown as { getTotalLength?: () => number }).getTotalLength?.() ?? 0;
-      if (len > 0) gsap.set(viaTrack, { strokeDasharray: len, strokeDashoffset: len });
-      else gsap.set(viaTrack, { strokeDashoffset: 1 });
-      track(
-        gsap.to(viaTrack, {
-          strokeDashoffset: 0,
-          ease: 'none',
-          scrollTrigger: { trigger: schedule, start: 'top 74%', end: 'bottom 52%', scrub: 1 },
-        }),
-      );
-    }
-    if (milestones.length && schedule) {
-      milestones.forEach((item) => {
-        const node = item.querySelector<HTMLElement>('.schedule-via__node');
-        const card = item.querySelector<HTMLElement>('.schedule-via__card');
-        gsap.set(item, { opacity: 1 });
-        if (card) gsap.set(card, { y: 28, opacity: 0, clipPath: 'inset(0 100% 0 0)', scale: 0.98 });
-        if (node) gsap.set(node, { scale: 0.4, opacity: 0, filter: 'blur(6px)' });
-
-        if (card) {
-          track(
-            gsap.to(card, {
-              y: 0,
-              opacity: 1,
-              clipPath: 'inset(0 0% 0 0)',
-              scale: 1,
-              ease: 'none',
-              scrollTrigger: { trigger: item, start: 'top 88%', end: 'top 54%', scrub: 1 },
-            }),
-          );
-        }
-        if (node) {
-          track(
-            gsap.to(node, {
-              scale: 1,
-              opacity: 1,
-              filter: 'blur(0px)',
-              ease: 'none',
-              scrollTrigger: { trigger: item, start: 'top 88%', end: 'top 60%', scrub: 1 },
-            }),
-          );
-        }
+      if (eventBrief && eventFacts?.length) createSceneMotion({
+        trigger: eventBrief, targets: eventFacts,
+        from: { y: 48, opacity: 0.12, scale: 0.965 }, settle: { y: 0, opacity: 1, scale: 1 },
+        leave: { y: -20, opacity: 0.62, scale: 0.99 }, stagger: 0.065, leaveAt: 0.76,
       });
-    }
+      if (eventBrief && eventGlow) createParallax(eventBrief, eventGlow, { yPercent: 12, scale: 0.96 }, { yPercent: -14, scale: 1.08 });
 
-    // ── HISTORY — editorial scroll unfold (alternating clip) ──
-    const history = document.querySelector<HTMLElement>('#sejarah');
-    const histHeader = document.querySelector<HTMLElement>('.history-section__header');
-    const histEntries = document.querySelectorAll<HTMLElement>('.history-editorial__entry');
-    const histFestival = document.querySelector<HTMLElement>('.history-festival');
-
-    if (histHeader && history) {
-      gsap.set(histHeader, { y: 28, opacity: 0, clipPath: 'inset(0 0 100% 0)' });
-      track(
-        gsap.to(histHeader, {
-          y: 0,
-          opacity: 1,
-          clipPath: 'inset(0 0 0% 0)',
-          ease: 'none',
-          scrollTrigger: { trigger: history, start: 'top 84%', end: 'top 48%', scrub: 1.1 },
-        }),
-      );
-    }
-    histEntries.forEach((entry) => {
-      const isFlip = entry.classList.contains('history-editorial__entry--flip');
-      const body = entry.querySelector<HTMLElement>('.history-editorial__body');
-      const numeral = entry.querySelector<HTMLElement>('.history-editorial__numeral');
-      gsap.set(entry, { opacity: 1 });
-      gsap.set(entry, { clipPath: isFlip ? 'inset(0 0 0 100%)' : 'inset(0 100% 0 0)' , y: 18, scale: 0.98 });
-      if (numeral) gsap.set(numeral, { y: 24, opacity: 0, scale: 0.9 });
-      if (body) gsap.set(body, { y: 18, opacity: 0 });
-      track(
-        gsap.to(entry, {
-          clipPath: 'inset(0 0% 0 0%)',
-          y: 0,
-          scale: 1,
-          ease: 'none',
-          scrollTrigger: { trigger: entry, start: 'top 90%', end: 'top 56%', scrub: 1.2 },
-        }),
-      );
-      if (body) {
-        track(
-          gsap.to(body, {
-            y: 0,
-            opacity: 1,
-            ease: 'none',
-            scrollTrigger: { trigger: entry, start: 'top 88%', end: 'top 60%', scrub: 1 },
-          }),
-        );
-      }
-      if (numeral) {
-        track(
-          gsap.to(numeral, {
-            y: 0,
-            opacity: 1,
-            scale: 1,
-            ease: 'none',
-            scrollTrigger: { trigger: entry, start: 'top 88%', end: 'top 62%', scrub: 1 },
-          }),
-        );
-      }
-    });
-    if (histFestival) {
-      gsap.set(histFestival, { y: 36, scale: 0.96, opacity: 0, clipPath: 'inset(8% 4% 8% 4% round 1.2rem)' } as unknown as object);
-      track(
-        gsap.to(histFestival, {
-          y: 0,
-          scale: 1,
-          opacity: 1,
-          clipPath: 'inset(0% 0% 0% 0% round 1.2rem)',
-          ease: 'none',
-          scrollTrigger: { trigger: histFestival, start: 'top 90%', end: 'top 52%', scrub: 1.2 },
-        }),
-      );
-    }
-
-    // ── PARTNERS — tier grid mech deploy ──
-    const partners = document.querySelector<HTMLElement>('.partner-section');
-    const pHeader = document.querySelector<HTMLElement>('.partner-section__header');
-    const pTiers = document.querySelectorAll<HTMLElement>('.partner-tier, .partner-section__tiers > div');
-    const pAnnouncement = document.querySelector<HTMLElement>('.partner-announcement');
-
-    if (pHeader && partners) {
-      gsap.set(pHeader, { y: 26, opacity: 0, clipPath: 'inset(0 0 100% 0)' });
-      track(gsap.to(pHeader, { y: 0, opacity: 1, clipPath: 'inset(0 0 0% 0)', ease: 'none', scrollTrigger: { trigger: partners, start: 'top 84%', end: 'top 50%', scrub: 1.1 } }));
-    }
-    if (pTiers.length && partners) {
-      pTiers.forEach((tier) => {
-        gsap.set(tier, { y: 20, opacity: 0, clipPath: 'inset(0 100% 0 0)', scale: 0.98 });
-        track(gsap.to(tier, { y: 0, opacity: 1, clipPath: 'inset(0 0% 0 0)', scale: 1, ease: 'none', scrollTrigger: { trigger: tier, start: 'top 92%', end: 'top 64%', scrub: 1 } }));
+      // Character showcase: one large reveal plus smaller typographic movement.
+      const showcase = document.querySelector<HTMLElement>('.showcase-hero');
+      const selector = showcase?.querySelector<HTMLElement>('.character-selector');
+      const showcaseCopy = showcase?.querySelectorAll<HTMLElement>('.character-selector__eyebrow, .character-selector__name, .character-selector__footer');
+      const lightSweep = showcase?.querySelector<HTMLElement>('.character-selector__light-sweep');
+      if (showcase && selector) createSceneMotion({
+        trigger: showcase, targets: selector,
+        from: { y: 64, opacity: 0.28, scale: 0.955 }, settle: { y: 0, opacity: 1, scale: 1 },
+        leave: { y: -42, opacity: 0.7, scale: 1.018 }, start: 'top 94%', end: 'bottom 5%',
+        scrub: 0.9, enterDuration: 0.3,
       });
-    }
-    if (pAnnouncement) {
-      gsap.set(pAnnouncement, { y: 22, opacity: 0, scale: 0.97 });
-      track(gsap.to(pAnnouncement, { y: 0, opacity: 1, scale: 1, ease: 'none', scrollTrigger: { trigger: pAnnouncement, start: 'top 92%', end: 'top 66%', scrub: 1 } }));
-    }
+      if (showcase && showcaseCopy?.length) createSceneMotion({
+        trigger: showcase, targets: showcaseCopy,
+        from: { y: 26, opacity: 0 }, settle: { y: 0, opacity: 1 }, leave: { y: -16, opacity: 0.62 },
+        start: 'top 82%', end: 'bottom 12%', stagger: 0.055,
+      });
+      if (showcase && lightSweep) createParallax(showcase, lightSweep, { xPercent: -8, opacity: 0.25 }, { xPercent: 8, opacity: 0.7 });
 
-    // ── PERJALANAN JRC — restrained editorial reveals over the cloud painting. ──
-    const lowerWorld = document.querySelector<HTMLElement>('.lower-world');
-    const journeyScenes = document.querySelectorAll<HTMLElement>(
-      '.history-procession__opening, .history-procession__inscription, .civic-assembly__manifesto, .civic-assembly__pillars, .patron-court__opening, .patron-court__bay, .patron-court__invitation',
-    );
-    if (lowerWorld) {
-      track(
-        gsap.to(lowerWorld, {
-          '--lower-parallax': '-42px',
-          ease: 'none',
-          scrollTrigger: { trigger: lowerWorld, start: 'top bottom', end: 'bottom top', scrub: 1.8 },
-        }),
-      );
-    }
-    journeyScenes.forEach((scene) => {
-      track(gsap.fromTo(
-        scene,
-        { y: 14, opacity: .84 },
-        {
-          y: 0,
-          opacity: 1,
-          duration: .55,
-          ease: 'power2.out',
-          scrollTrigger: { trigger: scene, start: 'top 88%', toggleActions: 'play none none none' },
-        },
-      ));
+      // Schedule: architecture carries depth, the route is drawn by scroll.
+      const schedule = document.querySelector<HTMLElement>('.schedule-section');
+      const arrival = schedule?.querySelector<HTMLElement>('.schedule-arrival');
+      const architecture = arrival?.querySelector<HTMLElement>('.schedule-arrival__architecture');
+      const scheduleHeader = schedule?.querySelector<HTMLElement>('.schedule-section__header');
+      const program = schedule?.querySelector<HTMLElement>('.schedule-program');
+      const scheduleStone = program?.querySelector<HTMLElement>('.schedule-program__stone');
+      const scheduleHeading = program?.querySelector<HTMLElement>('.schedule-program__heading');
+      const routePath = program?.querySelector<SVGPathElement>('#schedule-via-track');
+      const stations = program?.querySelectorAll<HTMLElement>('.schedule-route__stations > li');
+      if (arrival && architecture) createParallax(arrival, architecture, { yPercent: -4, scale: 1.08 }, { yPercent: 5, scale: 1.02 }, 'top bottom', 'bottom top', 1.35);
+      if (arrival && scheduleHeader) createSceneMotion({
+        trigger: arrival, targets: scheduleHeader,
+        from: { y: 54, opacity: 0.12, scale: 0.975 }, settle: { y: 0, opacity: 1, scale: 1 },
+        leave: { y: -32, opacity: 0.5, scale: 0.99 }, start: 'top 88%', end: 'bottom 10%',
+      });
+      if (program && scheduleStone) createParallax(program, scheduleStone, { yPercent: -5, scale: 1.06 }, { yPercent: 5, scale: 1.015 }, 'top bottom', 'bottom top', 1.4);
+      if (program && scheduleHeading) createSceneMotion({ trigger: program, targets: scheduleHeading, start: 'top 90%', end: 'bottom 10%' });
+      if (program && routePath) {
+        gsap.set(routePath, { strokeDasharray: 1, strokeDashoffset: 1 });
+        gsap.to(routePath, {
+          strokeDashoffset: 0, ease: 'none',
+          scrollTrigger: { trigger: program, start: 'top 68%', end: 'bottom 38%', scrub: 0.55, invalidateOnRefresh: true },
+        });
+      }
+      stations?.forEach((station, index) => {
+        const direction = index % 2 === 0 ? -1 : 1;
+        createSceneMotion({
+          trigger: station, targets: station,
+          from: { x: 38 * direction, y: 28, opacity: 0.12 }, settle: { x: 0, y: 0, opacity: 1 },
+          leave: { x: -14 * direction, y: -18, opacity: 0.58 }, start: 'top 91%', end: 'bottom 14%',
+          scrub: 0.58, stagger: 0, enterDuration: 0.33, leaveAt: 0.74,
+        });
+      });
+
+      // Lower world: text moves against stable image crops for low-cost depth.
+      document.querySelectorAll<HTMLElement>('.history-procession .journey-scene').forEach((scene, index) => {
+        const content = scene.querySelector<HTMLElement>('.history-procession__opening, .history-procession__inscription, .civic-assembly__manifesto');
+        if (content) {
+          const horizontal = index % 2 === 0 ? -22 : 22;
+          createSceneMotion({
+            trigger: scene, targets: content,
+            from: { x: horizontal, y: 48, opacity: 0.16, scale: 0.982 }, settle: { x: 0, y: 0, opacity: 1, scale: 1 },
+            leave: { x: -horizontal * 0.45, y: -30, opacity: 0.52, scale: 1.008 },
+            start: 'top 92%', end: 'bottom 8%', scrub: 0.8, enterDuration: 0.28,
+          });
+        }
+        const pillars = scene.querySelectorAll<HTMLElement>('.civic-assembly__pillars > li');
+        if (pillars.length) createSceneMotion({
+          trigger: scene, targets: pillars,
+          from: { y: 38, opacity: 0.12 }, settle: { y: 0, opacity: 1 }, leave: { y: -20, opacity: 0.56 },
+          start: 'top 78%', end: 'bottom 12%', stagger: 0.07, leaveAt: 0.74,
+        });
+      });
+
+      const partners = document.querySelector<HTMLElement>('.journey-scene--partners');
+      const partnerOpening = partners?.querySelector<HTMLElement>('.patron-court__opening');
+      const partnerBays = partners?.querySelectorAll<HTMLElement>('.patron-court__bay');
+      const partnerInvite = partners?.querySelector<HTMLElement>('.patron-court__invitation');
+      if (partners && partnerOpening) createSceneMotion({ trigger: partners, targets: partnerOpening });
+      if (partners && partnerBays?.length) createSceneMotion({
+        trigger: partners, targets: partnerBays,
+        from: { x: -34, opacity: 0.12 }, settle: { x: 0, opacity: 1 }, leave: { x: 18, opacity: 0.54 },
+        start: 'top 78%', end: 'bottom 14%', stagger: 0.065,
+      });
+      if (partners && partnerInvite) createSceneMotion({
+        trigger: partners, targets: partnerInvite,
+        from: { y: 28, opacity: 0 }, settle: { y: 0, opacity: 1 }, leave: { y: -16, opacity: 0.56 },
+        start: 'top 66%', end: 'bottom 10%',
+      });
+
+      const faq = document.querySelector<HTMLElement>('.journey-scene--faq');
+      const faqHeader = faq?.querySelector<HTMLElement>('.faq-section__header');
+      const faqItems = faq?.querySelectorAll<HTMLElement>('.faq-item');
+      if (faq && faqHeader) createSceneMotion({
+        trigger: faq, targets: faqHeader,
+        from: { x: -36, y: 18, opacity: 0.14 }, settle: { x: 0, y: 0, opacity: 1 }, leave: { x: 18, y: -18, opacity: 0.58 },
+      });
+      if (faq && faqItems?.length) createSceneMotion({
+        trigger: faq, targets: faqItems,
+        from: { x: 34, opacity: 0.1 }, settle: { x: 0, opacity: 1 }, leave: { x: -16, opacity: 0.58 },
+        start: 'top 82%', end: 'bottom 10%', stagger: 0.045, leaveAt: 0.75,
+      });
+
+      // Final gate and footer conclude the motion language instead of stopping.
+      const cta = document.querySelector<HTMLElement>('.cta-section');
+      const ctaGate = cta?.querySelector<HTMLElement>('.cta-gate');
+      const ctaInner = cta?.querySelector<HTMLElement>('.cta-section__inner');
+      const ctaEmbers = cta?.querySelectorAll<HTMLElement>('.cta-ember');
+      if (cta && ctaGate) createParallax(cta, ctaGate, { yPercent: 7, scale: 1.06 }, { yPercent: -4, scale: 1.01 }, 'top bottom', 'bottom top', 1.25);
+      if (cta && ctaInner) createSceneMotion({
+        trigger: cta, targets: ctaInner,
+        from: { y: 54, opacity: 0.08, scale: 0.97 }, settle: { y: 0, opacity: 1, scale: 1 },
+        leave: { y: -24, opacity: 0.7, scale: 1.006 }, start: 'top 92%', end: 'bottom 4%', scrub: 0.8, enterDuration: 0.32,
+      });
+      if (cta && ctaEmbers?.length) createParallax(cta, ctaEmbers, { yPercent: 36, opacity: 0.15 }, { yPercent: -34, opacity: 0.7 }, 'top bottom', 'bottom top', 1.5);
+
+      const footer = document.querySelector<HTMLElement>('.footer-section');
+      const footerWatermark = footer?.querySelector<HTMLElement>('.footer-watermark');
+      const footerContent = footer?.querySelectorAll<HTMLElement>('.footer-section__signature, .footer-section__manifesto, .footer-section__nav, .footer-section__legal');
+      if (footer && footerWatermark) createParallax(footer, footerWatermark, { yPercent: 22, opacity: 0.18 }, { yPercent: -8, opacity: 0.52 }, 'top bottom', 'bottom bottom', 1.2);
+      if (footer && footerContent?.length) createSceneMotion({
+        trigger: footer, targets: footerContent,
+        from: { y: 26, opacity: 0.1 }, settle: { y: 0, opacity: 1 }, leave: { y: 0, opacity: 1 },
+        start: 'top 96%', end: 'bottom bottom', stagger: 0.04, enterDuration: 0.48, leaveAt: 0.98,
+      });
     });
 
-    // ── LEGACY WORLD — one archive → forum → inner-court chapter ──
-    const legacy = document.querySelector<HTMLElement>('[data-legacy-world]');
-    if (legacy) {
-      const plate = legacy.querySelector<HTMLElement>('.legacy-world__plate');
-      const standards = legacy.querySelectorAll<HTMLElement>('.legacy-world__standard');
-      const archive = legacy.querySelector<HTMLElement>('.legacy-world__archive-frame');
-      const forum = legacy.querySelector<HTMLElement>('.legacy-world__forum-gate');
-      const columns = legacy.querySelectorAll<HTMLElement>('.legacy-world__columns');
-      const chapter = gsap.timeline({ scrollTrigger: { trigger: legacy, start: 'top 78%', end: 'bottom 35%', scrub: 1.35 } });
-      if (plate) chapter.fromTo(plate, { yPercent: -1 }, { yPercent: 18, ease: 'none' }, 0);
-      chapter.fromTo(legacy, { ['--legacy-dusk' as string]: 0 }, { ['--legacy-dusk' as string]: 1, ease: 'none' }, 0);
-      if (archive) chapter.fromTo(archive, { yPercent: 24, opacity: .35 }, { yPercent: -12, opacity: 1, ease: 'none' }, .08);
-      if (standards.length) chapter.fromTo(standards, { rotate: (i) => i ? -1.2 : 1.2, yPercent: -3 }, { rotate: (i) => i ? .8 : -.8, yPercent: 8, ease: 'none' }, .2);
-      if (forum) chapter.fromTo(forum, { clipPath: 'inset(48% 12% 48% 12%)', scaleX: .88, opacity: .25 }, { clipPath: 'inset(0% 0% 0% 0%)', scaleX: 1, opacity: 1, ease: 'none' }, .38);
-      if (columns.length) chapter.fromTo(columns, { xPercent: (i) => i ? 18 : -18, opacity: .25 }, { xPercent: 0, opacity: .8, ease: 'none' }, .58);
-      track(chapter);
-    }
-
-    // ── FAQ — scan reveal ──
-    const faq = document.querySelector<HTMLElement>('#faq');
-    const faqHeader = document.querySelector<HTMLElement>('.faq-section__header');
-    const faqItems = document.querySelectorAll<HTMLElement>('.faq-item');
-    if (faqHeader && faq) {
-      gsap.set(faqHeader, { y: 26, opacity: 0, clipPath: 'inset(0 0 100% 0)' });
-      track(gsap.to(faqHeader, { y: 0, opacity: 1, clipPath: 'inset(0 0 0% 0)', ease: 'none', scrollTrigger: { trigger: faq, start: 'top 84%', end: 'top 50%', scrub: 1.1 } }));
-    }
-    faqItems.forEach((item) => {
-      gsap.set(item, { y: 16, opacity: 0, clipPath: 'inset(0 100% 0 0)' });
-      track(gsap.to(item, { y: 0, opacity: 1, clipPath: 'inset(0 0% 0 0)', ease: 'none', scrollTrigger: { trigger: item, start: 'top 94%', end: 'top 72%', scrub: 1 } }));
-    });
-
-    // ── CTA — gate arch draw + HUD lift ──
-    const cta = document.querySelector<HTMLElement>('.cta-section');
-    const ctaInner = document.querySelector<HTMLElement>('.cta-section__inner');
-    const ctaGate = document.querySelector<HTMLElement>('.cta-gate');
-    const ctaEdition = document.querySelector<HTMLElement>('.cta-section__edition');
-    const ctaActions = document.querySelector<HTMLElement>('.cta-section__actions');
-    const ctaEmbers = document.querySelectorAll<HTMLElement>('.cta-ember');
-
-    if (cta && ctaInner) {
-      gsap.set(ctaInner, { y: 40, opacity: 0, scale: 0.96, clipPath: 'inset(12% 6% 12% 6% round 1rem)' } as unknown as object);
-      track(gsap.to(ctaInner, { y: 0, opacity: 1, scale: 1, clipPath: 'inset(0% 0% 0% 0% round 1rem)', ease: 'none', scrollTrigger: { trigger: cta, start: 'top 80%', end: 'top 36%', scrub: 1.2 } }));
-    }
-    if (ctaActions && cta) {
-      gsap.set(ctaActions, { y: 18, opacity: 0 });
-      track(gsap.to(ctaActions, { y: 0, opacity: 1, ease: 'none', scrollTrigger: { trigger: cta, start: 'top 48%', end: 'top 22%', scrub: 1 } }));
-    }
-    if (ctaGate && cta) {
-      track(gsap.fromTo(ctaGate, { y: 50, scale: 0.94, opacity: 0.55 }, { y: -18, scale: 1, opacity: 1, ease: 'none', scrollTrigger: { trigger: cta, start: 'top 86%', end: 'bottom 50%', scrub: 1.4 } }));
-    }
-    if (ctaEdition && cta) {
-      track(gsap.fromTo(ctaEdition, { y: 30, opacity: 0.2, scale: 0.92 }, { y: -30, opacity: 0.5, scale: 1, ease: 'none', scrollTrigger: { trigger: cta, start: 'top 82%', end: 'bottom top', scrub: 1.6 } }));
-    }
-    ctaEmbers.forEach((ember, i) => {
-      track(gsap.fromTo(ember, { y: 0, opacity: 0.7 }, { y: -80 - i * 16, opacity: 1, ease: 'none', scrollTrigger: { trigger: cta!, start: 'top 84%', end: 'bottom top', scrub: 1.5 } }));
-    });
-
-    ScrollTrigger.refresh();
+    // Every trigger measures itself when it is created. Sorting preserves the
+    // intended order without a late global refresh that restores scroll to 0.
+    ScrollTrigger.sort();
 
     return () => {
-      triggers.forEach((t) => t.kill());
-      tweens.forEach((t) => t.kill());
-      timelines.forEach((t) => t.kill());
-      const all = Array.from(
-        document.querySelectorAll(
-          '.hero-section__content, .hero-section__visual, .hero-section__shade, .hero-section__theme, .hero-section__title-lockup h1, .event-brief__kicker, .event-brief__intro h2, .event-brief__deadline, .event-brief__countdown, .event-brief__fact, .character-selector__eyebrow, .character-selector__stage, .character-selector__portal, .character-selector__name, .character-selector__footer, .schedule-section__header, .schedule-via__path, .schedule-via__card, .schedule-via__node, .history-section__header, .history-editorial__entry, .history-editorial__body, .history-editorial__numeral, .history-festival, .history-procession__opening, .history-procession__inscription, .civic-assembly__manifesto, .civic-assembly__pillars, .patron-court__opening, .patron-court__bay, .patron-court__invitation, .legacy-world__plate, .legacy-world__standard, .legacy-world__forum-gate, .legacy-world__columns, .partner-section__header, .partner-tier, .partner-announcement, .faq-section__header, .faq-item, .cta-section__inner, .cta-section__actions, .cta-gate, .cta-section__edition',
-        ),
-      ) as Element[];
-      if (all.length) gsap.set(all, { clearProps: 'all' });
-      const trackEl = document.getElementById('schedule-via-track');
-      if (trackEl) gsap.set(trackEl, { clearProps: 'strokeDashoffset,strokeDasharray' });
+      context.revert();
+      managedElements.forEach((element) => {
+        element.style.removeProperty('will-change');
+        delete element.dataset.motionManaged;
+      });
+      managedElements.clear();
+      delete root.dataset.motionSystem;
+      delete root.dataset.scrollDirection;
     };
   }, [disabled]);
 }

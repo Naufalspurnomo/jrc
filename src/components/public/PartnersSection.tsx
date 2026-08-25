@@ -2,7 +2,10 @@ import { partnerTiers, pendingAnnouncement } from '../../content/jrc';
 
 export function PartnersSection() {
   return (
-    <section className="patron-court" aria-labelledby="partner-title">
+    <section
+      className="journey-scene journey-scene--partners patron-court"
+      aria-labelledby="partner-title"
+    >
       <div className="patron-court__inner site-shell page-shell">
         <header className="patron-court__opening">
           <p>Kolaborasi</p>
@@ -22,10 +25,10 @@ export function PartnersSection() {
           ))}
         </div>
 
-        <footer className="patron-court__invitation">
+        <div className="patron-court__invitation">
           <span>Terbuka untuk kolaborasi</span>
           <p>Hubungi panitia JRC XIV untuk menjadi bagian dari arena ini.</p>
-        </footer>
+        </div>
       </div>
     </section>
   );

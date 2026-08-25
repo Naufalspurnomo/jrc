@@ -58,10 +58,10 @@ describe('EntryGate', () => {
     expect(css).toMatch(/\.gate-entry__door \{[^}]*z-index:\s*1/);
     expect(css).toMatch(/\.gate-entry__pier \{[^}]*z-index:\s*4/);
     expect(css).toMatch(/\.gate-entry__leaf--left \.gate-entry__door[^}]*animation-name:\s*gate-door-slide-left/);
-    expect(css).toContain('@keyframes gate-door-slide-left');
-    expect(css).toContain('translate3d(-100%,0,0)');
-    expect(css).toContain('@keyframes gate-door-slide-right');
-    expect(css).toContain('translate3d(100%,0,0)');
+    expect(css).toMatch(/@keyframes gate-door-slide-left[\s\S]*translate3d\(-108%,\s*0,\s*0\)/);
+    expect(css).toMatch(/@keyframes gate-door-slide-right[\s\S]*translate3d\(108%,\s*0,\s*0\)/);
+    expect(css).toContain('@keyframes gate-world-reveal');
+    expect(css).toContain('@keyframes gate-ambient-light');
     expect(css).toMatch(/@keyframes gate-camera/);
     expect(css).toMatch(/\.gate-entry__leaf--left \.gate-entry__wall[^}]*right:\s*var\(--door-half-width\)/);
 

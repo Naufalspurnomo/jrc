@@ -17,6 +17,7 @@ import './styles/schedule-editorial.css';
 import './styles/startup-performance.css';
 import './styles/site-polish.css';
 import './styles/lower-world.css';
+import './styles/scroll-motion.css';
 
 const root = document.getElementById('root');
 

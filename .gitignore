@@ -6,3 +6,4 @@ test-results/
 .pnpm-store/
 coverage/
 *.log
+public/assets/lower-scenes/*-slice.webp

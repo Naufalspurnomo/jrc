@@ -51,9 +51,9 @@ function isStaticMotionEnvironment() {
 const defaultDependencies: CinematicMotionDependencies = {
   createLenis: () =>
     new Lenis({
-      lerp: 0.085,
+      lerp: 0.075,
       smoothWheel: true,
-      wheelMultiplier: 0.88,
+      wheelMultiplier: 0.84,
       touchMultiplier: 1,
     }),
   ticker: gsap.ticker,
@@ -79,11 +79,20 @@ export function createCinematicMotionController({
   let heroVisible = true;
   let destroyed = false;
   let hashFrame = 0;
+  let lastScrollPosition = window.scrollY;
 
   const publishSceneActivity = () => {
     onSceneActivityChange?.(documentVisible && heroVisible);
   };
-  const onScroll = () => dependencies.scrollTrigger.update();
+  const onScroll = () => {
+    const nextScrollPosition = window.scrollY;
+    const delta = nextScrollPosition - lastScrollPosition;
+    if (Math.abs(delta) > 1.5) {
+      document.documentElement.dataset.scrollDirection = delta > 0 ? 'down' : 'up';
+    }
+    lastScrollPosition = nextScrollPosition;
+    dependencies.scrollTrigger.update();
+  };
   const onModalLock = (event: Event) => {
     const locked = (event as CustomEvent<{ locked?: boolean }>).detail?.locked === true;
     if (locked) lenis.stop();
@@ -134,6 +143,7 @@ export function createCinematicMotionController({
       window.removeEventListener(MODAL_LOCK_EVENT, onModalLock);
       window.removeEventListener(ROUTE_SCROLL_EVENT, onRouteScroll);
       lenis.destroy();
+      delete document.documentElement.dataset.scrollDirection;
     },
   };
 }

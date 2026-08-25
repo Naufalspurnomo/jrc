@@ -96,7 +96,9 @@ describe('SiteHeader', () => {
 describe('FAQSection', () => {
   it('renders accordion buttons with aria-expanded', async () => {
     const user = userEvent.setup();
-    render(<FAQSection />);
+    const { container } = render(<FAQSection />);
+
+    expect(container.querySelector('.journey-scene--faq')).toBeInTheDocument();
 
     const buttons = screen.getAllByRole('button', { expanded: false });
     expect(buttons.length).toBeGreaterThanOrEqual(5);

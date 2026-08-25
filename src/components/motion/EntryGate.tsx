@@ -9,7 +9,7 @@ interface EntryGateProps {
 }
 
 export function EntryGate({
-  duration = 2400,
+  duration = 3000,
   reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches,
   onComplete,
 }: EntryGateProps) {
@@ -75,12 +75,19 @@ export function EntryGate({
       aria-hidden="true"
       style={{ '--gate-duration': `${duration}ms` } as React.CSSProperties}
     >
-      <div className="gate-entry__ambient" />
+      <div className="gate-entry__ambient">
+        <i className="gate-entry__ambient-light" />
+      </div>
       <div className="gate-entry__portal">
+        <div className="gate-entry__portal-scene" />
         <div className="gate-entry__portal-glow" />
+        <div className="gate-entry__dust" aria-hidden="true">
+          {Array.from({ length: 9 }, (_, index) => <i key={index} />)}
+        </div>
         <i />
       </div>
       <div className="gate-entry__light" />
+      <div className="gate-entry__threshold"><i /><b /></div>
       {half('left')}
       {half('right')}
       <div className="gate-entry__arch" role="presentation">
@@ -101,8 +108,13 @@ export function EntryGate({
         <i className="gate-entry__stud gate-entry__stud--ne" />
         <i className="gate-entry__stud gate-entry__stud--sw" />
         <i className="gate-entry__stud gate-entry__stud--se" />
-        <img src="/assets/brand/jrc14-logo-transparent-512.webp" alt="" width="256" height="442" />
+        <i className="gate-entry__seal-orbit" />
+        <div className="gate-entry__seal-face">
+          <img src="/assets/brand/jrc14-logo-transparent-512.webp" alt="" width="256" height="442" />
+        </div>
+        <small>Imperium Machina</small>
       </div>
+      <div className="gate-entry__vignette" />
     </div>
   );
 }

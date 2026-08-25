@@ -3,17 +3,22 @@ import { festivalMoments, historyChapters } from '../../content/jrc';
 export function HistorySection() {
   return (
     <section id="sejarah" className="history-procession" aria-labelledby="history-title">
-      <header className="history-procession__opening site-shell page-shell">
-        <p>Perjalanan JRC</p>
-        <h2 id="history-title">Empat belas babak membentuk satu warisan.</h2>
-        <span>
-          Jejak orang-orang yang merakit, gagal, memperbaiki, lalu kembali memasuki arena.
-        </span>
-      </header>
+      <div className="journey-scene journey-scene--opening">
+        <header className="history-procession__opening site-shell page-shell">
+          <p>Perjalanan JRC</p>
+          <h2 id="history-title">Empat belas babak membentuk satu warisan.</h2>
+          <span>
+            Jejak orang-orang yang merakit, gagal, memperbaiki, lalu kembali memasuki arena.
+          </span>
+        </header>
+      </div>
 
       <div className="history-procession__route" aria-label="Tonggak perjalanan JRC">
-        {historyChapters.map((chapter) => (
-          <article className="history-procession__chapter" key={chapter.numeral}>
+        {historyChapters.map((chapter, index) => (
+          <article
+            className={`journey-scene journey-scene--chapter-${index + 1} history-procession__chapter`}
+            key={chapter.numeral}
+          >
             <div className="history-procession__inscription">
               <p>{chapter.eyebrow}</p>
               <h3>{chapter.title}</h3>
@@ -23,7 +28,10 @@ export function HistorySection() {
         ))}
       </div>
 
-      <section className="civic-assembly" aria-labelledby="festival-title">
+      <section
+        className="journey-scene journey-scene--civic civic-assembly"
+        aria-labelledby="festival-title"
+      >
         <div className="civic-assembly__manifesto">
           <p>Di luar arena</p>
           <h3 id="festival-title">Lebih dari pertandingan.</h3>
