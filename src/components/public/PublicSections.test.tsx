@@ -99,6 +99,7 @@ describe('FAQSection', () => {
     const { container } = render(<FAQSection />);
 
     expect(container.querySelector('.journey-scene--faq')).toBeInTheDocument();
+    expect(container.querySelectorAll('[data-journey-anchor]')).toHaveLength(2);
 
     const buttons = screen.getAllByRole('button', { expanded: false });
     expect(buttons.length).toBeGreaterThanOrEqual(5);

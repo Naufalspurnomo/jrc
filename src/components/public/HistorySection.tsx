@@ -6,7 +6,9 @@ export function HistorySection() {
       <div className="journey-scene journey-scene--opening">
         <header className="history-procession__opening site-shell page-shell">
           <p>Perjalanan JRC</p>
-          <h2 id="history-title">Empat belas babak membentuk satu warisan.</h2>
+          <h2 id="history-title" data-journey-anchor data-journey-side="right">
+            Empat belas babak membentuk satu warisan.
+          </h2>
           <span>
             Jejak orang-orang yang merakit, gagal, memperbaiki, lalu kembali memasuki arena.
           </span>
@@ -21,7 +23,9 @@ export function HistorySection() {
           >
             <div className="history-procession__inscription">
               <p>{chapter.eyebrow}</p>
-              <h3>{chapter.title}</h3>
+              <h3 data-journey-anchor data-journey-side={index % 2 === 0 ? 'left' : 'right'}>
+                {chapter.title}
+              </h3>
               <span>{chapter.copy}</span>
             </div>
           </article>
@@ -34,10 +38,12 @@ export function HistorySection() {
       >
         <div className="civic-assembly__manifesto">
           <p>Di luar arena</p>
-          <h3 id="festival-title">Lebih dari pertandingan.</h3>
+          <h3 id="festival-title" data-journey-anchor data-journey-side="right">
+            Lebih dari pertandingan.
+          </h3>
           <span>JRC juga menjadi tempat karya diperlihatkan dan komunitas bertemu.</span>
         </div>
-        <ol className="civic-assembly__pillars">
+        <ol className="civic-assembly__pillars" data-journey-anchor data-journey-side="right">
           {festivalMoments.map((moment) => (
             <li key={moment.numeral}>
               <div>

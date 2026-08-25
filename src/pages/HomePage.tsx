@@ -4,6 +4,7 @@ import { EventFacts } from '../components/public/EventFacts';
 import { FAQSection } from '../components/public/FAQSection';
 import { FinalCTA } from '../components/public/FinalCTA';
 import { HeroSection } from '../components/public/HeroSection';
+import { JourneyThread } from '../components/public/JourneyThread';
 import { LegacyWorld } from '../components/public/LegacyWorld';
 import { ScheduleSection } from '../components/public/ScheduleSection';
 import { ShowcaseHero } from '../components/public/ShowcaseHero';
@@ -51,6 +52,7 @@ export default function HomePage() {
         <div className="lower-world" aria-label="Perjalanan, informasi, dan penutup Java Robot Contest">
           <LegacyWorld />
           <FAQSection />
+          <JourneyThread />
         </div>
         <FinalCTA />
         <SiteFooter />

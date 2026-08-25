@@ -36,4 +36,12 @@ describe('LegacyWorld', () => {
     expect(container.querySelector('.journey-scene--civic')).toBeInTheDocument();
     expect(container.querySelector('.journey-scene--partners')).toBeInTheDocument();
   });
+
+  it('keeps ordered, non-serial anchors for the continuous story route', () => {
+    const { container } = render(<LegacyWorld />);
+
+    expect(container.querySelectorAll('[data-journey-anchor]')).toHaveLength(12);
+    expect(container.querySelector('[data-journey-anchor][data-journey-side="left"]')).toBeInTheDocument();
+    expect(container.querySelector('[data-journey-anchor][data-journey-side="right"]')).toBeInTheDocument();
+  });
 });
