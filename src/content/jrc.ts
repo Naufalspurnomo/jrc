@@ -1,5 +1,6 @@
 export const pendingAnnouncement = 'Akan diumumkan' as const;
 export const registrationPeriod = '15 September–15 Oktober 2026' as const;
+export const registrationDeadline = '2026-10-15T23:59:59+07:00' as const;
 
 export type CompetitionLevel = 'SD' | 'SMP' | 'SMA' | 'Umum';
 

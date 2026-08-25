@@ -48,11 +48,13 @@ export default function HomePage() {
         <EventFacts />
         <ShowcaseHero />
         <ScheduleSection />
-        <LegacyWorld />
-        <FAQSection />
+        <div className="lower-world" aria-label="Perjalanan, informasi, dan penutup Java Robot Contest">
+          <LegacyWorld />
+          <FAQSection />
+        </div>
         <FinalCTA />
+        <SiteFooter />
       </main>
-      <SiteFooter />
     </div>
   );
 }

@@ -435,6 +435,34 @@ export function useScrubTransitions({ disabled = false }: ScrubOptions = {}) {
       track(gsap.to(pAnnouncement, { y: 0, opacity: 1, scale: 1, ease: 'none', scrollTrigger: { trigger: pAnnouncement, start: 'top 92%', end: 'top 66%', scrub: 1 } }));
     }
 
+    // ── PERJALANAN JRC — restrained editorial reveals over the cloud painting. ──
+    const lowerWorld = document.querySelector<HTMLElement>('.lower-world');
+    const journeyScenes = document.querySelectorAll<HTMLElement>(
+      '.history-procession__opening, .history-procession__inscription, .civic-assembly__manifesto, .civic-assembly__pillars, .patron-court__opening, .patron-court__bay, .patron-court__invitation',
+    );
+    if (lowerWorld) {
+      track(
+        gsap.to(lowerWorld, {
+          '--lower-parallax': '-42px',
+          ease: 'none',
+          scrollTrigger: { trigger: lowerWorld, start: 'top bottom', end: 'bottom top', scrub: 1.8 },
+        }),
+      );
+    }
+    journeyScenes.forEach((scene) => {
+      track(gsap.fromTo(
+        scene,
+        { y: 14, opacity: .84 },
+        {
+          y: 0,
+          opacity: 1,
+          duration: .55,
+          ease: 'power2.out',
+          scrollTrigger: { trigger: scene, start: 'top 88%', toggleActions: 'play none none none' },
+        },
+      ));
+    });
+
     // ── LEGACY WORLD — one archive → forum → inner-court chapter ──
     const legacy = document.querySelector<HTMLElement>('[data-legacy-world]');
     if (legacy) {
@@ -454,7 +482,7 @@ export function useScrubTransitions({ disabled = false }: ScrubOptions = {}) {
     }
 
     // ── FAQ — scan reveal ──
-    const faq = document.querySelector<HTMLElement>('#informasi');
+    const faq = document.querySelector<HTMLElement>('#faq');
     const faqHeader = document.querySelector<HTMLElement>('.faq-section__header');
     const faqItems = document.querySelectorAll<HTMLElement>('.faq-item');
     if (faqHeader && faq) {
@@ -500,7 +528,7 @@ export function useScrubTransitions({ disabled = false }: ScrubOptions = {}) {
       timelines.forEach((t) => t.kill());
       const all = Array.from(
         document.querySelectorAll(
-          '.hero-section__content, .hero-section__visual, .hero-section__shade, .hero-section__theme, .hero-section__title-lockup h1, .event-brief__kicker, .event-brief__intro h2, .event-brief__deadline, .event-brief__countdown, .event-brief__fact, .character-selector__eyebrow, .character-selector__stage, .character-selector__portal, .character-selector__name, .character-selector__footer, .schedule-section__header, .schedule-via__path, .schedule-via__card, .schedule-via__node, .history-section__header, .history-editorial__entry, .history-editorial__body, .history-editorial__numeral, .history-festival, .legacy-world__plate, .legacy-world__standard, .legacy-world__forum-gate, .legacy-world__columns, .partner-section__header, .partner-tier, .partner-announcement, .faq-section__header, .faq-item, .cta-section__inner, .cta-section__actions, .cta-gate, .cta-section__edition',
+          '.hero-section__content, .hero-section__visual, .hero-section__shade, .hero-section__theme, .hero-section__title-lockup h1, .event-brief__kicker, .event-brief__intro h2, .event-brief__deadline, .event-brief__countdown, .event-brief__fact, .character-selector__eyebrow, .character-selector__stage, .character-selector__portal, .character-selector__name, .character-selector__footer, .schedule-section__header, .schedule-via__path, .schedule-via__card, .schedule-via__node, .history-section__header, .history-editorial__entry, .history-editorial__body, .history-editorial__numeral, .history-festival, .history-procession__opening, .history-procession__inscription, .civic-assembly__manifesto, .civic-assembly__pillars, .patron-court__opening, .patron-court__bay, .patron-court__invitation, .legacy-world__plate, .legacy-world__standard, .legacy-world__forum-gate, .legacy-world__columns, .partner-section__header, .partner-tier, .partner-announcement, .faq-section__header, .faq-item, .cta-section__inner, .cta-section__actions, .cta-gate, .cta-section__edition',
         ),
       ) as Element[];
       if (all.length) gsap.set(all, { clearProps: 'all' });

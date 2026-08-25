@@ -1,0 +1,425 @@
+/* Hallmark · genre: editorial-atmospheric · macrostructure: Long Document procession · theme: Imperium Machina */
+.lower-world {
+  --sky-paper: #fff0d0;
+  --sky-paper-soft: rgb(255 240 208 / 82%);
+  --sky-gold: #f2bd70;
+  --sky-rule: rgb(255 222 167 / 34%);
+  --sky-shadow: rgb(20 5 2 / 84%);
+  --lower-parallax: 0px;
+  position: relative;
+  isolation: isolate;
+  overflow: clip;
+  content-visibility: visible;
+  contain-intrinsic-size: none;
+  background: url('/assets/background-bawah.svg') center var(--lower-parallax) / 100% 100% no-repeat;
+  color: var(--sky-paper);
+}
+
+.lower-world::before {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  background: linear-gradient(180deg, rgb(23 6 3 / 8%) 0 15%, transparent 30%, rgb(23 6 3 / 7%) 64%, rgb(13 3 2 / 42%) 100%);
+  content: '';
+  pointer-events: none;
+}
+
+.lower-world > *,
+.lower-world .legacy-world__content { position: relative; z-index: 1; }
+
+.lower-world .legacy-world__plate,
+.lower-world .legacy-world__light,
+.lower-world .legacy-world__plate::before,
+.lower-world .legacy-world__light::before {
+  background: none;
+  opacity: 0;
+}
+.lower-world .legacy-world {
+  overflow: visible;
+  background: none;
+  opacity: 1;
+}
+
+/* Opening: title sits in the first dark pause of the painting. */
+.lower-world .history-procession { padding: clamp(12rem, 17vw, 19rem) 0 0; }
+.lower-world .history-procession__opening {
+  display: grid;
+  width: min(calc(100% - 2rem), 44rem);
+  margin: 0 auto clamp(17rem, 25vw, 28rem);
+  padding: 0;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 1.2rem;
+  justify-items: center;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+  text-align: center;
+}
+.lower-world .history-procession__opening > p,
+.lower-world .history-procession__opening h2,
+.lower-world .history-procession__opening > span {
+  color: var(--sky-paper);
+  text-shadow: 0 .2rem 1.6rem var(--sky-shadow);
+}
+.lower-world .history-procession__opening > p {
+  margin: 0;
+  color: var(--sky-gold);
+  font: 600 .64rem/1 var(--font-mono);
+  letter-spacing: .16em;
+  text-transform: uppercase;
+}
+.lower-world .history-procession__opening h2 {
+  max-width: 10ch;
+  margin: 0;
+  font-size: clamp(3.5rem, 6.2vw, 6.7rem);
+  line-height: .86;
+}
+.lower-world .history-procession__opening > span {
+  max-width: 34rem;
+  color: var(--sky-paper-soft);
+  line-height: 1.72;
+}
+
+/* Four chapters: text floats over different clearings, with no rail or serial. */
+.lower-world .history-procession__route {
+  display: grid;
+  width: min(calc(100% - 2rem), 74rem);
+  margin: 0 auto;
+}
+.lower-world .history-procession__route::before,
+.lower-world .history-procession__mark,
+.lower-world .history-procession__inscription small { display: none; }
+
+.lower-world .history-procession__chapter,
+.lower-world .history-procession__chapter:nth-child(even) {
+  display: grid;
+  min-height: clamp(25rem, 31vw, 33rem);
+  grid-template-columns: minmax(0, 1fr);
+  align-items: center;
+}
+.lower-world .history-procession__inscription,
+.lower-world .history-procession__chapter:nth-child(even) .history-procession__inscription {
+  width: min(100%, 30rem);
+  padding: 0;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+  color: var(--sky-paper);
+  text-shadow: 0 .18rem 1.4rem var(--sky-shadow);
+}
+.lower-world .history-procession__chapter:nth-child(1) .history-procession__inscription {
+  justify-self: start;
+  margin-left: clamp(1rem, 7vw, 7rem);
+  text-align: left;
+}
+.lower-world .history-procession__chapter:nth-child(2) .history-procession__inscription {
+  grid-column: auto;
+  grid-row: auto;
+  justify-self: end;
+  margin-right: clamp(1rem, 9vw, 9rem);
+  text-align: right;
+}
+.lower-world .history-procession__chapter:nth-child(3) .history-procession__inscription {
+  justify-self: start;
+  margin-left: clamp(3rem, 16vw, 17rem);
+  text-align: left;
+}
+.lower-world .history-procession__chapter:nth-child(4) .history-procession__inscription {
+  grid-column: auto;
+  grid-row: auto;
+  justify-self: end;
+  margin-right: clamp(2rem, 13vw, 13rem);
+  text-align: right;
+}
+.lower-world .history-procession__inscription > p {
+  margin: 0 0 .8rem;
+  color: var(--sky-gold);
+  font: 600 .6rem/1 var(--font-mono);
+  letter-spacing: .15em;
+  text-transform: uppercase;
+}
+.lower-world .history-procession__inscription h3 {
+  max-width: 12ch;
+  margin: 0 0 1rem;
+  color: var(--sky-paper);
+  font-size: clamp(2.8rem, 4.5vw, 4.65rem);
+  line-height: .88;
+}
+.lower-world .history-procession__chapter:nth-child(even) .history-procession__inscription h3 { margin-left: auto; }
+.lower-world .history-procession__inscription > span {
+  display: block;
+  max-width: 31rem;
+  color: var(--sky-paper-soft);
+  font-size: clamp(.94rem, 1.2vw, 1.05rem);
+  line-height: 1.72;
+}
+.lower-world .history-procession__chapter:nth-child(even) .history-procession__inscription > span { margin-left: auto; }
+
+/* The civic moment is a single landmark in the central opening. */
+.lower-world .civic-assembly {
+  position: relative;
+  display: block;
+  width: 100%;
+  min-height: clamp(45rem, 53vw, 60rem);
+  margin: clamp(7rem, 11vw, 12rem) auto 0;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+}
+.lower-world .civic-assembly::before {
+  position: absolute;
+  top: 25.3%;
+  left: 21.9%;
+  width: min(56%, 52rem);
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--sky-rule), transparent);
+  content: '';
+}
+.lower-world .civic-assembly__manifesto {
+  position: absolute;
+  top: 19.7%;
+  left: 50.7%;
+  width: min(31rem, calc(100% - 2rem));
+  padding: 0;
+  border: 0;
+  transform: translateX(-50%);
+  text-align: center;
+}
+.lower-world .civic-assembly__manifesto > p,
+.lower-world .civic-assembly__manifesto h3,
+.lower-world .civic-assembly__manifesto > span,
+.lower-world .civic-assembly__pillars h4,
+.lower-world .civic-assembly__pillars p {
+  text-shadow: 0 .2rem 1.45rem var(--sky-shadow);
+}
+.lower-world .civic-assembly__manifesto > p {
+  margin: 0 0 1rem;
+  color: var(--sky-gold);
+  font: 600 .62rem/1 var(--font-mono);
+  letter-spacing: .15em;
+  text-transform: uppercase;
+}
+.lower-world .civic-assembly__manifesto h3 {
+  max-width: 10ch;
+  margin: 0 auto 1.25rem;
+  color: var(--sky-paper);
+  font-size: clamp(3.3rem, 5.5vw, 6rem);
+  line-height: .85;
+}
+.lower-world .civic-assembly__manifesto > span {
+  display: block;
+  max-width: 28rem;
+  margin-inline: auto;
+  color: var(--sky-paper-soft);
+  line-height: 1.72;
+}
+.lower-world .civic-assembly__pillars {
+  position: absolute;
+  top: 52%;
+  left: 50%;
+  display: grid;
+  width: min(calc(100% - 2rem), 54rem);
+  margin: 0;
+  padding: 0;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  list-style: none;
+  transform: translateX(-50%);
+}
+.lower-world .civic-assembly__pillars li {
+  display: block;
+  min-height: 0;
+  padding: 0 clamp(1.2rem, 3vw, 2.5rem);
+  grid-template-columns: none;
+  gap: 0;
+  border-bottom: 0;
+  text-align: center;
+}
+.lower-world .civic-assembly__pillars li + li { border-left: 1px solid var(--sky-rule); }
+.lower-world .civic-assembly__pillars h4 {
+  margin: 0 0 .8rem;
+  color: var(--sky-paper);
+  font-size: clamp(1.55rem, 2.35vw, 2.15rem);
+}
+.lower-world .civic-assembly__pillars p {
+  margin: 0;
+  color: var(--sky-paper-soft);
+  font-size: .86rem;
+  line-height: 1.7;
+}
+
+/* Collaboration reads as a register, not an empty sponsor-card gallery. */
+.lower-world .patron-court {
+  padding: clamp(9rem, 13vw, 14rem) 0 clamp(8rem, 12vw, 12rem);
+  background: transparent;
+  color: var(--sky-paper);
+}
+.lower-world .patron-court__inner { width: min(calc(100% - 2rem), 64rem); }
+.lower-world .patron-court__opening {
+  display: grid;
+  max-width: 44rem;
+  margin: 0 auto clamp(4rem, 7vw, 7rem);
+  grid-template-columns: minmax(0, 1fr);
+  gap: 1.2rem;
+  justify-items: center;
+  text-align: center;
+}
+.lower-world .patron-court__opening > p {
+  margin: 0;
+  color: var(--sky-gold);
+  font: 600 .62rem/1 var(--font-mono);
+  letter-spacing: .15em;
+  text-transform: uppercase;
+}
+.lower-world .patron-court__opening h2 {
+  max-width: 11ch;
+  margin: 0;
+  color: var(--sky-paper);
+  text-shadow: 0 .2rem 1.5rem var(--sky-shadow);
+}
+.lower-world .patron-court__opening > span {
+  max-width: 32rem;
+  color: var(--sky-paper-soft);
+  line-height: 1.72;
+  text-shadow: 0 .18rem 1.25rem var(--sky-shadow);
+}
+.lower-world .patron-court__colonnade {
+  display: grid;
+  grid-template-columns: 1fr;
+  border-top: 1px solid var(--sky-rule);
+}
+.lower-world .patron-court__bay {
+  display: grid;
+  min-height: 0;
+  padding: clamp(1.75rem, 3vw, 2.7rem) 0;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: baseline;
+  gap: 2rem;
+  border: 0;
+  border-bottom: 1px solid var(--sky-rule);
+}
+.lower-world .patron-court__bay h3 {
+  margin: 0;
+  color: var(--sky-paper);
+  font-size: clamp(2rem, 3.2vw, 3.4rem);
+  line-height: .9;
+  text-shadow: 0 .18rem 1.25rem var(--sky-shadow);
+}
+.lower-world .patron-court__bay p {
+  margin: 0;
+  color: var(--sky-gold);
+  font: 600 .6rem/1 var(--font-mono);
+  letter-spacing: .14em;
+  text-transform: uppercase;
+}
+.lower-world .patron-court__invitation {
+  display: grid;
+  margin-top: 2rem;
+  padding: 1.75rem 0 0;
+  grid-template-columns: minmax(0, .7fr) minmax(0, 1.3fr);
+  gap: 2rem;
+  border: 0;
+}
+.lower-world .patron-court__invitation span {
+  color: var(--sky-gold);
+  font: 600 .6rem/1.3 var(--font-mono);
+  letter-spacing: .14em;
+  text-transform: uppercase;
+}
+.lower-world .patron-court__invitation p {
+  margin: 0;
+  color: var(--sky-paper-soft);
+  line-height: 1.7;
+}
+
+/* FAQ preserves the accordion but lets cloud and type carry the section. */
+.lower-world .faq-section {
+  padding: clamp(8rem, 12vw, 12rem) 0;
+  background: transparent;
+  color: var(--sky-paper);
+}
+.lower-world .faq-section__layout {
+  display: grid;
+  width: min(calc(100% - 2rem), 64rem);
+  padding: 0;
+  grid-template-columns: minmax(0, .8fr) minmax(0, 1.2fr);
+  gap: clamp(3rem, 8vw, 8rem);
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+}
+.lower-world .faq-section__header { position: relative; top: auto; }
+.lower-world .faq-section .site-kicker {
+  color: var(--sky-gold);
+  text-shadow: 0 .18rem 1.2rem var(--sky-shadow);
+}
+.lower-world .faq-section__header h2,
+.lower-world .faq-item__trigger {
+  color: var(--sky-paper);
+  text-shadow: 0 .18rem 1.25rem var(--sky-shadow);
+}
+.lower-world .faq-section__header > p:last-child,
+.lower-world .faq-item__answer > p {
+  color: var(--sky-paper-soft);
+  text-shadow: 0 .18rem 1.25rem var(--sky-shadow);
+}
+.lower-world .faq-section__items { border-top: 1px solid var(--sky-rule); }
+.lower-world .faq-item { border-bottom: 1px solid var(--sky-rule); }
+.lower-world .faq-item__trigger {
+  min-height: 6.25rem;
+  grid-template-columns: minmax(0, 1fr) 2rem;
+}
+.lower-world .faq-item__answer > p { max-width: 35rem; margin: 0 2rem 2rem 0; }
+.lower-world .faq-item__trigger:hover { background: transparent; color: var(--sky-gold); }
+.lower-world .faq-item__icon i,
+.lower-world .faq-item__icon i::before { background: var(--sky-gold); }
+
+.lower-world .cta-section { min-height: 42rem; padding: clamp(9rem, 15vw, 15rem) 0; background: transparent; }
+.lower-world .cta-section__atmosphere { opacity: .45; }
+.lower-world .cta-section__inner { text-shadow: 0 .2rem 1.45rem var(--sky-shadow); }
+.lower-world .footer-section { background: transparent; }
+.lower-world .footer-section::before { background: linear-gradient(90deg, transparent, rgb(255 222 167 / 48%), transparent); }
+.lower-world .footer-section__inner { text-shadow: 0 .18rem 1.2rem var(--sky-shadow); }
+
+@media (max-width: 48rem), (pointer: coarse) {
+  .lower-world { background-position: center top; background-size: cover; }
+  .lower-world .history-procession { padding-top: 9rem; }
+  .lower-world .history-procession__opening { margin-bottom: 9rem; }
+  .lower-world .history-procession__chapter,
+  .lower-world .history-procession__chapter:nth-child(even) {
+    min-height: 0;
+    padding: 6.5rem 0;
+  }
+  .lower-world .history-procession__inscription,
+  .lower-world .history-procession__chapter:nth-child(even) .history-procession__inscription {
+    width: min(calc(100% - 2rem), 30rem);
+    margin-inline: auto;
+    text-align: left;
+  }
+  .lower-world .history-procession__chapter:nth-child(even) .history-procession__inscription h3,
+  .lower-world .history-procession__chapter:nth-child(even) .history-procession__inscription > span { margin-left: 0; }
+  .lower-world .civic-assembly { min-height: auto; margin-top: 5rem; }
+  .lower-world .civic-assembly::before { display: none; }
+  .lower-world .civic-assembly__manifesto,
+  .lower-world .civic-assembly__pillars {
+    position: relative;
+    top: auto;
+    left: auto;
+    transform: none;
+  }
+  .lower-world .civic-assembly__manifesto { width: min(calc(100% - 2rem), 30rem); margin-inline: auto; }
+  .lower-world .civic-assembly__pillars {
+    width: min(calc(100% - 2rem), 30rem);
+    margin: 4rem auto 0;
+    grid-template-columns: 1fr;
+  }
+  .lower-world .civic-assembly__pillars li { padding: 1.65rem 0; text-align: left; }
+  .lower-world .civic-assembly__pillars li + li { border-top: 1px solid var(--sky-rule); border-left: 0; }
+  .lower-world .patron-court { padding-top: 7rem; }
+  .lower-world .patron-court__bay { grid-template-columns: 1fr; gap: .85rem; }
+  .lower-world .patron-court__invitation { grid-template-columns: 1fr; gap: 1rem; }
+  .lower-world .faq-section__layout { grid-template-columns: 1fr; gap: 3rem; text-align: left; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lower-world { --lower-parallax: 0px; }
+}

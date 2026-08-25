@@ -4,25 +4,27 @@ import { describe, expect, it } from 'vitest';
 import { LegacyWorld } from './LegacyWorld';
 
 describe('LegacyWorld', () => {
-  it('keeps Annales, J-Fest, and Societas in narrative order', () => {
+  it('keeps the journey, civic, and collaboration narrative in order', () => {
     const { container } = render(<LegacyWorld />);
-    const world = container.querySelector('[data-legacy-world]');
-    const headings = Array.from(world?.querySelectorAll('h2, h3') ?? []).map((node) => node.textContent);
+    const world = container.querySelector('.legacy-world');
+    const headings = Array.from(world?.querySelectorAll('h2, h3, h4') ?? []).map((node) => node.textContent);
 
-    expect(world).toHaveAttribute('aria-label', 'Annales JRC, J-Fest Conventus, dan Societas');
-    expect(headings.indexOf('Empat belas babak. Satu warisan yang terus bergerak.')).toBeLessThan(
+    expect(world).toHaveAttribute('aria-label', 'Perjalanan, festival, dan kolaborasi JRC');
+    expect(headings.indexOf('Empat belas babak membentuk satu warisan.')).toBeLessThan(
       headings.indexOf('Lebih dari pertandingan.'),
     );
     expect(headings.indexOf('Lebih dari pertandingan.')).toBeLessThan(
-      headings.indexOf('Mereka yang membantu arena berdiri.'),
+      headings.indexOf('Arena besar dibangun bersama.'),
     );
   });
 
-  it('keeps decorative continuity layers hidden from assistive technology', () => {
+  it('omits superseded serial ornaments from the editorial story', () => {
     const { container } = render(<LegacyWorld />);
-    const layers = container.querySelectorAll('[data-legacy-decoration]');
 
-    expect(layers.length).toBeGreaterThanOrEqual(8);
-    layers.forEach((layer) => expect(layer).toHaveAttribute('aria-hidden', 'true'));
+    expect(container.querySelector('.history-procession__mark')).not.toBeInTheDocument();
+    expect(container.querySelector('.history-procession__inscription small')).not.toBeInTheDocument();
+    expect(container.querySelector('.civic-assembly__pillars > li > span')).not.toBeInTheDocument();
+    expect(container.querySelector('.patron-court__bay > span')).not.toBeInTheDocument();
+    expect(container.querySelector('.patron-court__bay > i')).not.toBeInTheDocument();
   });
 });

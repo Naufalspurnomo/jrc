@@ -12,17 +12,12 @@ export function HistorySection() {
       </header>
 
       <div className="history-procession__route" aria-label="Tonggak perjalanan JRC">
-        {historyChapters.map((chapter, index) => (
+        {historyChapters.map((chapter) => (
           <article className="history-procession__chapter" key={chapter.numeral}>
-            <div className="history-procession__mark" aria-hidden="true">
-              <span>{chapter.numeral}</span>
-              <i />
-            </div>
             <div className="history-procession__inscription">
               <p>{chapter.eyebrow}</p>
               <h3>{chapter.title}</h3>
               <span>{chapter.copy}</span>
-              <small>{String(index + 1).padStart(2, '0')} / {String(historyChapters.length).padStart(2, '0')}</small>
             </div>
           </article>
         ))}
@@ -37,7 +32,6 @@ export function HistorySection() {
         <ol className="civic-assembly__pillars">
           {festivalMoments.map((moment) => (
             <li key={moment.numeral}>
-              <span>{moment.numeral}</span>
               <div>
                 <h4>{moment.title}</h4>
                 <p>{moment.copy}</p>

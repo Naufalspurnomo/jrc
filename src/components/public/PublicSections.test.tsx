@@ -20,13 +20,15 @@ const getFact = (label: string) => {
 };
 
 describe('EventFacts', () => {
-  it('renders a clear registration countdown and factual information register', () => {
+  it('renders the factual information register without duplicating the hero countdown', () => {
     render(<EventFacts />);
 
-    expect(screen.getByRole('heading', { name: 'Pendaftaran ditutup dalam' })).toBeInTheDocument();
-    expect(screen.getByText('15 Oktober 2026')).toBeInTheDocument();
-    expect(screen.getByRole('timer')).toHaveAttribute('data-complete', 'false');
-    expect(screen.getByRole('timer')).toHaveTextContent(/hari.*jam.*menit.*detik/i);
+    expect(screen.getByRole('heading', { name: 'Informasi JRC XIV' })).toBeInTheDocument();
+    expect(
+      screen.getByText(/Java Robot Contest merupakan acara tahunan yang diadakan/i),
+    ).toBeInTheDocument();
+    expect(screen.queryByRole('timer')).not.toBeInTheDocument();
+    expect(screen.queryByText('Pendaftaran ditutup dalam')).not.toBeInTheDocument();
     expect(document.querySelector('.event-brief__details')).toHaveAttribute(
       'aria-label',
       'Informasi utama JRC',

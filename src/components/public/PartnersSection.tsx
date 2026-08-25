@@ -14,10 +14,8 @@ export function PartnersSection() {
         </header>
 
         <div className="patron-court__colonnade" role="list" aria-label="Ruang kolaborasi JRC XIV">
-          {partnerTiers.map((tier, index) => (
+          {partnerTiers.map((tier) => (
             <article className="patron-court__bay" role="listitem" key={tier}>
-              <span aria-hidden="true">{String(index + 1).padStart(2, '0')}</span>
-              <i aria-hidden="true" />
               <h3>{tier}</h3>
               <p>{pendingAnnouncement}</p>
             </article>

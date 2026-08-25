@@ -16,6 +16,7 @@ import './styles/responsive-motion.css';
 import './styles/schedule-editorial.css';
 import './styles/startup-performance.css';
 import './styles/site-polish.css';
+import './styles/lower-world.css';
 
 const root = document.getElementById('root');
 

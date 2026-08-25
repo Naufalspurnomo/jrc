@@ -1,6 +1,11 @@
+/* Hallmark · pre-emit critique: P4 H5 E5 S5 R5 V4 */
 /* JRC XIV hero: the Roman asset family, aligned with the site's oxblood/gold palette. */
 
 .hero-section {
+  --hero-countdown-rule: color-mix(in srgb, var(--imperial-pale) 46%, transparent);
+  --hero-countdown-divider: color-mix(in srgb, var(--paper) 20%, transparent);
+  --hero-countdown-muted: color-mix(in srgb, var(--paper) 72%, transparent);
+  --hero-countdown-shadow: color-mix(in srgb, var(--coal) 56%, transparent);
   min-height: max(43rem, 100svh);
   background:
     radial-gradient(circle at 70% 18%, rgb(215 166 59 / 22%), transparent 28%),
@@ -211,12 +216,86 @@
 
 .hero-section__declaration {
   max-width: 34rem;
-  margin-top: 1.2rem;
+  margin: 1.2rem auto 0;
   color: rgb(243 233 211 / 88%);
   font-family: var(--font-sans);
   font-size: clamp(.82rem, 1vw, 1rem);
   line-height: 1.55;
+  text-align: center;
   text-shadow: 0 .1rem .5rem rgb(14 11 9 / 68%);
+}
+
+/* Hallmark · component: countdown · genre: atmospheric · theme: JRC Roman
+ * states: live · complete
+ * contrast: pass (46–50)
+ */
+.hero-section__countdown {
+  width: min(100%, 30rem);
+  margin: 1.5rem auto 0;
+  padding-top: .75rem;
+  border-top: 1px solid var(--hero-countdown-rule);
+  text-align: center;
+}
+
+.hero-section__countdown-label {
+  margin: 0 0 .65rem;
+  color: var(--imperial-pale);
+  font-family: var(--font-mono);
+  font-size: .625rem;
+  font-weight: 500;
+  letter-spacing: .12em;
+  line-height: 1.4;
+  text-transform: uppercase;
+}
+
+.hero-section__countdown-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: .75rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.hero-section__countdown-grid li {
+  min-width: 0;
+  padding-right: .75rem;
+  border-right: 1px solid var(--hero-countdown-divider);
+  text-align: center;
+}
+
+.hero-section__countdown-grid li:last-child {
+  padding-right: 0;
+  border-right: 0;
+}
+
+.hero-section__countdown-grid strong {
+  display: block;
+  color: var(--paper);
+  font-family: var(--font-display);
+  font-size: clamp(1.55rem, 2.2vw, 2.35rem);
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+  letter-spacing: .02em;
+  line-height: .9;
+  text-shadow: 0 .12rem .5rem var(--hero-countdown-shadow);
+}
+
+.hero-section__countdown-grid span {
+  display: block;
+  margin-top: .35rem;
+  color: var(--hero-countdown-muted);
+  font-family: var(--font-sans);
+  font-size: .75rem;
+  line-height: 1.2;
+}
+
+.hero-section__countdown-complete {
+  margin: 0;
+  color: var(--imperial-pale);
+  font-family: var(--font-sans);
+  font-size: .875rem;
+  line-height: 1.5;
 }
 
 .hero-section__actions {
@@ -317,7 +396,13 @@
   }
   .hero-section__title-lockup::before { inset: -14% -10% -18%; }
   .hero-section h1 { font-size: clamp(2.25rem, 10vw, 3.6rem); }
-  .hero-section__declaration { max-width: 20rem; margin-top: .8rem; font-size: .74rem; }
+  .hero-section__declaration { max-width: 20rem; margin: .8rem auto 0; font-size: .74rem; }
+  .hero-section__countdown { width: min(100%, 19rem); margin: 1rem auto 0; padding-top: .6rem; }
+  .hero-section__countdown-label { margin-bottom: .5rem; font-size: .625rem; letter-spacing: .08em; }
+  .hero-section__countdown-grid { gap: .5rem; }
+  .hero-section__countdown-grid li { padding-right: .5rem; }
+  .hero-section__countdown-grid strong { font-size: clamp(1.35rem, 6vw, 1.8rem); }
+  .hero-section__countdown-grid span { margin-top: .25rem; font-size: .7rem; }
   .hero-section__actions {
     right: 1rem;
     bottom: 2.7rem;
@@ -341,6 +426,12 @@
 @media (max-width: 23rem) {
   .hero-section__title-lockup { margin-top: 3.7rem; }
   .hero-section h1 { font-size: clamp(2rem, 10.7vw, 2.5rem); }
+  .hero-section__countdown { width: min(100%, 17rem); }
+  .hero-section__countdown-label { font-size: .625rem; }
+  .hero-section__countdown-grid { gap: .35rem; }
+  .hero-section__countdown-grid li { padding-right: .35rem; }
+  .hero-section__countdown-grid strong { font-size: 1.25rem; }
+  .hero-section__countdown-grid span { font-size: .625rem; }
   .hero-section__actions { grid-template-columns: 1fr; }
   .hero-section__actions .site-action--quiet { display: none; }
 }

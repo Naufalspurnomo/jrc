@@ -5,7 +5,7 @@ export function FAQSection() {
   const [openIndex, setOpenIndex] = useState<number | null>(null);
 
   return (
-    <section id="informasi" className="faq-section" aria-labelledby="faq-title">
+    <section id="faq" className="faq-section" aria-labelledby="faq-title">
       <div className="site-shell page-shell faq-section__layout">
         <header className="faq-section__header">
           <p className="site-kicker kicker">Acta publica</p>
@@ -30,9 +30,6 @@ export function FAQSection() {
                   aria-expanded={isOpen}
                   onClick={() => setOpenIndex(isOpen ? null : index)}
                 >
-                  <span className="faq-item__num" aria-hidden="true">
-                    0{index + 1}
-                  </span>
                   <span className="faq-item__question">{item.question}</span>
                   <span className="faq-item__icon" aria-hidden="true">
                     <i />
