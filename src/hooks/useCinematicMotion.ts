@@ -3,6 +3,8 @@ import { gsap } from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import { useEffect, useRef, useState, type RefObject } from 'react';
 
+import { SCROLL_LOCK_EVENT } from './scrollLock';
+
 gsap.registerPlugin(ScrollTrigger);
 
 type LenisLike = Pick<Lenis, 'raf' | 'on' | 'off' | 'start' | 'stop' | 'scrollTo' | 'destroy'>;
@@ -36,7 +38,6 @@ interface ControllerOptions {
   onSceneActivityChange?: (active: boolean) => void;
 }
 
-const MODAL_LOCK_EVENT = 'jrc:modal-lock';
 const ROUTE_SCROLL_EVENT = 'jrc:route-scroll';
 
 function isStaticMotionEnvironment() {
@@ -94,9 +95,19 @@ export function createCinematicMotionController({
     dependencies.scrollTrigger.update();
   };
   const onModalLock = (event: Event) => {
-    const locked = (event as CustomEvent<{ locked?: boolean }>).detail?.locked === true;
-    if (locked) lenis.stop();
-    else if (documentVisible) lenis.start();
+    const detail = (event as CustomEvent<{ locked?: boolean; scrollY?: number }>).detail;
+    if (detail?.locked === true) {
+      lenis.stop();
+      return;
+    }
+
+    const restoreY = detail?.scrollY;
+    if (typeof restoreY === 'number' && Number.isFinite(restoreY)) {
+      lenis.scrollTo(restoreY, { immediate: true, force: true });
+      lastScrollPosition = restoreY;
+      dependencies.scrollTrigger.update();
+    }
+    if (documentVisible) lenis.start();
   };
   const onRouteScroll = (event: Event) => {
     const targetId = (event as CustomEvent<{ targetId?: string }>).detail?.targetId;
@@ -108,7 +119,7 @@ export function createCinematicMotionController({
   };
 
   lenis.on('scroll', onScroll);
-  window.addEventListener(MODAL_LOCK_EVENT, onModalLock);
+  window.addEventListener(SCROLL_LOCK_EVENT, onModalLock);
   window.addEventListener(ROUTE_SCROLL_EVENT, onRouteScroll);
   dependencies.ticker.lagSmoothing(0);
   dependencies.ticker.add(tick);
@@ -140,7 +151,7 @@ export function createCinematicMotionController({
       window.cancelAnimationFrame(hashFrame);
       dependencies.ticker.remove(tick);
       lenis.off('scroll', onScroll);
-      window.removeEventListener(MODAL_LOCK_EVENT, onModalLock);
+      window.removeEventListener(SCROLL_LOCK_EVENT, onModalLock);
       window.removeEventListener(ROUTE_SCROLL_EVENT, onRouteScroll);
       lenis.destroy();
       delete document.documentElement.dataset.scrollDirection;

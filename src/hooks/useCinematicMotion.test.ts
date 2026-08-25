@@ -96,6 +96,21 @@ describe('createCinematicMotionController', () => {
     controller.destroy();
   });
 
+  it('resynchronizes Lenis to the native position before an overlay releases it', () => {
+    const { dependencies, lenis, update } = createDependencies();
+    const controller = createCinematicMotionController({ dependencies });
+
+    window.dispatchEvent(new CustomEvent('jrc:modal-lock', {
+      detail: { locked: false, scrollY: 1240 },
+    }));
+
+    expect(lenis.scrollTo).toHaveBeenCalledWith(1240, { immediate: true, force: true });
+    expect(update).toHaveBeenCalledOnce();
+    expect(lenis.start).toHaveBeenCalledOnce();
+
+    controller.destroy();
+  });
+
   it('synchronizes route hash navigation with Lenis', () => {
     const { dependencies, lenis } = createDependencies();
     const target = document.createElement('section');

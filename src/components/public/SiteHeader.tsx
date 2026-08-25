@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 
+import { lockDocumentScroll } from '../../hooks/scrollLock';
+
 const primaryNavigation = [
   { href: '/#perlombaan', label: 'Perlombaan' },
   { href: '/#jadwal', label: 'Jadwal' },
@@ -18,14 +20,7 @@ export function SiteHeader() {
   useEffect(() => {
     if (!isOpen) return;
 
-    const previousBodyStyles = document.body.getAttribute('style');
-    const scrollY = window.scrollY;
-    const scrollbarWidth = window.innerWidth - document.documentElement.clientWidth;
-    document.body.style.position = 'fixed';
-    document.body.style.top = `-${scrollY}px`;
-    document.body.style.width = '100%';
-    document.body.style.overflow = 'hidden';
-    if (scrollbarWidth > 0) document.body.style.paddingRight = `${scrollbarWidth}px`;
+    const scrollLock = lockDocumentScroll();
 
     const closeOnEscape = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
@@ -56,9 +51,7 @@ export function SiteHeader() {
     window.addEventListener('keydown', closeOnEscape);
     return () => {
       window.removeEventListener('keydown', closeOnEscape);
-      if (previousBodyStyles === null) document.body.removeAttribute('style');
-      else document.body.setAttribute('style', previousBodyStyles);
-      if (scrollY > 0) window.scrollTo(0, scrollY);
+      scrollLock.release();
     };
   }, [isOpen]);
 

@@ -76,7 +76,8 @@ describe('SiteHeader', () => {
     await user.click(toggle);
     const portal = screen.getByRole('navigation').querySelector<HTMLElement>('.site-header__nav-portal')!;
 
-    expect(document.body.style.position).toBe('fixed');
+    expect(document.documentElement.style.overflow).toBe('hidden');
+    expect(document.body.style.position).toBe('relative');
     expect(document.body.style.overflow).toBe('hidden');
     portal.focus();
     fireEvent.keyDown(document, { key: 'Tab' });
@@ -245,7 +246,8 @@ describe('ShowcaseHero', () => {
     expect(document.activeElement).toBe(close);
     expect(dialog).toHaveAttribute('aria-modal', 'true');
     expect(document.documentElement.style.overflow).toBe('hidden');
-    expect(document.body.style.position).toBe('fixed');
+    expect(document.body.style.overflow).toBe('hidden');
+    expect(document.body.style.position).toBe('');
 
     fireEvent.keyDown(document, { key: 'Tab', shiftKey: true });
     expect(document.activeElement).toBe(finalAction);

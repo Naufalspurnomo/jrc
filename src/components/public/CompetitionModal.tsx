@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom';
 import { Link } from 'react-router-dom';
 
 import type { Competition } from '../../content/jrc';
+import { lockDocumentScroll } from '../../hooks/scrollLock';
 
 const ACCENT_MAP: Record<Competition['accent'], { border: string; glow: string; text: string }> = {
   gold: { border: '#d7a63b', glow: 'rgb(215 166 59 / 28%)', text: '#f2cc74' },
@@ -32,29 +33,10 @@ export function CompetitionModal({ competition, open, onClose, portraitSrc }: Co
       : null;
     const appRoot = document.getElementById('root');
     const previousRootInert = appRoot?.hasAttribute('inert') ?? false;
-    const html = document.documentElement;
-    const body = document.body;
-    const previousStyles = {
-      htmlOverflow: html.style.overflow,
-      bodyOverflow: body.style.overflow,
-      bodyPosition: body.style.position,
-      bodyTop: body.style.top,
-      bodyWidth: body.style.width,
-      bodyPaddingRight: body.style.paddingRight,
-    };
-    const scrollY = window.scrollY;
-    const scrollbarGap = Math.max(0, window.innerWidth - html.clientWidth);
-
-    html.style.overflow = 'hidden';
-    body.style.overflow = 'hidden';
-    body.style.position = 'fixed';
-    body.style.top = `-${scrollY}px`;
-    body.style.width = '100%';
-    if (scrollbarGap > 0) body.style.paddingRight = `${scrollbarGap}px`;
+    const scrollLock = lockDocumentScroll();
     appRoot?.setAttribute('inert', '');
-    window.dispatchEvent(new CustomEvent('jrc:modal-lock', { detail: { locked: true } }));
 
-    closeRef.current?.focus();
+    closeRef.current?.focus({ preventScroll: true });
     const onKey = (e: KeyboardEvent) => {
       const root = dialogRef.current;
       if (!root) return;
@@ -94,16 +76,8 @@ export function CompetitionModal({ competition, open, onClose, portraitSrc }: Co
     document.addEventListener('keydown', onKey);
     return () => {
       document.removeEventListener('keydown', onKey);
-      window.dispatchEvent(new CustomEvent('jrc:modal-lock', { detail: { locked: false } }));
       if (appRoot && !previousRootInert) appRoot.removeAttribute('inert');
-      html.style.overflow = previousStyles.htmlOverflow;
-      body.style.overflow = previousStyles.bodyOverflow;
-      body.style.position = previousStyles.bodyPosition;
-      body.style.top = previousStyles.bodyTop;
-      body.style.width = previousStyles.bodyWidth;
-      body.style.paddingRight = previousStyles.bodyPaddingRight;
-      if (scrollY > 0) window.scrollTo({ top: scrollY, left: 0, behavior: 'auto' });
-      if (previousFocus?.isConnected) previousFocus.focus();
+      scrollLock.release({ restoreFocus: previousFocus });
     };
   }, [open]);
 
