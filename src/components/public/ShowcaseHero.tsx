@@ -263,7 +263,7 @@ export function ShowcaseHero() {
           <div className="character-selector__division">
             <p className="character-selector__discipline">{current.discipline}</p>
             <p className="character-selector__status">
-              {current.level} · Ketentuan JRC XIV belum final
+              {current.level} · Kategori resmi JRC XIV
             </p>
           </div>
 

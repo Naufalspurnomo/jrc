@@ -1061,7 +1061,9 @@ h3 {
   font-weight: 540;
   letter-spacing: -.055em;
   line-height: .98;
-  overflow-wrap: anywhere;
+  overflow-wrap: normal;
+  word-break: normal;
+  hyphens: none;
 }
 
 .arena-facts__fact[data-fact="venue"] dd {
@@ -3209,7 +3211,9 @@ h3 {
 .arena-modal__title-full {
   display: block;
   margin-top: .3rem;
-  overflow-wrap: anywhere;
+  overflow-wrap: normal;
+  word-break: normal;
+  hyphens: none;
   color: rgb(243 233 211 / 72%);
   font-family: var(--font-mono);
   font-size: .72rem;

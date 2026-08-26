@@ -126,10 +126,10 @@ describe('HeroExperience', () => {
     expect(HERO_ASSETS).toEqual(
       expect.objectContaining({
         background: '/assets/hero-rome-wide.webp',
-        foreground: '/assets/brand/jrc14-gladiator-mascot.webp',
-        foregroundMedium: '/assets/brand/jrc14-gladiator-mascot.webp',
-        foregroundSmall: '/assets/brand/jrc14-gladiator-mascot.webp',
-        foregroundVideo: '/assets/mascot/jrc14-gladiator-alpha.webm',
+        foreground: '/assets/mascot/jrc14-gladiator-framekey-v2-poster.webp',
+        foregroundMedium: '/assets/mascot/jrc14-gladiator-framekey-v2-poster.webp',
+        foregroundSmall: '/assets/mascot/jrc14-gladiator-framekey-v2-poster.webp',
+        foregroundVideo: '/assets/mascot/jrc14-gladiator-framekey-v2-alpha.webm',
         backgroundDepth: '/assets/hero-rome-depth.png',
         foregroundDepth: '/assets/batu-knight-depth.png',
       }),

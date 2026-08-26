@@ -16,11 +16,11 @@ export default function CompetitionPage() {
       <div className="site-page site-page--competition-not-found">
         <SiteHeader />
         <main className="competition-not-found site-shell page-shell">
-          <p className="site-kicker kicker">Error · CDIV</p>
+          <p className="site-kicker kicker">Kategori JRC XIV</p>
           <h1>Arena tidak ditemukan.</h1>
           <p>
-            Gerbang yang kamu cari tidak tercatat dalam enam arena draf JRC XIV. Kembali ke
-            halaman utama untuk memilih disiplin yang tersedia.
+            Halaman yang kamu cari tidak termasuk dalam enam kategori resmi JRC XIV. Kembali ke
+            halaman utama untuk memilih kategori yang tersedia.
           </p>
           <Link className="site-action site-action--primary button-primary" to="/">
             Kembali ke beranda
@@ -60,7 +60,7 @@ export default function CompetitionPage() {
         <section className="competition-brief" aria-labelledby="competition-brief-title">
           <div className="site-shell page-shell competition-brief__layout">
             <div>
-              <p className="site-kicker kicker">Mandatum arenae</p>
+              <p className="site-kicker kicker">Tentang kategori</p>
               <h2 id="competition-brief-title">Misi di dalam arena.</h2>
             </div>
             <div className="competition-brief__copy">
@@ -73,11 +73,11 @@ export default function CompetitionPage() {
         <section className="competition-intel" aria-labelledby="competition-intel-title">
           <div className="site-shell page-shell">
             <header>
-              <p className="site-kicker kicker">Acta technica</p>
+              <p className="site-kicker kicker">Detail kategori</p>
               <h2 id="competition-intel-title">Informasi resmi.</h2>
               <p>
-                Detail berikut sengaja tidak diperkirakan. Informasi akan diperbarui setelah
-                ketentuan JRC XIV disahkan.
+                Biaya pendaftaran dan guidebook belum diumumkan. Informasi akan diperbarui setelah
+                tersedia.
               </p>
             </header>
             <dl>
@@ -103,7 +103,7 @@ export default function CompetitionPage() {
 
         <section className="competition-cta" aria-labelledby="competition-cta-title">
           <div className="site-shell page-shell competition-cta__inner">
-            <p className="site-kicker kicker">Praepara legionem</p>
+            <p className="site-kicker kicker">Persiapan peserta</p>
             <h2 id="competition-cta-title">Siapkan tim sebelum gerbang dibuka.</h2>
             <p>
               Jelajahi portal lokal untuk memahami alur pendaftaran. Data demo tidak dikirim ke

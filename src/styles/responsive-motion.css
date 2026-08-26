@@ -125,6 +125,27 @@
   .footer-section__meta a { display: inline-flex; min-height: 44px; align-items: center; }
 }
 
+/* Labels and display words move as complete words. Never strand one or two
+   letters on a new line at compact widths. */
+.site-header__nav-list strong,
+.site-kicker,
+.kicker,
+dt,
+.lower-world h2,
+.lower-world h3,
+.lower-world h4 {
+  overflow-wrap: normal;
+  word-break: normal;
+  hyphens: none;
+}
+
+.site-header__nav-list strong,
+.site-kicker,
+.kicker,
+dt {
+  white-space: nowrap;
+}
+
 @media (min-width: 120rem) {
   .site-shell,
   .page-shell { max-width: 105rem; }

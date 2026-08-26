@@ -101,6 +101,9 @@ describe('FAQSection', () => {
 
     expect(container.querySelector('.journey-scene--faq')).toBeInTheDocument();
     expect(container.querySelectorAll('[data-journey-anchor]')).toHaveLength(2);
+    expect(screen.getByRole('heading', { name: 'Pertanyaan umum.' })).toBeInTheDocument();
+    expect(screen.getByText('Informasi peserta')).toBeInTheDocument();
+    expect(screen.queryByText('Acta publica')).not.toBeInTheDocument();
 
     const buttons = screen.getAllByRole('button', { expanded: false });
     expect(buttons.length).toBeGreaterThanOrEqual(5);
@@ -108,7 +111,19 @@ describe('FAQSection', () => {
     await user.click(buttons[0]);
     expect(buttons[0]).toHaveAttribute('aria-expanded', 'true');
 
-    expect(screen.getAllByText('Akan diumumkan').length).toBeGreaterThan(0);
+    expect(screen.getByText(/Guidebook belum tersedia/i)).toBeInTheDocument();
+  });
+
+  it('states that all six JRC XIV categories are official', async () => {
+    const user = userEvent.setup();
+    render(<FAQSection />);
+
+    const categoryQuestion = screen.getByRole('button', { name: 'Apa saja kategori resmi JRC XIV?' });
+    await user.click(categoryQuestion);
+
+    expect(categoryQuestion).toHaveAttribute('aria-expanded', 'true');
+    expect(screen.getByText(/JRC XIV memiliki enam kategori resmi.*Donatopia.*Goal Rush/i)).toBeInTheDocument();
+    expect(screen.queryByText(/draf dari JRC XIII/i)).not.toBeInTheDocument();
   });
 });
 
@@ -126,7 +141,7 @@ describe('ShowcaseHero', () => {
       '/assets/roman-select/athena.webp',
     );
     expect(screen.getByText('Transporter')).toBeInTheDocument();
-    expect(screen.getByText(/SD.*Ketentuan JRC XIV belum final/i)).toBeInTheDocument();
+    expect(screen.getByText(/SD.*Kategori resmi JRC XIV/i)).toBeInTheDocument();
     expect(screen.getByText('01/06')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Lihat divisi' })).toHaveAttribute(
       'aria-haspopup',

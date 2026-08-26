@@ -40,7 +40,7 @@ describe('CompetitionPage', () => {
     );
 
     expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('Ring Rumble');
-    expect(screen.getAllByText('Draf kategori JRC XIII')).toHaveLength(2);
+    expect(screen.getAllByText('Kategori resmi JRC XIV')).toHaveLength(2);
     expect(screen.getAllByText('Akan diumumkan').length).toBeGreaterThanOrEqual(2);
     expect(screen.getByRole('link', { name: /kembali ke enam arena/i })).toHaveAttribute(
       'href',

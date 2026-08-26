@@ -28,9 +28,9 @@ function NotFoundPage() {
     <div className="site-page site-page--competition-not-found">
       <SiteHeader />
       <main className="competition-not-found site-shell page-shell">
-        <p className="site-kicker kicker">Error · CDIV</p>
-        <h1>Arena tidak ditemukan.</h1>
-        <p>Gerbang ini tidak tercatat dalam peta JRC XIV.</p>
+        <p className="site-kicker kicker">JRC XIV</p>
+        <h1>Halaman tidak ditemukan.</h1>
+        <p>Periksa kembali alamat halaman atau kembali ke beranda.</p>
         <Link className="site-action site-action--primary button-primary" to="/">
           Kembali ke beranda
         </Link>
@@ -137,7 +137,7 @@ function getRouteMetadata(pathname: string) {
   }
 
   return {
-    title: 'Arena Tidak Ditemukan — JRC XIV',
+    title: 'Halaman Tidak Ditemukan — JRC XIV',
     robots: privateRobots,
   };
 }

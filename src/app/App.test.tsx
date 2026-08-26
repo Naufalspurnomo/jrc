@@ -53,14 +53,14 @@ describe('AppRoutes', () => {
     expect(await screen.findByRole('heading', { name: /portal peserta/i })).toBeInTheDocument();
   });
 
-  it('renders an arena themed not-found route', () => {
+  it('renders the not-found route', () => {
     render(
       <MemoryRouter initialEntries={['/rute-tidak-ada']}>
         <AppRoutes />
       </MemoryRouter>,
     );
 
-    expect(screen.getByRole('heading', { name: /arena tidak ditemukan/i })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /halaman tidak ditemukan/i })).toBeInTheDocument();
   });
 });
 
@@ -141,14 +141,14 @@ describe('route metadata', () => {
   it('does not index an unknown route', async () => {
     renderRoute('/rute-tidak-ada');
 
-    expect(screen.getByRole('heading', { name: /arena tidak ditemukan/i })).toBeInTheDocument();
-    await expectMetadata('Arena Tidak Ditemukan — JRC XIV', 'noindex,nofollow');
+    expect(screen.getByRole('heading', { name: /halaman tidak ditemukan/i })).toBeInTheDocument();
+    await expectMetadata('Halaman Tidak Ditemukan — JRC XIV', 'noindex,nofollow');
   });
 
   it('treats an unknown competition as not found', async () => {
     renderRoute('/perlombaan/tidak-ada');
 
     expect(await screen.findByRole('heading', { name: /arena tidak ditemukan/i })).toBeInTheDocument();
-    await expectMetadata('Arena Tidak Ditemukan — JRC XIV', 'noindex,nofollow');
+    await expectMetadata('Halaman Tidak Ditemukan — JRC XIV', 'noindex,nofollow');
   });
 });

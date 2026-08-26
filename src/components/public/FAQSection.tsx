@@ -12,13 +12,12 @@ export function FAQSection() {
     >
       <div className="site-shell page-shell faq-section__layout">
         <header className="faq-section__header">
-          <p className="site-kicker kicker">Acta publica</p>
+          <p className="site-kicker kicker">Informasi peserta</p>
           <h2 id="faq-title" data-journey-anchor data-journey-side="right">
-            Informasi sebelum gerbang dibuka.
+            Pertanyaan umum.
           </h2>
           <p>
-            Kami memilih mengatakan "belum diumumkan" daripada mengisi detail penting dengan
-            perkiraan.
+            Informasi pendaftaran, kategori perlombaan, guidebook, dan ketentuan peserta JRC XIV.
           </p>
         </header>
 

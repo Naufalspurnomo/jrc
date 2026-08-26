@@ -76,6 +76,8 @@ const canonical = await sharp(sourcePath, { density: 560 })
   .png()
   .toBuffer();
 
+const mobileSlices = [];
+
 for (const [index, name] of names.entries()) {
   const outputHeight = mobile.heights[index];
   const cropWidth = mobile.cropWidths[index];
@@ -89,15 +91,70 @@ for (const [index, name] of names.entries()) {
     Math.min(canonicalHeight - cropHeight, centerY - Math.round(cropHeight / 2)),
   );
   const left = Math.round((canonicalWidth - cropWidth) / 2);
-
-  await sharp(canonical)
+  const slice = await sharp(canonical)
     .extract({ left, top, width: cropWidth, height: cropHeight })
     .resize(mobile.width, outputHeight, { fit: 'fill', kernel: sharp.kernel.lanczos3 })
     .sharpen(0.5)
+    .png()
+    .toBuffer();
+
+  mobileSlices.push(slice);
+  await sharp(slice)
     .webp(webpOptions)
     .toFile(path.join(outputDir, `${name}-mobile.webp`));
 }
 
+// The mobile layout overlaps adjacent scenes by 9rem. Build one parent plate
+// with the same 2x overlap so independent art-directed crops crossfade instead
+// of exposing their different edge grades as horizontal section bands.
+const mobileOverlap = 288;
+const continuousHeight = mobile.heights.reduce(
+  (sum, height, index) => sum + height - (index === 0 ? 0 : mobileOverlap),
+  0,
+);
+const composites = [];
+let mobileTop = 0;
+
+for (const [index, slice] of mobileSlices.entries()) {
+  let input = slice;
+  if (index > 0) {
+    const height = mobile.heights[index];
+    const fadeMask = Buffer.from(`
+      <svg width="${mobile.width}" height="${height}" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <linearGradient id="fade" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0" stop-color="white" stop-opacity="0" />
+            <stop offset="${mobileOverlap / height}" stop-color="white" stop-opacity="1" />
+            <stop offset="1" stop-color="white" stop-opacity="1" />
+          </linearGradient>
+        </defs>
+        <rect width="100%" height="100%" fill="url(#fade)" />
+      </svg>
+    `);
+    input = await sharp(slice)
+      .ensureAlpha()
+      .composite([{ input: fadeMask, blend: 'dest-in' }])
+      .png()
+      .toBuffer();
+  }
+
+  composites.push({ input, left: 0, top: mobileTop });
+  mobileTop += mobile.heights[index] - (index === names.length - 1 ? 0 : mobileOverlap);
+}
+
+await sharp({
+  create: {
+    width: mobile.width,
+    height: continuousHeight,
+    channels: 4,
+    background: { r: 74, g: 18, b: 9, alpha: 1 },
+  },
+})
+  .composite(composites)
+  .removeAlpha()
+  .webp({ quality: 90, smartSubsample: true, effort: 6 })
+  .toFile(path.join(outputDir, 'lower-world-mobile-continuous.webp'));
+
 console.log(
-  `Created ${names.length} contiguous 2x desktop slices and ${names.length} art-directed mobile slices in ${outputDir}`,
+  `Created ${names.length} contiguous 2x desktop slices, ${names.length} art-directed mobile slices, and one crossfaded mobile world plate in ${outputDir}`,
 );

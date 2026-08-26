@@ -3,11 +3,11 @@ export const HERO_ASSETS = {
   backgroundAvif: '/assets/hero-rome-wide.avif',
   backgroundMobile: '/assets/hero-rome-wide-mobile.webp',
   backgroundDepth: '/assets/hero-rome-depth.png',
-  foreground: '/assets/brand/jrc14-gladiator-mascot.webp',
-  foregroundMedium: '/assets/brand/jrc14-gladiator-mascot.webp',
-  foregroundSmall: '/assets/brand/jrc14-gladiator-mascot.webp',
-  foregroundFallback: '/assets/brand/jrc14-gladiator-mascot.png',
-  foregroundVideo: '/assets/mascot/jrc14-gladiator-alpha.webm',
+  foreground: '/assets/mascot/jrc14-gladiator-framekey-v2-poster.webp',
+  foregroundMedium: '/assets/mascot/jrc14-gladiator-framekey-v2-poster.webp',
+  foregroundSmall: '/assets/mascot/jrc14-gladiator-framekey-v2-poster.webp',
+  foregroundFallback: '/assets/mascot/jrc14-gladiator-framekey-v2-poster.png',
+  foregroundVideo: '/assets/mascot/jrc14-gladiator-framekey-v2-alpha.webm',
   foregroundDepth: '/assets/batu-knight-depth.png',
 } as const;
 

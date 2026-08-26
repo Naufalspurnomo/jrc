@@ -42,12 +42,15 @@ for (const size of sizes) {
       const actions = q('.hero-section__actions');
       const mascotBounds = mascot?.getBoundingClientRect();
       const actionBounds = actions?.getBoundingClientRect();
+      const mascotContentBottom = mascotBounds
+        ? mascotBounds.top + mascotBounds.height * (1194 / 1280)
+        : null;
       return {
         title: box('#hero-title'),
         mascot: box('.hero-scene__foreground-video') ?? box('.hero-scene__foreground-image'),
         actions: box('.hero-section__actions'),
-        mascotCtaClearance: mascotBounds && actionBounds
-          ? Math.round((actionBounds.top - mascotBounds.bottom) * 100) / 100
+        mascotCtaClearance: mascotContentBottom !== null && actionBounds
+          ? Math.round((actionBounds.top - mascotContentBottom) * 100) / 100
           : null,
         engravings: box('.hero-section__engravings'),
         assetCount: document.querySelectorAll('.hero-section__engraving img').length,

@@ -1,0 +1,1602 @@
+[
+  {
+    "width": 320,
+    "height": 568,
+    "errors": [],
+    "failed": [],
+    "geom": {
+      "scrollWidth": 320,
+      "clientWidth": 320,
+      "height": 12033,
+      "broken": [],
+      "smallTargets": [
+        {
+          "text": "Perlombaan",
+          "w": 142,
+          "h": 15,
+          "visible": true
+        },
+        {
+          "text": "Jadwal",
+          "w": 142,
+          "h": 15,
+          "visible": true
+        },
+        {
+          "text": "Sejarah",
+          "w": 142,
+          "h": 15,
+          "visible": true
+        },
+        {
+          "text": "Informasi",
+          "w": 142,
+          "h": 15,
+          "visible": true
+        },
+        {
+          "text": "Demo portal peserta",
+          "w": 142,
+          "h": 15,
+          "visible": true
+        },
+        {
+          "text": "Atribusi aset",
+          "w": 143,
+          "h": 13,
+          "visible": true
+        }
+      ],
+      "sections": [
+        {
+          "s": "#perlombaan",
+          "exists": true,
+          "h": 719,
+          "overflow": "hidden"
+        },
+        {
+          "s": "#jadwal",
+          "exists": true,
+          "h": 1755,
+          "overflow": "hidden"
+        },
+        {
+          "s": "#sejarah",
+          "exists": true,
+          "h": 3614,
+          "overflow": "visible"
+        },
+        {
+          "s": "#informasi",
+          "exists": true,
+          "h": 1296,
+          "overflow": "visible"
+        },
+        {
+          "s": ".faq-section",
+          "exists": true,
+          "h": 1296,
+          "overflow": "visible"
+        },
+        {
+          "s": ".cta-section",
+          "exists": true,
+          "h": 722,
+          "overflow": "hidden"
+        },
+        {
+          "s": "footer",
+          "exists": true,
+          "h": 758,
+          "overflow": "hidden"
+        }
+      ],
+      "menu": {
+        "rect": {
+          "x": 0,
+          "y": 0,
+          "w": 320,
+          "h": 568
+        },
+        "sh": 568,
+        "ch": 568,
+        "overflow": "auto"
+      },
+      "modal": {
+        "rect": {
+          "x": 8.43682861328125,
+          "y": 10.804931640625,
+          "w": 303.1263427734375,
+          "h": 550.4136352539062
+        },
+        "sh": 997,
+        "ch": 550,
+        "overflow": "auto",
+        "close": {
+          "w": 43.87355041503906,
+          "h": 43.87355041503906
+        },
+        "actions": {
+          "top": 840.1957397460938,
+          "bottom": 992.5379028320312
+        }
+      }
+    }
+  },
+  {
+    "width": 360,
+    "height": 640,
+    "errors": [],
+    "failed": [],
+    "geom": {
+      "scrollWidth": 360,
+      "clientWidth": 360,
+      "height": 11803,
+      "broken": [],
+      "smallTargets": [
+        {
+          "text": "Perlombaan",
+          "w": 162,
+          "h": 15,
+          "visible": true
+        },
+        {
+          "text": "Jadwal",
+          "w": 162,
+          "h": 15,
+          "visible": true
+        },
+        {
+          "text": "Sejarah",
+          "w": 162,
+          "h": 15,
+          "visible": true
+        },
+        {
+          "text": "Informasi",
+          "w": 162,
+          "h": 15,
+          "visible": true
+        },
+        {
+          "text": "Demo portal peserta",
+          "w": 162,
+          "h": 15,
+          "visible": true
+        },
+        {
+          "text": "Atribusi aset",
+          "w": 143,
+          "h": 13,
+          "visible": true
+        }
+      ],
+      "sections": [
+        {
+          "s": "#perlombaan",
+          "exists": true,
+          "h": 724,
+          "overflow": "hidden"
+        },
+        {
+          "s": "#jadwal",
+          "exists": true,
+          "h": 1716,
+          "overflow": "hidden"
+        },
+        {
+          "s": "#sejarah",
+          "exists": true,
+          "h": 3473,
+          "overflow": "visible"
+        },
+        {
+          "s": "#informasi",
+          "exists": true,
+          "h": 1296,
+          "overflow": "visible"
+        },
+        {
+          "s": ".faq-section",
+          "exists": true,
+          "h": 1296,
+          "overflow": "visible"
+        },
+        {
+          "s": ".cta-section",
+          "exists": true,
+          "h": 735,
+          "overflow": "hidden"
+        },
+        {
+          "s": "footer",
+          "exists": true,
+          "h": 758,
+          "overflow": "hidden"
+        }
+      ],
+      "menu": {
+        "rect": {
+          "x": 0,
+          "y": 0,
+          "w": 360,
+          "h": 640
+        },
+        "sh": 640,
+        "ch": 640,
+        "overflow": "auto"
+      },
+      "modal": {
+        "rect": {
+          "x": 8.029739379882812,
+          "y": 8.17498779296875,
+          "w": 343.9405517578125,
+          "h": 623.89208984375
+        },
+        "sh": 1010,
+        "ch": 622,
+        "overflow": "auto",
+        "close": {
+          "w": 43.992431640625,
+          "h": 43.99238967895508
+        },
+        "actions": {
+          "top": 852.2946166992188,
+          "bottom": 1005.0494384765625
+        }
+      }
+    }
+  },
+  {
+    "width": 375,
+    "height": 667,
+    "errors": [],
+    "failed": [],
+    "geom": {
+      "scrollWidth": 375,
+      "clientWidth": 375,
+      "height": 11740,
+      "broken": [],
+      "smallTargets": [
+        {
+          "text": "Perlombaan",
+          "w": 170,
+          "h": 15,
+          "visible": true
+        },
+        {
+          "text": "Jadwal",
+          "w": 170,
+          "h": 15,
+          "visible": true
+        },
+        {
+          "text": "Sejarah",
+          "w": 170,
+          "h": 15,
+          "visible": true
+        },
+        {
+          "text": "Informasi",
+          "w": 170,
+          "h": 15,
+          "visible": true
+        },
+        {
+          "text": "Demo portal peserta",
+          "w": 170,
+          "h": 15,
+          "visible": true
+        },
+        {
+          "text": "Atribusi aset",
+          "w": 143,
+          "h": 13,
+          "visible": true
+        }
+      ],
+      "sections": [
+        {
+          "s": "#perlombaan",
+          "exists": true,
+          "h": 726,
+          "overflow": "hidden"
+        },
+        {
+          "s": "#jadwal",
+          "exists": true,
+          "h": 1691,
+          "overflow": "hidden"
+        },
+        {
+          "s": "#sejarah",
+          "exists": true,
+          "h": 3427,
+          "overflow": "visible"
+        },
+        {
+          "s": "#informasi",
+          "exists": true,
+          "h": 1296,
+          "overflow": "visible"
+        },
+        {
+          "s": ".faq-section",
+          "exists": true,
+          "h": 1296,
+          "overflow": "visible"
+        },
+        {
+          "s": ".cta-section",
+          "exists": true,
+          "h": 744,
+          "overflow": "hidden"
+        },
+        {
+          "s": "footer",
+          "exists": true,
+          "h": 734,
+          "overflow": "hidden"
+        }
+      ],
+      "menu": {
+        "rect": {
+          "x": 0,
+          "y": 0,
+          "w": 375,
+          "h": 667
+        },
+        "sh": 667,
+        "ch": 667,
+        "overflow": "auto"
+      },
+      "modal": {
+        "rect": {
+          "x": 10.103179931640625,
+          "y": 20.01568603515625,
+          "w": 354.79364013671875,
+          "h": 643.372314453125
+        },
+        "sh": 1020,
+        "ch": 649,
+        "overflow": "auto",
+        "close": {
+          "w": 43.484466552734375,
+          "h": 43.484458923339844
+        },
+        "actions": {
+          "top": 864.5344848632812,
+          "bottom": 1015.5255737304688
+        }
+      }
+    }
+  },
+  {
+    "width": 390,
+    "height": 844,
+    "errors": [],
+    "failed": [],
+    "geom": {
+      "scrollWidth": 390,
+      "clientWidth": 390,
+      "height": 11794,
+      "broken": [],
+      "smallTargets": [
+        {
+          "text": "Perlombaan",
+          "w": 177,
+          "h": 15,
+          "visible": true
+        },
+        {
+          "text": "Jadwal",
+          "w": 177,
+          "h": 15,
+          "visible": true
+        },
+        {
+          "text": "Sejarah",
+          "w": 177,
+          "h": 15,
+          "visible": true
+        },
+        {
+          "text": "Informasi",
+          "w": 177,
+          "h": 15,
+          "visible": true
+        },
+        {
+          "text": "Demo portal peserta",
+          "w": 177,
+          "h": 15,
+          "visible": true
+        },
+        {
+          "text": "Atribusi aset",
+          "w": 143,
+          "h": 13,
+          "visible": true
+        }
+      ],
+      "sections": [
+        {
+          "s": "#perlombaan",
+          "exists": true,
+          "h": 844,
+          "overflow": "hidden"
+        },
+        {
+          "s": "#jadwal",
+          "exists": true,
+          "h": 1665,
+          "overflow": "hidden"
+        },
+        {
+          "s": "#sejarah",
+          "exists": true,
+          "h": 3294,
+          "overflow": "visible"
+        },
+        {
+          "s": "#informasi",
+          "exists": true,
+          "h": 1267,
+          "overflow": "visible"
+        },
+        {
+          "s": ".faq-section",
+          "exists": true,
+          "h": 1267,
+          "overflow": "visible"
+        },
+        {
+          "s": ".cta-section",
+          "exists": true,
+          "h": 754,
+          "overflow": "hidden"
+        },
+        {
+          "s": "footer",
+          "exists": true,
+          "h": 734,
+          "overflow": "hidden"
+        }
+      ],
+      "menu": {
+        "rect": {
+          "x": 0,
+          "y": 0,
+          "w": 390,
+          "h": 844
+        },
+        "sh": 844,
+        "ch": 844,
+        "overflow": "auto"
+      },
+      "modal": {
+        "rect": {
+          "x": 8.004608154296875,
+          "y": 8.02740478515625,
+          "w": 373.99078369140625,
+          "h": 827.9796142578125
+        },
+        "sh": 1047,
+        "ch": 826,
+        "overflow": "auto",
+        "close": {
+          "w": 43.998931884765625,
+          "h": 43.99891662597656
+        },
+        "actions": {
+          "top": 889.5369262695312,
+          "bottom": 1042.314453125
+        }
+      }
+    }
+  },
+  {
+    "width": 412,
+    "height": 915,
+    "errors": [],
+    "failed": [],
+    "geom": {
+      "scrollWidth": 412,
+      "clientWidth": 412,
+      "height": 11891,
+      "broken": [],
+      "smallTargets": [
+        {
+          "text": "Perlombaan",
+          "w": 188,
+          "h": 15,
+          "visible": true
+        },
+        {
+          "text": "Jadwal",
+          "w": 188,
+          "h": 15,
+          "visible": true
+        },
+        {
+          "text": "Sejarah",
+          "w": 188,
+          "h": 15,
+          "visible": true
+        },
+        {
+          "text": "Informasi",
+          "w": 188,
+          "h": 15,
+          "visible": true
+        },
+        {
+          "text": "Demo portal peserta",
+          "w": 188,
+          "h": 15,
+          "visible": true
+        },
+        {
+          "text": "Atribusi aset",
+          "w": 143,
+          "h": 13,
+          "visible": true
+        }
+      ],
+      "sections": [
+        {
+          "s": "#perlombaan",
+          "exists": true,
+          "h": 915,
+          "overflow": "hidden"
+        },
+        {
+          "s": "#jadwal",
+          "exists": true,
+          "h": 1590,
+          "overflow": "hidden"
+        },
+        {
+          "s": "#sejarah",
+          "exists": true,
+          "h": 3315,
+          "overflow": "visible"
+        },
+        {
+          "s": "#informasi",
+          "exists": true,
+          "h": 1267,
+          "overflow": "visible"
+        },
+        {
+          "s": ".faq-section",
+          "exists": true,
+          "h": 1267,
+          "overflow": "visible"
+        },
+        {
+          "s": ".cta-section",
+          "exists": true,
+          "h": 768,
+          "overflow": "hidden"
+        },
+        {
+          "s": "footer",
+          "exists": true,
+          "h": 734,
+          "overflow": "hidden"
+        }
+      ],
+      "menu": {
+        "rect": {
+          "x": 0,
+          "y": 0,
+          "w": 412,
+          "h": 915
+        },
+        "sh": 915,
+        "ch": 915,
+        "overflow": "auto"
+      },
+      "modal": {
+        "rect": {
+          "x": 11.959991455078125,
+          "y": 30.989990234375,
+          "w": 388.08001708984375,
+          "h": 881.02001953125
+        },
+        "sh": 1047,
+        "ch": 897,
+        "overflow": "auto",
+        "close": {
+          "w": 43.1199951171875,
+          "h": 43.12000274658203
+        },
+        "actions": {
+          "top": 894.890625,
+          "bottom": 1044.6162109375
+        }
+      }
+    }
+  },
+  {
+    "width": 430,
+    "height": 932,
+    "errors": [],
+    "failed": [],
+    "geom": {
+      "scrollWidth": 430,
+      "clientWidth": 430,
+      "height": 11848,
+      "broken": [],
+      "smallTargets": [
+        {
+          "text": "Perlombaan",
+          "w": 197,
+          "h": 15,
+          "visible": true
+        },
+        {
+          "text": "Jadwal",
+          "w": 197,
+          "h": 15,
+          "visible": true
+        },
+        {
+          "text": "Sejarah",
+          "w": 197,
+          "h": 15,
+          "visible": true
+        },
+        {
+          "text": "Informasi",
+          "w": 197,
+          "h": 15,
+          "visible": true
+        },
+        {
+          "text": "Demo portal peserta",
+          "w": 197,
+          "h": 15,
+          "visible": true
+        },
+        {
+          "text": "Atribusi aset",
+          "w": 143,
+          "h": 13,
+          "visible": true
+        }
+      ],
+      "sections": [
+        {
+          "s": "#perlombaan",
+          "exists": true,
+          "h": 932,
+          "overflow": "hidden"
+        },
+        {
+          "s": "#jadwal",
+          "exists": true,
+          "h": 1541,
+          "overflow": "hidden"
+        },
+        {
+          "s": "#sejarah",
+          "exists": true,
+          "h": 3278,
+          "overflow": "visible"
+        },
+        {
+          "s": "#informasi",
+          "exists": true,
+          "h": 1267,
+          "overflow": "visible"
+        },
+        {
+          "s": ".faq-section",
+          "exists": true,
+          "h": 1267,
+          "overflow": "visible"
+        },
+        {
+          "s": ".cta-section",
+          "exists": true,
+          "h": 779,
+          "overflow": "hidden"
+        },
+        {
+          "s": "footer",
+          "exists": true,
+          "h": 734,
+          "overflow": "hidden"
+        }
+      ],
+      "menu": {
+        "rect": {
+          "x": 0,
+          "y": 0,
+          "w": 430,
+          "h": 932
+        },
+        "sh": 932,
+        "ch": 932,
+        "overflow": "auto"
+      },
+      "modal": {
+        "rect": {
+          "x": 8.339599609375,
+          "y": 9.8997802734375,
+          "w": 413.32080078125,
+          "h": 914.4972534179688
+        },
+        "sh": 1022,
+        "ch": 914,
+        "overflow": "auto",
+        "close": {
+          "w": 43.927825927734375,
+          "h": 43.92781448364258
+        },
+        "actions": {
+          "top": 864.9478149414062,
+          "bottom": 1017.4784545898438
+        }
+      }
+    }
+  },
+  {
+    "width": 568,
+    "height": 320,
+    "errors": [],
+    "failed": [],
+    "geom": {
+      "scrollWidth": 568,
+      "clientWidth": 568,
+      "height": 11386,
+      "broken": [],
+      "smallTargets": [
+        {
+          "text": "Perlombaan",
+          "w": 266,
+          "h": 15,
+          "visible": true
+        },
+        {
+          "text": "Jadwal",
+          "w": 266,
+          "h": 15,
+          "visible": true
+        },
+        {
+          "text": "Sejarah",
+          "w": 266,
+          "h": 15,
+          "visible": true
+        },
+        {
+          "text": "Informasi",
+          "w": 266,
+          "h": 15,
+          "visible": true
+        },
+        {
+          "text": "Demo portal peserta",
+          "w": 266,
+          "h": 15,
+          "visible": true
+        },
+        {
+          "text": "Atribusi aset",
+          "w": 143,
+          "h": 13,
+          "visible": true
+        }
+      ],
+      "sections": [
+        {
+          "s": "#perlombaan",
+          "exists": true,
+          "h": 744,
+          "overflow": "hidden"
+        },
+        {
+          "s": "#jadwal",
+          "exists": true,
+          "h": 1435,
+          "overflow": "hidden"
+        },
+        {
+          "s": "#sejarah",
+          "exists": true,
+          "h": 3151,
+          "overflow": "visible"
+        },
+        {
+          "s": "#informasi",
+          "exists": true,
+          "h": 1219,
+          "overflow": "visible"
+        },
+        {
+          "s": ".faq-section",
+          "exists": true,
+          "h": 1219,
+          "overflow": "visible"
+        },
+        {
+          "s": ".cta-section",
+          "exists": true,
+          "h": 835,
+          "overflow": "hidden"
+        },
+        {
+          "s": "footer",
+          "exists": true,
+          "h": 734,
+          "overflow": "hidden"
+        }
+      ],
+      "menu": {
+        "rect": {
+          "x": 0,
+          "y": 0,
+          "w": 568,
+          "h": 320
+        },
+        "sh": 426,
+        "ch": 320,
+        "overflow": "auto"
+      },
+      "modal": {
+        "rect": {
+          "x": 12.250030517578125,
+          "y": 20.775863647460938,
+          "w": 543.5,
+          "h": 287.7352294921875
+        },
+        "sh": 796,
+        "ch": 286,
+        "overflow": "auto",
+        "close": {
+          "w": 43.959503173828125,
+          "h": 43.95955276489258
+        },
+        "actions": {
+          "top": 648.5108032226562,
+          "bottom": 801.151611328125
+        }
+      }
+    }
+  },
+  {
+    "width": 667,
+    "height": 375,
+    "errors": [],
+    "failed": [],
+    "geom": {
+      "scrollWidth": 667,
+      "clientWidth": 667,
+      "height": 11122,
+      "broken": [],
+      "smallTargets": [
+        {
+          "text": "Perlombaan",
+          "w": 316,
+          "h": 15,
+          "visible": true
+        },
+        {
+          "text": "Jadwal",
+          "w": 316,
+          "h": 15,
+          "visible": true
+        },
+        {
+          "text": "Sejarah",
+          "w": 316,
+          "h": 15,
+          "visible": true
+        },
+        {
+          "text": "Informasi",
+          "w": 316,
+          "h": 15,
+          "visible": true
+        },
+        {
+          "text": "Demo portal peserta",
+          "w": 316,
+          "h": 15,
+          "visible": true
+        },
+        {
+          "text": "Atribusi aset",
+          "w": 143,
+          "h": 13,
+          "visible": true
+        }
+      ],
+      "sections": [
+        {
+          "s": "#perlombaan",
+          "exists": true,
+          "h": 753,
+          "overflow": "hidden"
+        },
+        {
+          "s": "#jadwal",
+          "exists": true,
+          "h": 1337,
+          "overflow": "hidden"
+        },
+        {
+          "s": "#sejarah",
+          "exists": true,
+          "h": 3073,
+          "overflow": "visible"
+        },
+        {
+          "s": "#informasi",
+          "exists": true,
+          "h": 1172,
+          "overflow": "visible"
+        },
+        {
+          "s": ".faq-section",
+          "exists": true,
+          "h": 1172,
+          "overflow": "visible"
+        },
+        {
+          "s": ".cta-section",
+          "exists": true,
+          "h": 835,
+          "overflow": "hidden"
+        },
+        {
+          "s": "footer",
+          "exists": true,
+          "h": 734,
+          "overflow": "hidden"
+        }
+      ],
+      "menu": {
+        "rect": {
+          "x": 0,
+          "y": 0,
+          "w": 667,
+          "h": 375
+        },
+        "sh": 454,
+        "ch": 375,
+        "overflow": "auto"
+      },
+      "modal": {
+        "rect": {
+          "x": 12.055450439453125,
+          "y": 25.649856567382812,
+          "w": 642.88916015625,
+          "h": 337.4417724609375
+        },
+        "sh": 796,
+        "ch": 336,
+        "overflow": "auto",
+        "close": {
+          "w": 43.992431640625,
+          "h": 43.99241638183594
+        },
+        "actions": {
+          "top": 653.8539428710938,
+          "bottom": 806.6088256835938
+        }
+      }
+    }
+  },
+  {
+    "width": 768,
+    "height": 1024,
+    "errors": [],
+    "failed": [],
+    "geom": {
+      "scrollWidth": 768,
+      "clientWidth": 768,
+      "height": 11122,
+      "broken": [],
+      "smallTargets": [],
+      "sections": [
+        {
+          "s": "#perlombaan",
+          "exists": true,
+          "h": 1024,
+          "overflow": "hidden"
+        },
+        {
+          "s": "#jadwal",
+          "exists": true,
+          "h": 1285,
+          "overflow": "hidden"
+        },
+        {
+          "s": "#sejarah",
+          "exists": true,
+          "h": 3016,
+          "overflow": "visible"
+        },
+        {
+          "s": "#informasi",
+          "exists": true,
+          "h": 1172,
+          "overflow": "visible"
+        },
+        {
+          "s": ".faq-section",
+          "exists": true,
+          "h": 1172,
+          "overflow": "visible"
+        },
+        {
+          "s": ".cta-section",
+          "exists": true,
+          "h": 764,
+          "overflow": "hidden"
+        },
+        {
+          "s": "footer",
+          "exists": true,
+          "h": 734,
+          "overflow": "hidden"
+        }
+      ],
+      "modal": {
+        "rect": {
+          "x": 12.459228515625,
+          "y": 110.87435913085938,
+          "w": 743.08154296875,
+          "h": 901.4326171875
+        },
+        "sh": 901,
+        "ch": 901,
+        "overflow": "auto",
+        "close": {
+          "w": 43.9456787109375,
+          "h": 43.9456787109375
+        },
+        "actions": {
+          "top": 842.7353515625,
+          "bottom": 995.3280029296875
+        }
+      }
+    }
+  },
+  {
+    "width": 820,
+    "height": 1180,
+    "errors": [],
+    "failed": [],
+    "geom": {
+      "scrollWidth": 820,
+      "clientWidth": 820,
+      "height": 11026,
+      "broken": [],
+      "smallTargets": [],
+      "sections": [
+        {
+          "s": "#perlombaan",
+          "exists": true,
+          "h": 1180,
+          "overflow": "hidden"
+        },
+        {
+          "s": "#jadwal",
+          "exists": true,
+          "h": 1600,
+          "overflow": "hidden"
+        },
+        {
+          "s": "#sejarah",
+          "exists": true,
+          "h": 2665,
+          "overflow": "visible"
+        },
+        {
+          "s": "#informasi",
+          "exists": true,
+          "h": 1172,
+          "overflow": "visible"
+        },
+        {
+          "s": ".faq-section",
+          "exists": true,
+          "h": 1172,
+          "overflow": "visible"
+        },
+        {
+          "s": ".cta-section",
+          "exists": true,
+          "h": 768,
+          "overflow": "hidden"
+        },
+        {
+          "s": "footer",
+          "exists": true,
+          "h": 431,
+          "overflow": "hidden"
+        }
+      ],
+      "modal": {
+        "rect": {
+          "x": 24.59375,
+          "y": 286,
+          "w": 770.8125,
+          "h": 607.984375
+        },
+        "sh": 606,
+        "ch": 606,
+        "overflow": "hidden",
+        "close": {
+          "w": 44,
+          "h": 44
+        },
+        "actions": {
+          "top": 770.59375,
+          "bottom": 868.984375
+        }
+      }
+    }
+  },
+  {
+    "width": 1024,
+    "height": 768,
+    "errors": [],
+    "failed": [],
+    "geom": {
+      "scrollWidth": 1024,
+      "clientWidth": 1024,
+      "height": 10581,
+      "broken": [],
+      "smallTargets": [],
+      "sections": [
+        {
+          "s": "#perlombaan",
+          "exists": true,
+          "h": 870,
+          "overflow": "hidden"
+        },
+        {
+          "s": "#jadwal",
+          "exists": true,
+          "h": 1579,
+          "overflow": "hidden"
+        },
+        {
+          "s": "#sejarah",
+          "exists": true,
+          "h": 2636,
+          "overflow": "visible"
+        },
+        {
+          "s": "#informasi",
+          "exists": true,
+          "h": 1220,
+          "overflow": "visible"
+        },
+        {
+          "s": ".faq-section",
+          "exists": true,
+          "h": 1220,
+          "overflow": "visible"
+        },
+        {
+          "s": ".cta-section",
+          "exists": true,
+          "h": 768,
+          "overflow": "hidden"
+        },
+        {
+          "s": "footer",
+          "exists": true,
+          "h": 431,
+          "overflow": "hidden"
+        }
+      ],
+      "modal": {
+        "rect": {
+          "x": 48,
+          "y": 117.46875,
+          "w": 928,
+          "h": 533.046875
+        },
+        "sh": 531,
+        "ch": 531,
+        "overflow": "hidden",
+        "close": {
+          "w": 44,
+          "h": 44
+        },
+        "actions": {
+          "top": 581.515625,
+          "bottom": 625.515625
+        }
+      }
+    }
+  },
+  {
+    "width": 1280,
+    "height": 720,
+    "errors": [],
+    "failed": [],
+    "geom": {
+      "scrollWidth": 1280,
+      "clientWidth": 1280,
+      "height": 11336,
+      "broken": [],
+      "smallTargets": [],
+      "sections": [
+        {
+          "s": "#perlombaan",
+          "exists": true,
+          "h": 903,
+          "overflow": "hidden"
+        },
+        {
+          "s": "#jadwal",
+          "exists": true,
+          "h": 1639,
+          "overflow": "hidden"
+        },
+        {
+          "s": "#sejarah",
+          "exists": true,
+          "h": 2947,
+          "overflow": "visible"
+        },
+        {
+          "s": "#informasi",
+          "exists": true,
+          "h": 1008,
+          "overflow": "visible"
+        },
+        {
+          "s": ".faq-section",
+          "exists": true,
+          "h": 1008,
+          "overflow": "visible"
+        },
+        {
+          "s": ".cta-section",
+          "exists": true,
+          "h": 768,
+          "overflow": "hidden"
+        },
+        {
+          "s": "footer",
+          "exists": true,
+          "h": 431,
+          "overflow": "hidden"
+        }
+      ],
+      "modal": {
+        "rect": {
+          "x": 176.165771484375,
+          "y": 91.14315795898438,
+          "w": 927.66845703125,
+          "h": 538.2138671875
+        },
+        "sh": 536,
+        "ch": 536,
+        "overflow": "hidden",
+        "close": {
+          "w": 43.9842529296875,
+          "h": 43.984291076660156
+        },
+        "actions": {
+          "top": 560.3817138671875,
+          "bottom": 604.365966796875
+        }
+      }
+    }
+  },
+  {
+    "width": 1366,
+    "height": 768,
+    "errors": [],
+    "failed": [],
+    "geom": {
+      "scrollWidth": 1366,
+      "clientWidth": 1366,
+      "height": 11711,
+      "broken": [],
+      "smallTargets": [],
+      "sections": [
+        {
+          "s": "#perlombaan",
+          "exists": true,
+          "h": 910,
+          "overflow": "hidden"
+        },
+        {
+          "s": "#jadwal",
+          "exists": true,
+          "h": 1674,
+          "overflow": "hidden"
+        },
+        {
+          "s": "#sejarah",
+          "exists": true,
+          "h": 3099,
+          "overflow": "visible"
+        },
+        {
+          "s": "#informasi",
+          "exists": true,
+          "h": 1027,
+          "overflow": "visible"
+        },
+        {
+          "s": ".faq-section",
+          "exists": true,
+          "h": 1027,
+          "overflow": "visible"
+        },
+        {
+          "s": ".cta-section",
+          "exists": true,
+          "h": 768,
+          "overflow": "hidden"
+        },
+        {
+          "s": "footer",
+          "exists": true,
+          "h": 431,
+          "overflow": "hidden"
+        }
+      ],
+      "modal": {
+        "rect": {
+          "x": 219,
+          "y": 114.796875,
+          "w": 928,
+          "h": 538.40625
+        },
+        "sh": 536,
+        "ch": 536,
+        "overflow": "hidden",
+        "close": {
+          "w": 44,
+          "h": 44
+        },
+        "actions": {
+          "top": 584.203125,
+          "bottom": 628.203125
+        }
+      }
+    }
+  },
+  {
+    "width": 1440,
+    "height": 900,
+    "errors": [],
+    "failed": [],
+    "geom": {
+      "scrollWidth": 1440,
+      "clientWidth": 1440,
+      "height": 12282,
+      "broken": [],
+      "smallTargets": [],
+      "sections": [
+        {
+          "s": "#perlombaan",
+          "exists": true,
+          "h": 999,
+          "overflow": "hidden"
+        },
+        {
+          "s": "#jadwal",
+          "exists": true,
+          "h": 1704,
+          "overflow": "hidden"
+        },
+        {
+          "s": "#sejarah",
+          "exists": true,
+          "h": 3276,
+          "overflow": "visible"
+        },
+        {
+          "s": "#informasi",
+          "exists": true,
+          "h": 1043,
+          "overflow": "visible"
+        },
+        {
+          "s": ".faq-section",
+          "exists": true,
+          "h": 1043,
+          "overflow": "visible"
+        },
+        {
+          "s": ".cta-section",
+          "exists": true,
+          "h": 768,
+          "overflow": "hidden"
+        },
+        {
+          "s": "footer",
+          "exists": true,
+          "h": 431,
+          "overflow": "hidden"
+        }
+      ],
+      "modal": {
+        "rect": {
+          "x": 256,
+          "y": 180.796875,
+          "w": 928,
+          "h": 538.40625
+        },
+        "sh": 536,
+        "ch": 536,
+        "overflow": "hidden",
+        "close": {
+          "w": 44,
+          "h": 44
+        },
+        "actions": {
+          "top": 650.203125,
+          "bottom": 694.203125
+        }
+      }
+    }
+  },
+  {
+    "width": 1920,
+    "height": 1080,
+    "errors": [],
+    "failed": [],
+    "geom": {
+      "scrollWidth": 1920,
+      "clientWidth": 1920,
+      "height": 13389,
+      "broken": [],
+      "smallTargets": [],
+      "sections": [
+        {
+          "s": "#perlombaan",
+          "exists": true,
+          "h": 1162,
+          "overflow": "hidden"
+        },
+        {
+          "s": "#jadwal",
+          "exists": true,
+          "h": 1744,
+          "overflow": "hidden"
+        },
+        {
+          "s": "#sejarah",
+          "exists": true,
+          "h": 3533,
+          "overflow": "visible"
+        },
+        {
+          "s": "#informasi",
+          "exists": true,
+          "h": 1078,
+          "overflow": "visible"
+        },
+        {
+          "s": ".faq-section",
+          "exists": true,
+          "h": 1078,
+          "overflow": "visible"
+        },
+        {
+          "s": ".cta-section",
+          "exists": true,
+          "h": 774,
+          "overflow": "hidden"
+        },
+        {
+          "s": "footer",
+          "exists": true,
+          "h": 431,
+          "overflow": "hidden"
+        }
+      ],
+      "modal": {
+        "rect": {
+          "x": 496,
+          "y": 270.796875,
+          "w": 928,
+          "h": 538.40625
+        },
+        "sh": 536,
+        "ch": 536,
+        "overflow": "hidden",
+        "close": {
+          "w": 44,
+          "h": 44
+        },
+        "actions": {
+          "top": 740.203125,
+          "bottom": 784.203125
+        }
+      }
+    }
+  },
+  {
+    "width": 2560,
+    "height": 1440,
+    "errors": [],
+    "failed": [],
+    "geom": {
+      "scrollWidth": 2560,
+      "clientWidth": 2560,
+      "height": 14026,
+      "broken": [],
+      "smallTargets": [],
+      "sections": [
+        {
+          "s": "#perlombaan",
+          "exists": true,
+          "h": 1440,
+          "overflow": "hidden"
+        },
+        {
+          "s": "#jadwal",
+          "exists": true,
+          "h": 1744,
+          "overflow": "hidden"
+        },
+        {
+          "s": "#sejarah",
+          "exists": true,
+          "h": 3533,
+          "overflow": "visible"
+        },
+        {
+          "s": "#informasi",
+          "exists": true,
+          "h": 1078,
+          "overflow": "visible"
+        },
+        {
+          "s": ".faq-section",
+          "exists": true,
+          "h": 1078,
+          "overflow": "visible"
+        },
+        {
+          "s": ".cta-section",
+          "exists": true,
+          "h": 774,
+          "overflow": "hidden"
+        },
+        {
+          "s": "footer",
+          "exists": true,
+          "h": 431,
+          "overflow": "hidden"
+        }
+      ],
+      "modal": {
+        "rect": {
+          "x": 816,
+          "y": 450.796875,
+          "w": 928,
+          "h": 538.40625
+        },
+        "sh": 536,
+        "ch": 536,
+        "overflow": "hidden",
+        "close": {
+          "w": 44,
+          "h": 44
+        },
+        "actions": {
+          "top": 920.203125,
+          "bottom": 964.203125
+        }
+      }
+    }
+  }
+]

@@ -11,7 +11,7 @@ export interface Competition {
   shortName: string;
   level: CompetitionLevel;
   discipline: string;
-  fixtureLabel: 'Draf kategori JRC XIII';
+  fixtureLabel: 'Kategori resmi JRC XIV';
   fee: typeof pendingAnnouncement;
   guidebook: {
     label: 'Guidebook';
@@ -32,7 +32,7 @@ export const competitions: readonly Competition[] = [
     shortName: 'Donatopia',
     level: 'SD',
     discipline: 'Transporter',
-    fixtureLabel: 'Draf kategori JRC XIII',
+    fixtureLabel: 'Kategori resmi JRC XIV',
     fee: pendingAnnouncement,
     guidebook: { label: 'Guidebook', status: pendingAnnouncement, href: null },
     provocation: 'Bawa misi sampai garis akhir.',
@@ -48,7 +48,7 @@ export const competitions: readonly Competition[] = [
     shortName: 'Nightmaze',
     level: 'SMP',
     discipline: 'Rescue Transporter',
-    fixtureLabel: 'Draf kategori JRC XIII',
+    fixtureLabel: 'Kategori resmi JRC XIV',
     fee: pendingAnnouncement,
     guidebook: { label: 'Guidebook', status: pendingAnnouncement, href: null },
     provocation: 'Temukan jalan ketika arena menggelap.',
@@ -64,7 +64,7 @@ export const competitions: readonly Competition[] = [
     shortName: 'Pirate Clash',
     level: 'SMA',
     discipline: 'Transporter Shooter',
-    fixtureLabel: 'Draf kategori JRC XIII',
+    fixtureLabel: 'Kategori resmi JRC XIV',
     fee: pendingAnnouncement,
     guidebook: { label: 'Guidebook', status: pendingAnnouncement, href: null },
     provocation: 'Angkut, bidik, tuntaskan.',
@@ -80,7 +80,7 @@ export const competitions: readonly Competition[] = [
     shortName: 'Wacky Rally',
     level: 'Umum',
     discipline: 'Line Follower Mikro',
-    fixtureLabel: 'Draf kategori JRC XIII',
+    fixtureLabel: 'Kategori resmi JRC XIV',
     fee: pendingAnnouncement,
     guidebook: { label: 'Guidebook', status: pendingAnnouncement, href: null },
     provocation: 'Kecepatan lahir dari kendali.',
@@ -96,7 +96,7 @@ export const competitions: readonly Competition[] = [
     shortName: 'Ring Rumble',
     level: 'Umum',
     discipline: 'Sumo',
-    fixtureLabel: 'Draf kategori JRC XIII',
+    fixtureLabel: 'Kategori resmi JRC XIV',
     fee: pendingAnnouncement,
     guidebook: { label: 'Guidebook', status: pendingAnnouncement, href: null },
     provocation: 'Satu ring. Tidak ada ruang untuk ragu.',
@@ -112,7 +112,7 @@ export const competitions: readonly Competition[] = [
     shortName: 'Goal Rush',
     level: 'Umum',
     discipline: 'Soccer',
-    fixtureLabel: 'Draf kategori JRC XIII',
+    fixtureLabel: 'Kategori resmi JRC XIV',
     fee: pendingAnnouncement,
     guidebook: { label: 'Guidebook', status: pendingAnnouncement, href: null },
     provocation: 'Baca arena. Rebut bola. Cetak sejarah.',
@@ -168,27 +168,27 @@ export const eventSchedule: readonly ScheduleItem[] = [
 export const historyChapters = [
   {
     numeral: 'I',
-    eyebrow: 'Awal perjalanan',
+    eyebrow: 'JRC I',
     title: 'Satu arena mulai dibangun',
     copy: 'JRC lahir sebagai ruang bagi pelajar dan perancang muda untuk menguji robot di hadapan tantangan nyata.',
   },
   {
     numeral: 'V',
-    eyebrow: 'Arena bertumbuh',
+    eyebrow: 'JRC V',
     title: 'Disiplin baru, lawan baru',
     copy: 'Kompetisi berkembang menjadi pertemuan lintas jenjang yang merayakan proses, bukan sekadar podium.',
   },
   {
     numeral: 'XIII',
-    eyebrow: 'Warisan terakhir',
-    title: 'Enam kisah dari generasi sebelumnya',
-    copy: 'Nama kategori pada edisi XIII menjadi draf awal tahun ini sampai ketentuan resmi JRC XIV diumumkan.',
+    eyebrow: 'JRC XIII',
+    title: 'Edisi sebelumnya',
+    copy: 'Pengalaman dari JRC XIII menjadi acuan panitia dalam menyiapkan pelaksanaan JRC XIV.',
   },
   {
     numeral: 'XIV',
-    eyebrow: 'Bab berikutnya',
+    eyebrow: 'JRC XIV',
     title: 'Imperium Machina',
-    copy: 'Kini arena Roma menjadi panggung baru: monumental dalam skala, presisi dalam rekayasa, dan terbuka untuk generasi berikutnya.',
+    copy: 'Enam kategori resmi hadir dalam satu tema baru, mempertemukan peserta dari jenjang SD, SMP, SMA, dan umum.',
   },
 ] as const;
 
@@ -222,22 +222,22 @@ export const faqItems = [
     answer: 'Pendaftaran JRC XIV dibuka pada 15 September dan ditutup pada 15 Oktober 2026.',
   },
   {
-    question: 'Apakah kategori JRC XIV sudah final?',
+    question: 'Apa saja kategori resmi JRC XIV?',
     answer:
-      'Belum. Enam kategori yang tampil adalah draf dari JRC XIII dan akan diperbarui setelah ketentuan resmi diumumkan.',
+      'JRC XIV memiliki enam kategori resmi: Donatopia — Transporter, Nightmaze — Rescue Transporter, Pirate Clash — Transporter Shooter, Wacky Rally — Line Follower Mikro, Ring Rumble — Sumo, dan Goal Rush — Soccer.',
   },
   {
     question: 'Di mana guidebook dapat diunduh?',
-    answer: pendingAnnouncement,
+    answer: 'Guidebook belum tersedia. Tautan unduhan akan ditampilkan di halaman kategori setelah dirilis.',
   },
   {
     question: 'Siapa yang dapat mengikuti JRC XIV?',
     answer:
-      'Jenjang peserta mengikuti kategori masing-masing. Detail batas usia, komposisi tim, dan persyaratan akan tercantum pada guidebook resmi.',
+      'Jenjang peserta mengikuti kategori masing-masing. Batas usia, komposisi tim, dan persyaratan lain akan diumumkan.',
   },
   {
     question: 'Bagaimana menghubungi panitia?',
-    answer: 'Kanal kontak resmi akan diumumkan bersama pembukaan pendaftaran.',
+    answer: 'Kanal kontak panitia belum tersedia.',
   },
 ] as const;
 
