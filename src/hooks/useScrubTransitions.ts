@@ -199,23 +199,34 @@ export function useScrubTransitions({ disabled = false }: ScrubOptions = {}) {
       });
 
       // Lower world: text moves against stable image crops for low-cost depth.
-      document.querySelectorAll<HTMLElement>('.history-procession .journey-scene').forEach((scene, index) => {
-        const content = scene.querySelector<HTMLElement>('.history-procession__opening, .history-procession__inscription, .civic-assembly__manifesto');
+      document.querySelectorAll<HTMLElement>('.history-archive .archive-entry').forEach((entry, index) => {
+        const content = entry.querySelector<HTMLElement>('.archive-entry__inscription');
+        const plate = entry.querySelector<HTMLElement>('.archive-plate');
         if (content) {
           const horizontal = index % 2 === 0 ? -22 : 22;
           createSceneMotion({
-            trigger: scene, targets: content,
+            trigger: entry, targets: content,
             from: { x: horizontal, y: 48, opacity: 0.16, scale: 0.982 }, settle: { x: 0, y: 0, opacity: 1, scale: 1 },
             leave: { x: -horizontal * 0.45, y: -30, opacity: 0.52, scale: 1.008 },
             start: 'top 92%', end: 'bottom 8%', scrub: 0.8, enterDuration: 0.28,
           });
         }
-        const pillars = scene.querySelectorAll<HTMLElement>('.civic-assembly__pillars > li');
-        if (pillars.length) createSceneMotion({
-          trigger: scene, targets: pillars,
-          from: { y: 38, opacity: 0.12 }, settle: { y: 0, opacity: 1 }, leave: { y: -20, opacity: 0.56 },
-          start: 'top 78%', end: 'bottom 12%', stagger: 0.07, leaveAt: 0.74,
-        });
+        if (plate) {
+          createParallax(entry, plate, { yPercent: 6, scale: 1.03 }, { yPercent: -4, scale: 1 }, 'top bottom', 'bottom top', 1.1);
+        }
+      });
+      const festival = document.querySelector<HTMLElement>('.history-archive__festival');
+      const festivalManifesto = festival?.querySelector<HTMLElement>('.civic-assembly__manifesto');
+      const festivalPillars = festival?.querySelectorAll<HTMLElement>('.civic-assembly__pillars > li');
+      if (festival && festivalManifesto) createSceneMotion({
+        trigger: festival, targets: festivalManifesto,
+        from: { y: 36, opacity: 0.2, scale: 0.98 }, settle: { y: 0, opacity: 1, scale: 1 },
+        leave: { y: -18, opacity: 0.6, scale: 1.005 }, start: 'top 88%', end: 'bottom 10%', scrub: 0.9,
+      });
+      if (festival && festivalPillars?.length) createSceneMotion({
+        trigger: festival, targets: festivalPillars,
+        from: { y: 38, opacity: 0.12 }, settle: { y: 0, opacity: 1 }, leave: { y: -20, opacity: 0.56 },
+        start: 'top 78%', end: 'bottom 12%', stagger: 0.07, leaveAt: 0.74,
       });
 
       const partners = document.querySelector<HTMLElement>('.journey-scene--partners');

@@ -8,7 +8,7 @@ import {
   type PortalRepository,
   type Registration,
   type RegistrationStatus,
-} from '../../data/portal';
+} from '../../features/registration';
 
 interface AdminRegistrationDetailPageProps {
   repository?: PortalRepository;

@@ -1,4 +1,4 @@
-import type { RegistrationStatus } from '../../data/portal';
+import type { RegistrationStatus } from '../../features/registration';
 
 const labels: Record<RegistrationStatus, string> = {
   draft: 'Draft',

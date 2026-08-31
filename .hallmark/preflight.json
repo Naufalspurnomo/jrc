@@ -1,9 +1,0 @@
-{
-  "date": "2026-08-25",
-  "framework": "React 19 + Vite 8",
-  "font_stack": ["Cinzel Variable", "Manrope Variable", "IBM Plex Mono"],
-  "palette": "Imperium Machina — coal, ivory, oxblood, and imperial gold",
-  "motion": "GSAP + Lenis with reduced-motion fallbacks",
-  "spacing": "Existing rem/clamp scale",
-  "preserved": ["brand palette", "font stack", "background-bawah.svg", "FAQ interaction"]
-}

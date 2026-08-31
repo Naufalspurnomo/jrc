@@ -1,7 +1,7 @@
 import { Link, Navigate, useNavigate } from 'react-router-dom';
 import { PortalShell } from '../../components/portal/PortalShell';
 import { StatusBadge } from '../../components/portal/StatusBadge';
-import { portalRepository, type PortalRepository, type Registration } from '../../data/portal';
+import { portalRepository, type PortalRepository, type Registration } from '../../features/registration';
 
 interface PortalDashboardPageProps {
   repository?: PortalRepository;

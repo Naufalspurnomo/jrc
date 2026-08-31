@@ -1,23 +1,23 @@
-import './styles/fonts.css';
+import './styles/base/fonts.css';
 
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 
 import App from './app/App';
-import './styles/index.css';
-import './styles/showcase-hero.css';
-import './styles/hero-redesign.css';
-import './styles/hero-layer-fix.css';
-import './styles/hero-festival.css';
-import './styles/event-facts-civic.css';
-import './styles/legacy-world.css';
-import './styles/legacy-world-redesign.css';
-import './styles/responsive-motion.css';
-import './styles/schedule-editorial.css';
-import './styles/startup-performance.css';
-import './styles/site-polish.css';
-import './styles/lower-world.css';
-import './styles/scroll-motion.css';
+import './styles/base/app.css';
+import './styles/sections/showcase.css';
+import './styles/sections/hero-layout.css';
+import './styles/sections/hero-composition.css';
+import './styles/sections/hero-theme.css';
+import './styles/sections/event-brief.css';
+import './styles/sections/history.css';
+import './styles/sections/legacy-layout.css';
+import './styles/system/responsive.css';
+import './styles/sections/schedule.css';
+import './styles/system/performance.css';
+import './styles/system/site-shell.css';
+import './styles/sections/lower-world.css';
+import './styles/system/motion.css';
 
 const root = document.getElementById('root');
 

@@ -608,15 +608,15 @@
 }
 
 @keyframes gate-door-slide-left {
-  0%, 27% { transform: translate3d(0, 0, 0); }
-  72% { transform: translate3d(-96%, 0, 0); }
-  100% { transform: translate3d(-108%, 0, 0); }
+  0%, 23% { transform: translate3d(0, 0, 0); }
+  68% { transform: translate3d(-98%, 0, 0); }
+  76%, 100% { transform: translate3d(-108%, 0, 0); }
 }
 
 @keyframes gate-door-slide-right {
-  0%, 27% { transform: translate3d(0, 0, 0); }
-  72% { transform: translate3d(96%, 0, 0); }
-  100% { transform: translate3d(108%, 0, 0); }
+  0%, 23% { transform: translate3d(0, 0, 0); }
+  68% { transform: translate3d(98%, 0, 0); }
+  76%, 100% { transform: translate3d(108%, 0, 0); }
 }
 
 @keyframes gate-door-sheen {
@@ -676,31 +676,65 @@
 }
 
 @keyframes gate-camera {
-  0%, 62% { transform: translate3d(0, 0, 0) scale(1); opacity: 1; }
-  86% { transform: translate3d(0, 0, 0) scale(1.025); opacity: 1; }
-  100% { transform: translate3d(0, 0, 0) scale(1.095); opacity: 0; }
+  0%, 76% { transform: translate3d(0, 0, 0) scale(1); opacity: 1; }
+  86% { transform: translate3d(0, 0, 0) scale(1.018); opacity: 1; }
+  100% { transform: translate3d(0, 0, 0) scale(1.09); opacity: 0; }
 }
 
 @media (max-width: 800px) {
   .gate-entry {
     --portal-width: 78vw;
     --door-half-width: 39vw;
+    animation-name: gate-camera-mobile;
+    will-change: opacity;
   }
 
   .gate-entry__portal { height: 78vh; }
-  .gate-entry__door { width: var(--door-half-width); height: 68vh; }
+  .gate-entry__ambient {
+    background:
+      linear-gradient(180deg, rgb(15 8 6 / 74%), rgb(19 11 8 / 88%)),
+      linear-gradient(90deg, rgb(11 7 6 / 90%), transparent 38% 62%, rgb(11 7 6 / 90%)),
+      url('/assets/arena-interior-wide-mobile.webp') center 42% / cover no-repeat;
+  }
+  .gate-entry__portal-scene {
+    background:
+      linear-gradient(180deg, rgb(7 5 4 / 6%), rgb(7 5 4 / 24%)),
+      url('/assets/arena-interior-wide-mobile.webp') center 54% / cover no-repeat;
+  }
+  .gate-entry__portal-scene,
+  .gate-entry__portal::after,
+  .gate-entry__ambient-light,
+  .gate-entry__threshold {
+    animation: none;
+    will-change: auto;
+  }
+  .gate-entry__portal-scene { transform: translate3d(0, 0, 0) scale(1.02); opacity: .7; }
+  .gate-entry__portal::after { opacity: .42; }
+  .gate-entry__ambient-light { display: none; }
+  .gate-entry__threshold { width: 105vw; opacity: .35; }
+  .gate-entry__dust,
+  .gate-entry__standard { display: none; }
+  .gate-entry__door {
+    width: var(--door-half-width);
+    height: 68vh;
+    will-change: transform;
+  }
+  .gate-entry__door > i { display: none; }
+  .gate-entry__light { will-change: transform, opacity; }
+  .gate-entry__seal { width: clamp(128px, 31vw, 164px); will-change: transform, opacity; }
   .gate-entry__pier { width: clamp(70px, 16vw, 112px); height: 69%; }
   .gate-entry__arch { bottom: 61vh; width: 96vw; height: 55vw; }
-  .gate-entry__standard { top: 29%; width: clamp(48px, 10vw, 66px); height: 27%; }
-  .gate-entry__standard--left { left: 4%; }
-  .gate-entry__standard--right { right: 4%; }
-  .gate-entry__seal { width: clamp(128px, 31vw, 164px); }
-  .gate-entry__threshold { width: 105vw; }
   .gate-entry__masonry {
     background:
       repeating-linear-gradient(0deg, transparent 0 10.5vh, rgb(166 118 71 / 10%) 10.65vh 10.85vh),
       linear-gradient(92deg, transparent 47%, rgb(170 121 72 / 7%) 47.4% 47.8%, transparent 48.2%);
   }
+}
+
+@keyframes gate-camera-mobile {
+  0%, 76% { transform: translate3d(0, 0, 0) scale(1); opacity: 1; }
+  88% { transform: translate3d(0, 0, 0) scale(1.012); opacity: 1; }
+  100% { transform: translate3d(0, 0, 0) scale(1.045); opacity: 0; }
 }
 
 @media (max-width: 420px) {

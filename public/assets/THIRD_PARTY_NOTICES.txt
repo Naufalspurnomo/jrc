@@ -1,0 +1,67 @@
+JRC XIV Frontend — Third-Party Visual Asset Notices
+
+Colosseum engraving
+Title: Speculum Romanae Magnificentiae: The Colosseum
+Creator: Antonio Lafreri / anonymous
+Institution: The Metropolitan Museum of Art
+Source: https://commons.wikimedia.org/wiki/File:Speculum_Romanae_Magnificentiae-_The_Colosseum_MET_DP102223.jpg
+License: Creative Commons Zero 1.0
+License URL: https://creativecommons.org/publicdomain/zero/1.0/
+Files: hero-roman/colosseum-engraving.avif, hero-roman/colosseum-engraving.webp
+
+Triumphal arch engraving
+Title: Arch of Septimius Severus, Rome
+Creator: Unknown; published in the 1911 Encyclopaedia Britannica
+Source: https://commons.wikimedia.org/wiki/File:EB1911_Triumphal_Arch,_Plate,_5.jpg
+License: Public domain
+File: hero-roman/roman-triumphal-arch.jpg
+
+Athena Giustiniani
+Creator: Justin Benttinen
+Source: https://commons.wikimedia.org/wiki/File:Athena_Giustiniani,_Vatican_Museums.jpg
+License: CC BY-SA 4.0
+License URL: https://creativecommons.org/licenses/by-sa/4.0/
+File: roman-select/athena.webp
+
+Ares Borghese
+Creator: Shonagon
+Source: https://commons.wikimedia.org/wiki/File:Ar%C3%A8s_Borgh%C3%A8se_-_Mus%C3%A9e_du_Louvre_AGER_Ma_866_%3B_MR_65_%3B_N_819.jpg
+License: CC0 1.0 Universal
+License URL: https://creativecommons.org/publicdomain/zero/1.0/
+File: roman-select/ares.webp
+
+Apollo Belvedere
+Creator: Livioandronico2013
+Source: https://commons.wikimedia.org/wiki/File:Apollo_del_Belvedere.jpg
+License: CC BY-SA 4.0
+License URL: https://creativecommons.org/licenses/by-sa/4.0/
+File: roman-select/apollo.webp
+
+Capitoline Antinous
+Credit: Jastrow (2006)
+Source: https://commons.wikimedia.org/wiki/File:Capitoline_Antinous_Musei_Capitolini_MC741_n2.jpg
+License: Public domain
+File: roman-select/antinous.webp
+
+Meleager
+Credit: Jastrow (2006)
+Source: https://commons.wikimedia.org/wiki/File:Meleager_Pio-Clementino_Inv490.jpg
+License: Public domain
+File: roman-select/meleager.webp
+
+Farnese Hercules
+Credit: Marie-Lan Nguyen (2011)
+Source: https://commons.wikimedia.org/wiki/File:Herakles_Farnese_MAN_Napoli_Inv6001_n01.jpg
+License: CC BY 2.5
+License URL: https://creativecommons.org/licenses/by/2.5/
+File: roman-select/hercules.webp
+
+Pula Arena background
+Title: Anfiteatro de Pula, Croacia, 2017-04-16, DD 01-06 PAN
+Creator: Diego Delso
+Source: https://commons.wikimedia.org/wiki/File:Anfiteatro_de_Pula,_Croacia,_2017-04-16,_DD_01-06_PAN.jpg
+License: CC BY-SA 4.0
+License URL: https://creativecommons.org/licenses/by-sa/4.0/
+Files: arena-pula-wide.webp, arena-pula-mobile.webp
+
+The listed files have been resized, cropped, and color-graded for this website. Original licenses remain in effect.

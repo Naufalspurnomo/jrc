@@ -5,27 +5,21 @@ import { useEffect } from 'react';
 gsap.registerPlugin(ScrollTrigger);
 
 interface RevealOptions {
-  /** Selector scope — defaults to document. */
   scope?: HTMLElement | null;
-  /** Extra selectors to reveal, appended to the default set. */
   extra?: string[];
-  /** Disable all animation (reduced motion / static contexts). */
   disabled?: boolean;
 }
 
 const DEFAULT_SELECTORS = [
-  '.arena-facts__intro',
-  '.arena-facts__register',
-  '.arena-facts__fact',
-  '.character-select__header',
-  '.cs-card',
+  '.event-brief__intro',
+  '.event-brief__fact',
+  '.character-selector',
   '.schedule-section__header',
-  '.schedule-section__timeline li',
-  '.history-section__header',
-  '.history-section__chapters li',
-  '.history-festival',
-  '.partner-section__header',
-  '.partner-section__tiers > div',
+  '.schedule-route__stations > li',
+  '.archive-entry',
+  '.civic-assembly__manifesto',
+  '.patron-court__opening',
+  '.patron-court__bay',
   '.faq-section__header',
   '.faq-section__items',
   '.cta-section__inner',
@@ -34,11 +28,7 @@ const DEFAULT_SELECTORS = [
   '.competition-intel dl',
 ];
 
-/**
- * Scroll-triggered entrance reveal for sections and list items.
- * Animates opacity + y only (transform/opacity — layout-safe),
- * respects prefers-reduced-motion via the disabled flag.
- */
+/** Applies one-time entrance transitions to public content sections. */
 export function useScrollReveal({ scope, extra = [], disabled = false }: RevealOptions = {}) {
   useEffect(() => {
     const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;

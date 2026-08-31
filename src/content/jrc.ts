@@ -165,30 +165,91 @@ export const eventSchedule: readonly ScheduleItem[] = [
   },
 ] as const;
 
-export const historyChapters = [
+export interface HistoryChapter {
+  numeral: string;
+  eyebrow: string;
+  title: string;
+  copy: string;
+  image?: {
+    src: string;
+    srcMobile: string;
+    alt: string;
+    caption: string;
+  };
+}
+
+export const historyChapters: readonly HistoryChapter[] = [
   {
     numeral: 'I',
-    eyebrow: 'JRC I',
+    eyebrow: 'JRC I · 2009',
     title: 'Satu arena mulai dibangun',
     copy: 'JRC lahir sebagai ruang bagi pelajar dan perancang muda untuk menguji robot di hadapan tantangan nyata.',
+    image: {
+      src: '/assets/history-archive/jrc-01.webp',
+      srcMobile: '/assets/history-archive/jrc-01-mobile.webp',
+      alt: 'Dokumentasi awal Java Robot Contest',
+      caption: 'Arsip Java Robot Contest',
+    },
+  },
+  {
+    numeral: 'III',
+    eyebrow: 'JRC III · 2012',
+    title: 'JRC III kembali setelah jeda',
+    copy: 'Arena maze menjadi panggung kebangkitan setelah jeda, menegaskan JRC sebagai agenda tahunan yang dinanti.',
+    image: {
+      src: '/assets/history-archive/jrc-03.webp',
+      srcMobile: '/assets/history-archive/jrc-03-mobile.webp',
+      alt: 'Arena maze Java Robot Contest III',
+      caption: 'Arsip Java Robot Contest',
+    },
   },
   {
     numeral: 'V',
-    eyebrow: 'JRC V',
+    eyebrow: 'JRC V · 2014',
     title: 'Disiplin baru, lawan baru',
     copy: 'Kompetisi berkembang menjadi pertemuan lintas jenjang yang merayakan proses, bukan sekadar podium.',
+    image: {
+      src: '/assets/history-archive/jrc-05.webp',
+      srcMobile: '/assets/history-archive/jrc-05-mobile.webp',
+      alt: 'Suasana arena Java Robot Contest',
+      caption: 'Arsip Java Robot Contest',
+    },
+  },
+  {
+    numeral: 'VIII',
+    eyebrow: 'JRC VIII · 2017',
+    title: 'Arena yang makin ramai',
+    copy: 'Dari satu panggung kecil, JRC tumbuh menjadi perhelatan yang memenuhi ruang publik dengan robot dan penonton.',
+    image: {
+      src: '/assets/history-archive/jrc-08.webp',
+      srcMobile: '/assets/history-archive/jrc-08-mobile.webp',
+      alt: 'JRC VIII di ruang publik',
+      caption: 'Arsip Java Robot Contest',
+    },
   },
   {
     numeral: 'XIII',
-    eyebrow: 'JRC XIII',
+    eyebrow: 'JRC XIII · 2023',
     title: 'Edisi sebelumnya',
     copy: 'Pengalaman dari JRC XIII menjadi acuan panitia dalam menyiapkan pelaksanaan JRC XIV.',
+    image: {
+      src: '/assets/history-archive/jrc-11.webp',
+      srcMobile: '/assets/history-archive/jrc-11-mobile.webp',
+      alt: 'Dokumentasi Java Robot Contest XIII',
+      caption: 'Dokumentasi resmi JRC XIII',
+    },
   },
   {
     numeral: 'XIV',
-    eyebrow: 'JRC XIV',
+    eyebrow: 'JRC XIV · 2026',
     title: 'Imperium Machina',
     copy: 'Enam kategori resmi hadir dalam satu tema baru, mempertemukan peserta dari jenjang SD, SMP, SMA, dan umum.',
+    image: {
+      src: '/assets/history-archive/jrc-12.webp',
+      srcMobile: '/assets/history-archive/jrc-12-mobile.webp',
+      alt: 'Dokumentasi Java Robot Contest XIV',
+      caption: 'Dokumentasi resmi JRC XIV',
+    },
   },
 ] as const;
 

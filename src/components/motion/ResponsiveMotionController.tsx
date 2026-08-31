@@ -4,7 +4,7 @@ const MOTION_GROUPS = [
   { selector: '.event-brief__intro, .schedule-section__header, .faq-section__header', motion: 'from-left' },
   { selector: '.event-brief__fact, .civic-assembly__pillars > li, .patron-court__bay, .faq-item', motion: 'rise' },
   { selector: '.character-selector, .cta-section__inner', motion: 'scale' },
-  { selector: '.schedule-program__heading, .history-procession__opening, .history-procession__inscription, .civic-assembly__manifesto, .patron-court__opening, .patron-court__invitation', motion: 'editorial' },
+  { selector: '.schedule-program__heading, .history-archive__opening, .archive-entry__inscription, .civic-assembly__manifesto, .patron-court__opening, .patron-court__invitation', motion: 'editorial' },
   { selector: '.schedule-route__stations > li', motion: 'from-right' },
   { selector: '.footer-section__signature, .footer-section__manifesto, .footer-section__nav, .footer-section__legal', motion: 'quiet' },
 ] as const;

@@ -1,5 +1,5 @@
 import { Link, useNavigate } from 'react-router-dom';
-import { portalRepository, type PortalRepository } from '../../data/portal';
+import { portalRepository, type PortalRepository } from '../../features/registration';
 
 interface PortalLoginPageProps {
   repository?: PortalRepository;

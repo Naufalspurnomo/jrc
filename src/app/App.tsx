@@ -8,7 +8,7 @@ import {
   useLocation,
 } from 'react-router-dom';
 
-import EntryGate from '../components/motion/EntryGate';
+import EntryGate, { shouldPlayEntryGate } from '../components/motion/EntryGate';
 import { SiteFooter } from '../components/public/SiteFooter';
 import { SiteHeader } from '../components/public/SiteHeader';
 import { findCompetition } from '../content/jrc';
@@ -40,11 +40,11 @@ function NotFoundPage() {
   );
 }
 
-export function AppRoutes() {
+export function AppRoutes({ homeStartupReady = true }: { homeStartupReady?: boolean } = {}) {
   return (
     <Suspense fallback={null}>
       <Routes>
-        <Route path="/" element={<HomePage />} />
+        <Route path="/" element={<HomePage startupReady={homeStartupReady} />} />
         <Route path="/perlombaan/:slug" element={<CompetitionPage />} />
         <Route path="/portal/masuk" element={<PortalLoginPage />} />
         <Route path="/portal" element={<PortalDashboardPage />} />
@@ -146,10 +146,17 @@ function AppExperience() {
   const { pathname } = useLocation();
   const metadata = getRouteMetadata(pathname);
   const initialPathname = useRef(pathname);
-  const [showsEntryGate, setShowsEntryGate] = useState(initialPathname.current === '/');
+  const initialGate = useRef(
+    initialPathname.current === '/' && window.location.hash === '' && shouldPlayEntryGate(),
+  );
+  const [showsEntryGate, setShowsEntryGate] = useState(initialGate.current);
+  const [startupReady, setStartupReady] = useState(!initialGate.current);
 
   useEffect(() => {
-    if (pathname !== '/') setShowsEntryGate(false);
+    if (pathname !== '/') {
+      setShowsEntryGate(false);
+      setStartupReady(true);
+    }
   }, [pathname]);
 
   useEffect(() => {
@@ -161,8 +168,16 @@ function AppExperience() {
   return (
     <>
       <RouteScrollManager />
-      {showsEntryGate ? <EntryGate onComplete={() => setShowsEntryGate(false)} /> : null}
-      <AppRoutes />
+      {showsEntryGate ? (
+        <EntryGate
+          onComplete={() => {
+            setShowsEntryGate(false);
+            setStartupReady(true);
+            window.dispatchEvent(new Event('jrc:gate-complete'));
+          }}
+        />
+      ) : null}
+      <AppRoutes homeStartupReady={startupReady} />
     </>
   );
 }

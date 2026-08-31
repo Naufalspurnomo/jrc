@@ -40,7 +40,7 @@ export function SiteFooter() {
 
         <div className="footer-section__legal">
           <span>© {new Date().getFullYear()} Java Robot Contest</span>
-          <a className="footer-section__attribution" href="/assets/roman-select/ATTRIBUTION.md">
+          <a className="footer-section__attribution" href="/assets/THIRD_PARTY_NOTICES.txt">
             Atribusi aset
           </a>
           <span>Surabaya, Indonesia</span>

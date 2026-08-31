@@ -1,9 +1,5 @@
 node_modules/
 dist/
-playwright-report/
-test-results/
 .vite/
 .pnpm-store/
-coverage/
 *.log
-public/assets/lower-scenes/*-slice.webp

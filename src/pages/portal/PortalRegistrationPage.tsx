@@ -10,7 +10,7 @@ import {
   type PortalFileMetadata,
   type PortalRepository,
   type RegistrationDraft,
-} from '../../data/portal';
+} from '../../features/registration';
 
 const registrationSchema = z.object({
   teamName: z.string().trim().min(3, 'Nama tim minimal 3 karakter.'),

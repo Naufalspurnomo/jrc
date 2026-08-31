@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 
 import { registrationDeadline } from '../../content/jrc';
-import HeroExperience from '../../scene/HeroExperience';
+import HeroExperience from '../../features/hero/HeroExperience';
 
 const registrationDeadlineAt = new Date(registrationDeadline).getTime();
 
@@ -25,7 +25,7 @@ function getRemainingTime(now = Date.now()): RemainingTime {
   };
 }
 
-export function HeroSection() {
+export function HeroSection({ startupReady = true }: { startupReady?: boolean }) {
   const [remaining, setRemaining] = useState(() => getRemainingTime());
 
   useEffect(() => {
@@ -43,15 +43,15 @@ export function HeroSection() {
   return (
     <section className="hero-section" aria-labelledby="hero-title">
       <div className="hero-section__visual" aria-hidden="true">
-        <HeroExperience />
+        <HeroExperience startVideo={startupReady} />
       </div>
       <div className="hero-section__engravings" aria-hidden="true">
         <picture className="hero-section__engraving hero-section__engraving--colosseum">
           <source srcSet="/assets/hero-roman/colosseum-engraving.avif" type="image/avif" />
-          <img src="/assets/hero-roman/colosseum-engraving.webp" width="1600" height="1045" alt="" />
+          <img src="/assets/hero-roman/colosseum-engraving.webp" width="1600" height="1045" alt="" loading="lazy" decoding="async" fetchPriority="low" />
         </picture>
         <picture className="hero-section__engraving hero-section__engraving--arch-left">
-          <img src="/assets/hero-roman/roman-triumphal-arch.jpg" width="1310" height="930" alt="" />
+          <img src="/assets/hero-roman/roman-triumphal-arch.jpg" width="1310" height="930" alt="" loading="lazy" decoding="async" fetchPriority="low" />
         </picture>
       </div>
       <div className="hero-section__shade" aria-hidden="true" />

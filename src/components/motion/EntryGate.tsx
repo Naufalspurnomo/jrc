@@ -6,51 +6,179 @@ interface EntryGateProps {
   duration?: number;
   reducedMotion?: boolean;
   onComplete?: () => void;
+  prepare?: () => Promise<void>;
+  prepareTimeout?: number;
+  minimumHold?: number;
+}
+
+const SESSION_KEY = 'jrc:gate-seen:v3';
+const MOBILE_BREAKPOINT = 640;
+const DEFAULT_PREPARE_TIMEOUT = 1_800;
+const DEFAULT_MINIMUM_HOLD = 300;
+
+export const ENTRY_GATE_ASSETS = {
+  heroDesktop: '/assets/hero-rome-wide.avif',
+  heroMobile: '/assets/hero-rome-wide-mobile.webp',
+  mascotDesktop: '/assets/mascot/jrc14-gladiator-framekey-v2-poster.webp',
+  mascotMobile: '/assets/mascot/jrc14-gladiator-poster-mobile-3b151f2ef6.webp',
+} as const;
+
+function hasSeenGateThisSession() {
+  try {
+    return sessionStorage.getItem(SESSION_KEY) === '1';
+  } catch {
+    return false;
+  }
+}
+
+function markGateSeen() {
+  try {
+    sessionStorage.setItem(SESSION_KEY, '1');
+  } catch {
+    /* Storage unavailable: the gate may play again on the next load. */
+  }
+}
+
+export function shouldPlayEntryGate(
+  reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches,
+) {
+  return !reducedMotion && !hasSeenGateThisSession();
+}
+
+export function getEntryGateCriticalAssets(viewportWidth = window.innerWidth) {
+  const mobile = viewportWidth <= MOBILE_BREAKPOINT;
+  return [
+    mobile ? ENTRY_GATE_ASSETS.heroMobile : ENTRY_GATE_ASSETS.heroDesktop,
+    mobile ? ENTRY_GATE_ASSETS.mascotMobile : ENTRY_GATE_ASSETS.mascotDesktop,
+  ] as const;
+}
+
+function decodeImage(src: string) {
+  return new Promise<void>((resolve) => {
+    const image = new Image();
+    let settled = false;
+    const settle = () => {
+      if (settled) return;
+      settled = true;
+      image.onload = null;
+      image.onerror = null;
+      resolve();
+    };
+
+    image.decoding = 'async';
+    image.onload = settle;
+    image.onerror = settle;
+    image.src = src;
+
+    if (typeof image.decode === 'function') {
+      void image.decode().then(settle, settle);
+    } else if (image.complete) {
+      settle();
+    }
+  });
+}
+
+async function prepareFonts() {
+  if (!document.fonts?.load) return;
+  await Promise.allSettled([
+    document.fonts.load('800 48px "Cinzel Variable"'),
+    document.fonts.load('500 12px "IBM Plex Mono"'),
+    document.fonts.load('400 16px "Manrope Variable"'),
+  ]);
+}
+
+export async function prepareEntryGate() {
+  await Promise.allSettled([
+    ...getEntryGateCriticalAssets().map(decodeImage),
+    prepareFonts(),
+  ]);
+}
+
+function defaultOpeningDuration() {
+  return window.matchMedia('(max-width: 800px)').matches ? 2_050 : 2_200;
 }
 
 export function EntryGate({
-  duration = 3000,
+  duration = defaultOpeningDuration(),
   reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches,
   onComplete,
+  prepare = prepareEntryGate,
+  prepareTimeout = DEFAULT_PREPARE_TIMEOUT,
+  minimumHold = DEFAULT_MINIMUM_HOLD,
 }: EntryGateProps) {
-  const [visible, setVisible] = useState(!reducedMotion);
+  const [visible, setVisible] = useState(() => shouldPlayEntryGate(reducedMotion));
   const [active, setActive] = useState(false);
   const onCompleteRef = useRef(onComplete);
   const completedRef = useRef(false);
   onCompleteRef.current = onComplete;
 
   useEffect(() => {
+    const timers = new Set<number>();
+    let openingFrame = 0;
+    let cancelled = false;
+
+    const scheduleTimer = (callback: () => void, delay: number) => {
+      const timer = window.setTimeout(() => {
+        timers.delete(timer);
+        callback();
+      }, delay);
+      timers.add(timer);
+      return timer;
+    };
+
     const complete = () => {
       if (completedRef.current) return;
       completedRef.current = true;
+      markGateSeen();
       setVisible(false);
       onCompleteRef.current?.();
     };
 
-    if (reducedMotion) {
+    if (!visible) {
       complete();
       return undefined;
     }
 
-    let activationTimer = 0;
-    let completionTimer = 0;
-    let secondFrame = 0;
-    const firstFrame = window.requestAnimationFrame(() => {
-      secondFrame = window.requestAnimationFrame(() => {
-        activationTimer = window.setTimeout(() => {
-          setActive(true);
-          completionTimer = window.setTimeout(complete, duration);
-          }, 50);
+    const wait = (delay: number) => new Promise<void>((resolve) => {
+      scheduleTimer(resolve, delay);
+    });
+    const settlePreparation = Promise.race([
+      Promise.resolve().then(prepare).catch(() => undefined),
+      wait(prepareTimeout),
+    ]);
+
+    void Promise.all([settlePreparation, wait(minimumHold)]).then(() => {
+      if (cancelled || completedRef.current) return;
+      openingFrame = window.requestAnimationFrame(() => {
+        if (cancelled || completedRef.current) return;
+        setActive(true);
+        scheduleTimer(complete, duration);
       });
     });
 
-    return () => {
-      window.cancelAnimationFrame(firstFrame);
-      window.cancelAnimationFrame(secondFrame);
-      window.clearTimeout(activationTimer);
-      window.clearTimeout(completionTimer);
+    const dismiss = () => complete();
+    const onKey = (event: KeyboardEvent) => {
+      if (['Enter', ' ', 'Escape', 'Tab', 'ArrowDown', 'ArrowUp', 'PageDown', 'PageUp'].includes(event.key)) {
+        dismiss();
+      }
     };
-  }, [duration, reducedMotion]);
+
+    window.addEventListener('keydown', onKey, { passive: true });
+    window.addEventListener('pointerdown', dismiss, { passive: true, once: true });
+    window.addEventListener('touchstart', dismiss, { passive: true, once: true });
+    window.addEventListener('wheel', dismiss, { passive: true, once: true });
+
+    return () => {
+      cancelled = true;
+      window.cancelAnimationFrame(openingFrame);
+      timers.forEach((timer) => window.clearTimeout(timer));
+      timers.clear();
+      window.removeEventListener('keydown', onKey);
+      window.removeEventListener('pointerdown', dismiss);
+      window.removeEventListener('touchstart', dismiss);
+      window.removeEventListener('wheel', dismiss);
+    };
+  }, [duration, minimumHold, prepare, prepareTimeout, visible]);
 
   if (!visible) return null;
 
@@ -71,7 +199,7 @@ export function EntryGate({
   return (
     <div
       className={`gate-entry${active ? ' gate-entry--active' : ''}`}
-      data-testid="entry-gate"
+      data-phase={active ? 'opening' : 'preparing'}
       aria-hidden="true"
       style={{ '--gate-duration': `${duration}ms` } as React.CSSProperties}
     >
@@ -110,7 +238,16 @@ export function EntryGate({
         <i className="gate-entry__stud gate-entry__stud--se" />
         <i className="gate-entry__seal-orbit" />
         <div className="gate-entry__seal-face">
-          <img src="/assets/brand/jrc14-logo-transparent-512.webp" alt="" width="256" height="442" />
+          <img
+            src="/assets/brand/jrc14-logo-transparent-128.webp"
+            srcSet="/assets/brand/jrc14-logo-transparent-128.webp 128w, /assets/brand/jrc14-logo-transparent-256.webp 256w"
+            sizes="(max-width: 800px) 98px, 144px"
+            alt=""
+            width="128"
+            height="221"
+            decoding="async"
+            fetchPriority="high"
+          />
         </div>
         <small>Imperium Machina</small>
       </div>

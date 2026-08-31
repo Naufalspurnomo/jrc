@@ -1,39 +1,57 @@
-# JRC XIV — Imperium Machina
+# JRC XIV Frontend
 
-Website lokal JRC XIV bertema Roman Empire × modern robotics. Dibangun dengan Vite, React, TypeScript, Three.js, GSAP, Lenis, dan Tailwind CSS.
+Frontend for the JRC XIV public website, participant portal, and administration interface. Built with React, TypeScript, Vite, Tailwind CSS, GSAP, and Lenis.
 
-## Menjalankan lokal
+## Requirements
 
-Persyaratan: Node.js 24 atau lebih baru.
+- Node.js 22.12 or newer
+- npm
 
-```powershell
+## Development
+
+```bash
 npm install
-npm run assets:prepare
 npm run dev
 ```
 
-Build dan verifikasi:
+## Available commands
 
-```powershell
+```bash
+npm run dev
+npm run build
+npm run preview
 npm run lint
 npm run typecheck
-npm test
-npm run build
-npm run test:e2e
 ```
 
-## Route utama
+## Project structure
 
-- `/` — website publik dan cinematic hero.
-- `/perlombaan/:slug` — detail kategori perlombaan.
-- `/portal/masuk` — demo login peserta.
-- `/portal` — dashboard peserta.
-- `/portal/pendaftaran` — wizard pendaftaran lokal.
-- `/admin` — demo command desk panitia.
-- `/admin/pendaftaran/:registrationId` — detail dan review pendaftaran.
+```text
+src/
+├── app/                    Route composition and page metadata
+├── components/             Shared interface components
+├── content/                Public event content
+├── features/hero/          Hero rendering and asset contract
+├── features/registration/  Registration model, repository contract, and local adapter
+├── hooks/                  Motion and document behavior
+├── pages/                  Public, participant, and administration routes
+└── styles/                 Base, section, and system styles
+```
 
-Portal adalah prototype lokal. Session, draft, metadata dokumen, dan review disimpan di `localStorage`; autentikasi nyata, upload permanen, email, backend, dan pembayaran belum diaktifkan.
+## Routes
 
-## Asset pipeline
+- `/` — public website
+- `/perlombaan/:slug` — competition details
+- `/portal/masuk` — participant sign-in demo
+- `/portal` — participant dashboard
+- `/portal/pendaftaran` — registration demo
+- `/admin` — administration dashboard demo
+- `/admin/pendaftaran/:registrationId` — registration review demo
 
-Master outpaint disimpan di `asset/generated-source`. `npm run assets:prepare` menghasilkan AVIF/WebP responsif, depth hint, serta foreground composite dengan alpha feathering ke `public/assets`.
+## Backend integration
+
+Participant and administration pages depend on `PortalRepository` from `src/features/registration/repository.ts`. The current singleton uses `LocalPortalRepository` and browser `localStorage` for demonstration data.
+
+A production backend must provide authentication, registration persistence, document storage, payment processing, email delivery, and administration authorization. Replace the local adapter at `src/features/registration/index.ts` when the backend API is available.
+
+Production assets are committed under `public/assets`. Preserve `THIRD_PARTY_NOTICES.txt` when redistributing attributed media.
