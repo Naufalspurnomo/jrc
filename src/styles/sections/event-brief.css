@@ -1,141 +1,226 @@
-/* JRC XIV event register: one calendar path, no duplicate countdown or information cards. */
+/* JRC XIV institutional register: edition, identity, and verified event facts. */
 .event-brief {
   --brief-ink: #16100d;
   --brief-paper: #f5ebd8;
-  --brief-muted: rgb(245 235 216 / 68%);
+  --brief-muted: rgb(245 235 216 / 66%);
+  --brief-line: rgb(230 185 95 / 46%);
   --brief-gold: #e6b95f;
   position: relative;
   overflow: clip;
-  padding: clamp(7rem, 12vw, 12rem) 0;
-  background:
-    radial-gradient(ellipse at 77% 11%, rgb(156 50 40 / 23%), transparent 31rem),
-    radial-gradient(circle at 22% 110%, rgb(209 158 69 / 15%), transparent 30rem),
-    linear-gradient(135deg, #130d0b, var(--brief-ink) 56%, #21140f);
+  padding: clamp(6rem, 10vw, 9rem) 0;
+  background: var(--brief-ink);
   color: var(--brief-paper);
-}
-
-.event-brief::before {
-  position: absolute;
-  inset: 0;
-  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 180 180' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.74' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.48'/%3E%3C/svg%3E");
-  mix-blend-mode: soft-light;
-  opacity: .11;
-  content: "";
-  pointer-events: none;
-}
-
-.event-brief__glow {
-  position: absolute;
-  top: -16rem;
-  right: -12rem;
-  width: min(56vw, 50rem);
-  aspect-ratio: 1;
-  border-radius: 50%;
-  background: radial-gradient(circle, rgb(246 201 106 / 17%), rgb(151 49 39 / 7%) 42%, transparent 68%);
-  filter: blur(2px);
-  pointer-events: none;
 }
 
 .event-brief__inner {
   position: relative;
-  display: grid;
-  grid-template-columns: minmax(0, .74fr) minmax(28rem, 1.26fr);
-  gap: clamp(3rem, 8vw, 9rem);
-  align-items: center;
+  width: min(100% - 3rem, 84rem);
 }
 
-.event-brief__intro { max-width: 39rem; }
-.event-brief__sr-title {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  padding: 0;
-  margin: -1px;
-  overflow: hidden;
-  clip: rect(0, 0, 0, 0);
-  white-space: nowrap;
-  border: 0;
+.event-brief__intro {
+  display: grid;
+  grid-template-columns: clamp(9rem, 16vw, 13rem) minmax(0, 1fr);
+  gap: clamp(2rem, 5vw, 5rem);
+  align-items: end;
 }
-.event-brief__description {
-  max-width: 38rem;
+
+.event-brief__edition {
+  display: grid;
+  align-content: end;
+}
+
+.event-brief__edition-label {
+  color: var(--brief-muted);
+  font-family: var(--font-mono);
+  font-size: .68rem;
+  font-weight: 500;
+  letter-spacing: .12em;
+  line-height: 1.4;
+  text-transform: uppercase;
+}
+
+.event-brief__edition-number {
+  margin-top: .5rem;
+  color: var(--brief-gold);
+  font-family: var(--font-display);
+  font-size: clamp(5.4rem, 10vw, 8.75rem);
+  font-weight: 540;
+  letter-spacing: -.075em;
+  line-height: .72;
+}
+
+.event-brief__identity {
+  min-width: 0;
+}
+
+.event-brief__title {
   margin: 0;
   color: var(--brief-paper);
-  font-size: clamp(1.1rem, 1.4vw, 1.35rem);
-  font-weight: 500;
-  line-height: 1.55;
+  font-size: clamp(3rem, 6.2vw, 6rem);
+  font-weight: 560;
+  letter-spacing: -.055em;
+  line-height: .88;
+}
+
+.event-brief__institution {
+  max-width: 42rem;
+  margin: clamp(1.35rem, 2.5vw, 2rem) 0 0;
+  color: var(--brief-muted);
+  font-size: clamp(.95rem, 1.35vw, 1.1rem);
+  font-weight: 560;
+  line-height: 1.6;
 }
 
 .event-brief__details {
   display: grid;
-  margin: 0;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  column-gap: clamp(2rem, 5vw, 5rem);
-  row-gap: 0;
-  border-top: 1px solid rgb(238 210 152 / 38%);
+  margin: clamp(3.5rem, 7vw, 6.5rem) 0 0;
+  grid-template-columns: 1.35fr 1fr 1.4fr 1.15fr;
+  border-block: 1px solid var(--brief-line);
 }
+
 .event-brief__fact {
-  position: relative;
-  min-height: 11rem;
-  padding: clamp(1.6rem, 2.9vw, 2.5rem) 0;
-  border-bottom: 1px solid rgb(238 210 152 / 25%);
+  min-width: 0;
+  padding: clamp(1.5rem, 2.6vw, 2.25rem);
+  border-left: 1px solid var(--brief-line);
 }
-.event-brief__fact::before {
-  position: absolute;
-  top: -3px;
-  left: 0;
-  width: .35rem;
-  height: .35rem;
-  border: 1px solid var(--brief-gold);
-  border-radius: 50%;
-  background: var(--brief-ink);
-  content: "";
+
+.event-brief__fact:first-child {
+  padding-left: 0;
+  border-left: 0;
 }
-.event-brief__fact[data-fact='period'] {
-  display: grid;
-  min-height: 13rem;
-  grid-column: 1 / -1;
-  align-content: center;
-  border-bottom-color: rgb(238 210 152 / 38%);
-}
+
 .event-brief__fact dt {
   color: var(--brief-gold);
   font-family: var(--font-mono);
-  font-size: .56rem;
-  font-weight: 700;
-  letter-spacing: .13em;
+  font-size: .68rem;
+  font-weight: 500;
+  letter-spacing: .1em;
+  line-height: 1.45;
   text-transform: uppercase;
 }
+
 .event-brief__fact dd {
-  max-width: 18ch;
-  margin: .75rem 0 0;
+  margin: .85rem 0 0;
   color: var(--brief-paper);
   font-family: "Cormorant Garamond Variable", Georgia, serif;
-  font-size: clamp(1.55rem, 2.35vw, 2.5rem);
+  font-size: clamp(1.45rem, 2.15vw, 2rem);
   font-weight: 560;
-  line-height: .98;
+  line-height: 1.12;
+  overflow-wrap: break-word;
+  text-wrap: balance;
 }
-.event-brief__fact[data-fact='period'] dd {
-  max-width: none;
-  color: var(--brief-gold);
-  font-family: "Cinzel Variable", Georgia, serif;
-  font-size: clamp(2rem, 4vw, 4rem);
-  font-weight: 560;
-  letter-spacing: -.045em;
-  line-height: .94;
+
+.event-brief__fact-primary,
+.event-brief__fact-secondary {
+  display: block;
+}
+
+.event-brief__fact-secondary {
+  margin-top: .45rem;
+  color: var(--brief-muted);
+  font-family: var(--font-sans);
+  font-size: .72rem;
+  font-weight: 650;
+  letter-spacing: .04em;
+  line-height: 1.5;
 }
 
 @media (max-width: 64rem) {
-  .event-brief { padding: 6rem 0; }
-  .event-brief__inner { grid-template-columns: 1fr; gap: 2.5rem; }
-  .event-brief__intro { max-width: 42rem; }
+  .event-brief {
+    padding: clamp(5rem, 10vw, 7rem) 0;
+  }
+
+  .event-brief__intro {
+    grid-template-columns: clamp(8rem, 18vw, 10rem) minmax(0, 1fr);
+    gap: clamp(2rem, 5vw, 3.5rem);
+  }
+
+  .event-brief__title {
+    font-size: clamp(3rem, 7.4vw, 4.8rem);
+  }
+
+  .event-brief__details {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .event-brief__fact {
+    min-height: 9.5rem;
+    border-bottom: 1px solid var(--brief-line);
+  }
+
+  .event-brief__fact:nth-child(odd) {
+    padding-left: 0;
+    border-left: 0;
+  }
+
+  .event-brief__fact:nth-last-child(-n + 2) {
+    border-bottom: 0;
+  }
 }
 
 @media (max-width: 43.75rem) {
-  .event-brief { padding: 4.75rem 0; }
-  .event-brief__inner { gap: 2rem; }
-  .event-brief__details { grid-template-columns: 1fr; }
+  .event-brief {
+    padding: 4.75rem 0;
+  }
+
+  .event-brief__intro {
+    grid-template-columns: 1fr;
+    gap: 1.75rem;
+    align-items: start;
+  }
+
+  .event-brief__edition {
+    display: flex;
+    align-items: baseline;
+    gap: .9rem;
+  }
+
+  .event-brief__edition-number {
+    order: -1;
+    margin-top: 0;
+    font-size: clamp(3.8rem, 19vw, 5rem);
+    line-height: .75;
+  }
+
+  .event-brief__title {
+    font-size: clamp(2.55rem, 13vw, 3.8rem);
+    line-height: .9;
+  }
+
+  .event-brief__title span {
+    display: block;
+  }
+
+  .event-brief__institution {
+    margin-top: 1.25rem;
+    font-size: .95rem;
+  }
+
+  .event-brief__details {
+    margin-top: 3rem;
+    grid-template-columns: 1fr;
+  }
+
   .event-brief__fact,
-  .event-brief__fact[data-fact='period'] { min-height: auto; padding: 1.7rem 0; }
-  .event-brief__fact dd { font-size: 1.8rem; }
-  .event-brief__fact[data-fact='period'] dd { font-size: clamp(1.85rem, 9vw, 2.8rem); }
+  .event-brief__fact:first-child,
+  .event-brief__fact:nth-child(odd) {
+    min-height: 0;
+    padding: 1.35rem 0 1.5rem;
+    border-bottom: 1px solid var(--brief-line);
+    border-left: 0;
+  }
+
+  .event-brief__fact:last-child {
+    border-bottom: 0;
+  }
+
+  .event-brief__fact dd {
+    max-width: 24ch;
+    margin-top: .65rem;
+    font-size: clamp(1.55rem, 8vw, 2rem);
+  }
+
+  .event-brief__fact-secondary {
+    font-size: .72rem;
+  }
 }

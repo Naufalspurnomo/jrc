@@ -5,6 +5,9 @@
   --sky-burgundy-soft: rgb(63 16 9 / 96%);
   --sky-gold: #f2bd70;
   --sky-rule: rgb(255 222 167 / 36%);
+  --archive-ink: #291b15;
+  --archive-soft: #624e41;
+  --archive-accent: #6f4037;
   --scene-row-1: url('/assets/lower-scenes/row-1-column-1.png');
   --scene-row-2: url('/assets/lower-scenes/row-2-column-1.png');
   --scene-row-3: url('/assets/lower-scenes/row-3-column-1.png');
@@ -377,6 +380,27 @@
   line-height: 1.72;
 }
 
+/* Current history archive: light typography over the desktop lower-world burgundy. */
+@media (min-width: 48.01rem) {
+  .lower-world .history-archive__opening h2,
+  .lower-world .archive-entry__inscription h3 {
+    color: var(--sky-paper);
+    text-shadow: var(--sky-shadow-dark);
+  }
+
+  .lower-world .history-archive__opening > span,
+  .lower-world .archive-entry__copy {
+    color: var(--sky-paper-soft);
+    text-shadow: var(--sky-shadow-dark);
+  }
+
+  .lower-world .history-archive__opening > p,
+  .lower-world .archive-entry__edition {
+    color: var(--sky-gold);
+    text-shadow: var(--sky-shadow-dark);
+  }
+}
+
 /* Civic clearing — one manifesto, then three text pillars separated only by rules. */
 .lower-world .civic-assembly {
   display: grid;
@@ -682,6 +706,24 @@
 
   .lower-world .history-procession__opening h2 { font-size: clamp(2.35rem, 11vw, 4.4rem); }
 
+  .lower-world .history-archive__opening h2,
+  .lower-world .archive-entry__inscription h3 {
+    color: var(--archive-ink);
+    text-shadow: none;
+  }
+
+  .lower-world .history-archive__opening > span,
+  .lower-world .archive-entry__copy {
+    color: var(--archive-soft);
+    text-shadow: none;
+  }
+
+  .lower-world .history-archive__opening > p,
+  .lower-world .archive-entry__edition {
+    color: var(--archive-accent);
+    text-shadow: none;
+  }
+
   .lower-world .history-procession__chapter,
   .lower-world .history-procession__chapter:nth-child(even) {
     min-height: 49rem;
@@ -754,6 +796,26 @@
   }
 
   .lower-world .faq-section__layout { grid-template-columns: 1fr; gap: 3.5rem; text-align: left; }
+}
+
+@media (pointer: coarse) {
+  .lower-world .history-archive__opening h2,
+  .lower-world .archive-entry__inscription h3 {
+    color: var(--archive-ink);
+    text-shadow: none;
+  }
+
+  .lower-world .history-archive__opening > span,
+  .lower-world .archive-entry__copy {
+    color: var(--archive-soft);
+    text-shadow: none;
+  }
+
+  .lower-world .history-archive__opening > p,
+  .lower-world .archive-entry__edition {
+    color: var(--archive-accent);
+    text-shadow: none;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {

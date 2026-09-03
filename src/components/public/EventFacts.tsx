@@ -1,23 +1,29 @@
-import { eventFacts } from '../../content/jrc';
+import { competitions, eventFacts } from '../../content/jrc';
+
+const participantLevels = [...new Set(competitions.map(({ level }) => level))];
 
 const facts = [
-  { key: 'period', label: 'Periode pendaftaran', value: eventFacts.registration },
+  { key: 'registration', label: 'Periode pendaftaran', value: eventFacts.registration },
   { key: 'event-date', label: 'Hari pertandingan', value: eventFacts.eventDate },
-  { key: 'venue', label: 'Lokasi', value: 'PENS, Surabaya' },
+  { key: 'venue', label: 'Lokasi', value: eventFacts.venue },
 ] as const;
 
 export function EventFacts() {
   return (
     <section id="informasi" className="event-brief" aria-labelledby="event-brief-title">
-      <div className="event-brief__glow" aria-hidden="true" />
       <div className="event-brief__inner site-shell page-shell">
         <header className="event-brief__intro">
-          <h2 id="event-brief-title" className="event-brief__sr-title">Informasi JRC XIV</h2>
-          <p className="event-brief__description event-brief__description--lead">
-            Java Robot Contest merupakan acara tahunan yang diadakan oleh Himpunan Mahasiswa
-            Teknik Elektronika Politeknik Elektronika Negeri Surabaya yang menghadirkan 6 macam
-            perlombaan di bidang robotika dengan tingkatan SD, SMP, SMA, dan umum.
-          </p>
+          <div className="event-brief__edition">
+            <span className="event-brief__edition-label">Edisi ke-{eventFacts.edition}</span>
+            <strong className="event-brief__edition-number">XIV</strong>
+          </div>
+
+          <div className="event-brief__identity">
+            <h2 id="event-brief-title" className="event-brief__title">
+              <span>Java Robot</span> <span>Contest</span>
+            </h2>
+            <p className="event-brief__institution">Himpunan Mahasiswa Teknik Elektronika</p>
+          </div>
         </header>
 
         <dl className="event-brief__details" aria-label="Informasi utama JRC">
@@ -27,6 +33,15 @@ export function EventFacts() {
               <dd>{fact.value}</dd>
             </div>
           ))}
+          <div className="event-brief__fact" data-fact="participants">
+            <dt>Kategori dan jenjang</dt>
+            <dd>
+              <span className="event-brief__fact-primary">{competitions.length} kategori</span>
+              <span className="event-brief__fact-secondary">
+                {participantLevels.length} jenjang · {participantLevels.join(' · ')}
+              </span>
+            </dd>
+          </div>
         </dl>
       </div>
     </section>
