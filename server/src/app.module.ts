@@ -108,6 +108,8 @@ export class CompetitionsController {
         id: true,
         slug: true,
         name: true,
+        level: true,
+        discipline: true,
         description: true,
         eventId: true,
         eventName: true,

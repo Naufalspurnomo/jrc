@@ -462,7 +462,7 @@ export default function PortalRegistrationPage({ api = registrationApi }: Portal
               )}
             </fieldset>
 
-            <section aria-labelledby="registration-next-steps">
+            <section className="portal-document-panel" aria-labelledby="registration-next-steps">
               <h2 id="registration-next-steps">Dokumen dan pengiriman</h2>
               {reviewReason && (
                 <div>

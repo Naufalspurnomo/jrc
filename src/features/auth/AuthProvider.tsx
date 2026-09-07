@@ -44,7 +44,12 @@ export function AuthProvider({ api = registrationApi, children }: AuthProviderPr
   const refresh = useCallback(async (): Promise<AuthSession | null> => {
     setLoading(true);
     try {
-      const nextSession = await api.auth.me();
+      const probe = await api.auth.me();
+      if (!probe.user) {
+        setSession(null);
+        return null;
+      }
+      const nextSession: AuthSession = { ...probe, user: probe.user };
       setSession(nextSession);
       return nextSession;
     } catch (error) {

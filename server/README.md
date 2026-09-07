@@ -185,12 +185,16 @@ Provide through approved secret/configuration management:
 
 Current acceptance evidence:
 
-- Frontend unit tests: **59 passed**.
-- Backend unit run: **88 passed**, with **7 E2E tests skipped** by design.
+- Frontend unit tests: **60 passed**.
+- Backend unit run: **91 passed**, with **7 E2E tests skipped** by design.
 - Backend E2E run: **7 passed** separately.
-- Browser happy path: verified.
-- Migrations: verified.
-- Backup and restore: verified.
-- Runtime audit and health: verified.
+- Browser participant/admin workflow, revision, rejection, proof re-upload, ticket, and duplicate check-in: verified on an isolated database.
+- Runtime presentation scan: 13 pages across public, participant, reviewer, finance, and gate identities with no console, page, or unexpected network errors.
+- Mobile presentation scan: 15 authenticated pages at 320, 360, and 375 pixels with no document overflow or clipped controls.
+- Scanner camera lifecycle: verified with a browser fake-media stream; the actual presentation phone still requires the HTTPS physical-camera check in `PRESENTATION-QA.md`.
+- Three migrations, including populated-database catalog alignment: verified.
+- Backup and restore database/storage round trip: verified.
+- Runtime dependency audit and container health: verified.
+- Real SMTP delivery remains an activation check requiring the presentation account credentials.
 
 Re-run and archive equivalent evidence for every production release; these counts describe the currently verified revision, not a permanent guarantee.

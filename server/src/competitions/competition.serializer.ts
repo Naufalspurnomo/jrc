@@ -2,6 +2,8 @@ type CompetitionForSerialization = {
   id: string;
   slug: string;
   name: string;
+  level: string;
+  discipline: string;
   description: string | null;
   eventId: string;
   eventName: string;
@@ -16,6 +18,8 @@ export function serializeCompetition(competition: CompetitionForSerialization) {
     id: competition.id,
     slug: competition.slug,
     name: competition.name,
+    level: competition.level,
+    discipline: competition.discipline,
     description: competition.description,
     eventId: competition.eventId,
     eventName: competition.eventName,

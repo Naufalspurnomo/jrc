@@ -8,6 +8,7 @@ import request, { Response } from 'supertest';
 type SuperAgentTest = ReturnType<typeof request.agent>;
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { AppModule } from '../src/app.module';
+import { hashToken, SESSION_COOKIE_NAME } from '../src/auth';
 import { configureApp } from '../src/bootstrap';
 
 const run = process.env.RUN_E2E === '1';
@@ -75,8 +76,10 @@ suite('registration system e2e', () => {
 
     const competition = await prisma.competition.create({
       data: {
-        slug: 'line-follower',
-        name: 'Line Follower',
+        slug: 'wacky-rally-line-follower-mikro',
+        name: 'Wacky Rally — Line Follower Mikro',
+        level: 'Umum',
+        discipline: 'Line Follower Mikro',
         eventId: 'JRC-XIV-2026',
         eventName: 'JRC XIV 2026',
         fee: 250000,
@@ -125,11 +128,52 @@ suite('registration system e2e', () => {
   });
 
   it('enforces authentication, ownership, RBAC, and CSRF', async () => {
+    await request(app.getHttpServer()).get('/api/auth/me').expect(200).expect(({ body }: Response) => {
+      expect(body).toEqual({ user: null });
+    });
     await request(app.getHttpServer()).get('/api/registrations').expect(401);
     await participantA.get('/api/auth/me').expect(200).expect(({ body }: Response) => {
       expect(body.user.email).toBe('a@example.test');
       expect(body.user.passwordHash).toBeUndefined();
     });
+    await request(app.getHttpServer())
+      .get('/api/competitions')
+      .expect(200)
+      .expect(({ body }: Response) => {
+        expect(body).toEqual([
+          expect.objectContaining({
+            slug: 'wacky-rally-line-follower-mikro',
+            name: 'Wacky Rally — Line Follower Mikro',
+            level: 'Umum',
+            discipline: 'Line Follower Mikro',
+          }),
+        ]);
+      });
+
+    const cookieName = process.env.COOKIE_NAME?.trim() || SESSION_COOKIE_NAME;
+    await request(app.getHttpServer())
+      .get('/api/auth/me')
+      .set('Cookie', `${cookieName}=invalid-session-token`)
+      .expect(200)
+      .expect(({ body }: Response) => expect(body).toEqual({ user: null }));
+
+    const expiredToken = 'expired-session-token';
+    const participant = await prisma.user.findUniqueOrThrow({
+      where: { email: 'a@example.test' },
+    });
+    await prisma.session.create({
+      data: {
+        userId: participant.id,
+        tokenHash: hashToken(expiredToken),
+        csrfHash: hashToken('expired-csrf-token'),
+        expiresAt: new Date(Date.now() - 60_000),
+      },
+    });
+    await request(app.getHttpServer())
+      .get('/api/auth/me')
+      .set('Cookie', `${cookieName}=${expiredToken}`)
+      .expect(200)
+      .expect(({ body }: Response) => expect(body).toEqual({ user: null }));
 
     const created = await state(participantA, csrfA)('post', '/api/registrations')
       .send({ competitionId, teamName: '=CMD()', institution: 'PENS' })
@@ -204,6 +248,12 @@ suite('registration system e2e', () => {
     const participantRegistration = await participantA
       .get(`/api/registrations/${registrationId}`)
       .expect(200);
+    expect(participantRegistration.body.competition).toMatchObject({
+      slug: 'wacky-rally-line-follower-mikro',
+      name: 'Wacky Rally — Line Follower Mikro',
+      level: 'Umum',
+      discipline: 'Line Follower Mikro',
+    });
     expect(participantRegistration.body.members).toEqual([
       expect.objectContaining({ role: 'LEADER', email: 'alice@example.test' }),
       expect.objectContaining({ role: 'MEMBER', email: null, phone: null }),
@@ -318,6 +368,9 @@ suite('registration system e2e', () => {
 
   it('invalidates the server-side session on logout', async () => {
     await state(participantB, csrfB)('post', '/api/auth/logout').expect(201);
-    await participantB.get('/api/auth/me').expect(401);
+    await participantB.get('/api/auth/me').expect(200).expect(({ body }: Response) => {
+      expect(body).toEqual({ user: null });
+    });
+    await participantB.get('/api/registrations').expect(401);
   });
 });

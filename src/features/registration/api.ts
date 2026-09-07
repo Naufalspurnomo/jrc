@@ -203,6 +203,11 @@ export interface AuthSession {
   expiresAt?: string;
 }
 
+export interface AuthProbe {
+  user: AuthUser | null;
+  expiresAt?: string;
+}
+
 export interface LoginInput {
   email: string;
   password: string;
@@ -395,7 +400,7 @@ export interface PaymentReviewInput {
 
 export interface RegistrationApi {
   auth: {
-    me(): Promise<AuthSession>;
+    me(): Promise<AuthProbe>;
     login(input: LoginInput): Promise<AuthSession>;
     register(input: RegisterInput): Promise<AuthSession>;
     logout(): Promise<void>;
@@ -439,7 +444,7 @@ export interface RegistrationApi {
 export function createRegistrationApi(client = new ApiClient()): RegistrationApi {
   return {
     auth: {
-      me: () => client.request<AuthSession>(API_PATHS.auth.me),
+      me: () => client.request<AuthProbe>(API_PATHS.auth.me),
       login: (input) => client.request<AuthSession>(API_PATHS.auth.login, { method: 'POST', body: input, csrf: false }),
       register: (input) => client.request<AuthSession>(API_PATHS.auth.register, { method: 'POST', body: input, csrf: false }),
       logout: async () => {

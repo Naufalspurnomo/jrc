@@ -198,6 +198,24 @@ function extractSessionToken(request: Request): string | undefined {
 export class AuthService {
   constructor(private readonly prisma: PrismaService) {}
 
+  async probeSession(
+    request: Request,
+  ): Promise<{ user: AuthPrincipal | null }> {
+    const token = extractSessionToken(request);
+    if (!token) return { user: null };
+
+    const session = await this.prisma.session.findFirst({
+      where: {
+        tokenHash: hashToken(token),
+        revokedAt: null,
+        expiresAt: { gt: new Date() },
+        user: { active: true },
+      },
+      include: { user: true },
+    });
+    return { user: session ? sanitizeUser(session.user) : null };
+  }
+
   async register(dto: RegisterDto): Promise<IssuedAuth> {
     const email = normalizeEmail(dto.email);
     const passwordHash = await argon2.hash(dto.password, {
@@ -432,9 +450,10 @@ export class AuthController {
     return { user: issued.user, csrfToken: issued.csrfToken };
   }
 
+  @Public()
   @Get('me')
-  me(@Req() request: AuthenticatedRequest): { user: AuthPrincipal } {
-    return { user: request.principal };
+  async me(@Req() request: Request): Promise<{ user: AuthPrincipal | null }> {
+    return this.auth.probeSession(request);
   }
 
   @Get('csrf')

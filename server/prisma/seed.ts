@@ -14,12 +14,54 @@ const STAFF_ROLES = [
 ] as const;
 
 const COMPETITION_DEFINITIONS = [
-  { slug: 'transporter-sd', name: 'Transporter SD', feeEnv: 'TRANSPORTER_SD_FEE', defaultFee: 250_000 },
-  { slug: 'rescue-smp', name: 'Rescue SMP', feeEnv: 'RESCUE_SMP_FEE', defaultFee: 300_000 },
-  { slug: 'shooter-sma', name: 'Shooter SMA', feeEnv: 'SHOOTER_SMA_FEE', defaultFee: 350_000 },
-  { slug: 'line-follower', name: 'Line Follower', feeEnv: 'LINE_FOLLOWER_FEE', defaultFee: 300_000 },
-  { slug: 'sumo', name: 'Sumo', feeEnv: 'SUMO_FEE', defaultFee: 300_000 },
-  { slug: 'soccer', name: 'Soccer', feeEnv: 'SOCCER_FEE', defaultFee: 350_000 },
+  {
+    slug: 'donatopia-transporter',
+    name: 'Donatopia — Transporter',
+    level: 'SD',
+    discipline: 'Transporter',
+    feeEnv: 'TRANSPORTER_SD_FEE',
+    defaultFee: 250_000,
+  },
+  {
+    slug: 'nightmaze-rescue-transporter',
+    name: 'Nightmaze — Rescue Transporter',
+    level: 'SMP',
+    discipline: 'Rescue Transporter',
+    feeEnv: 'RESCUE_SMP_FEE',
+    defaultFee: 300_000,
+  },
+  {
+    slug: 'pirate-clash-transporter-shooter',
+    name: 'Pirate Clash — Transporter Shooter',
+    level: 'SMA',
+    discipline: 'Transporter Shooter',
+    feeEnv: 'SHOOTER_SMA_FEE',
+    defaultFee: 350_000,
+  },
+  {
+    slug: 'wacky-rally-line-follower-mikro',
+    name: 'Wacky Rally — Line Follower Mikro',
+    level: 'Umum',
+    discipline: 'Line Follower Mikro',
+    feeEnv: 'LINE_FOLLOWER_FEE',
+    defaultFee: 300_000,
+  },
+  {
+    slug: 'ring-rumble-sumo',
+    name: 'Ring Rumble — Sumo',
+    level: 'Umum',
+    discipline: 'Sumo',
+    feeEnv: 'SUMO_FEE',
+    defaultFee: 300_000,
+  },
+  {
+    slug: 'goal-rush-soccer',
+    name: 'Goal Rush — Soccer',
+    level: 'Umum',
+    discipline: 'Soccer',
+    feeEnv: 'SOCCER_FEE',
+    defaultFee: 350_000,
+  },
 ] as const;
 
 type StaffSeed = {
@@ -157,6 +199,8 @@ async function main(): Promise<void> {
         create: {
           slug: competition.slug,
           name: competition.name,
+          level: competition.level,
+          discipline: competition.discipline,
           eventId,
           eventName,
           fee: competition.fee,
@@ -165,6 +209,8 @@ async function main(): Promise<void> {
         },
         update: {
           name: competition.name,
+          level: competition.level,
+          discipline: competition.discipline,
           eventId,
           eventName,
           fee: competition.fee,

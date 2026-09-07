@@ -1037,6 +1037,34 @@ h3 {
 .portal-fieldset > p[role='alert'],
 .admin-error { color: #a12927; font-size: .72rem; }
 .portal-field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+.portal-document-panel {
+  display: grid;
+  width: 100%;
+  max-width: 54rem;
+  min-width: 0;
+  grid-template-columns: minmax(0, .8fr) minmax(0, 1.4fr) max-content;
+  gap: 1.25rem;
+  align-items: end;
+  margin-top: 3rem;
+  padding: clamp(1.5rem, 3vw, 2.5rem);
+  border: 1px solid rgb(55 34 25 / 24%);
+  background: rgb(255 252 245 / 48%);
+}
+.portal-document-panel > h2,
+.portal-document-panel > p,
+.portal-document-panel > div,
+.portal-document-panel > ul { grid-column: 1 / -1; }
+.portal-document-panel > h2 { margin: 0; color: #3b251d; }
+.portal-document-panel > p { margin: 0; color: #7a6656; font-size: .8rem; line-height: 1.6; }
+.portal-document-panel > label { display: grid; min-width: 0; gap: .55rem; color: #665346; font-family: var(--font-mono); font-size: .57rem; font-weight: 600; letter-spacing: .07em; text-transform: uppercase; }
+.portal-document-panel select,
+.portal-document-panel input[type='file'] { width: 100%; min-width: 0; min-height: 3.5rem; padding: .9rem 1rem; border: 1px solid rgb(52 32 24 / 26%); border-radius: 0; outline: none; background: rgb(255 252 245 / 68%); color: #281b15; }
+.portal-document-panel select:focus,
+.portal-document-panel input[type='file']:focus { border-color: var(--oxblood); box-shadow: 0 0 0 3px rgb(96 28 30 / 10%); }
+.portal-document-panel > .portal-button { min-height: 3.5rem; white-space: nowrap; }
+.portal-document-panel > ul { min-width: 0; margin: .5rem 0 0; padding: 0; list-style: none; }
+.portal-document-panel > ul li { display: grid; min-width: 0; padding: 1rem 0; grid-template-columns: minmax(10rem, .8fr) minmax(0, 1.4fr) auto; gap: 1rem; align-items: center; border-top: 1px solid rgb(52 32 24 / 18%); }
+.portal-document-panel > ul li > * { min-width: 0; overflow-wrap: anywhere; }
 .portal-file-field { min-height: 10rem; place-content: center; padding: 2rem; border: 1px dashed rgb(96 28 30 / 50%); text-align: center; }
 .portal-file-field input { width: auto; min-height: 0; margin: 0 auto; padding: 0; border: 0; background: none; }
 .portal-file-field span,
@@ -1059,6 +1087,18 @@ h3 {
 .portal-empty-state h1 { max-width: 60rem; font-size: clamp(4rem, 8vw, 8rem); line-height: .78; }
 .portal-empty-state > p:not(.portal-eyebrow) { color: #735f4f; }
 .portal-empty-state .portal-button { justify-self: center; margin-top: 1rem; }
+
+@media (max-width: 45rem) {
+  .portal-document-panel { grid-template-columns: minmax(0, 1fr); padding: 1.25rem; }
+  .portal-document-panel > h2,
+  .portal-document-panel > p,
+  .portal-document-panel > div,
+  .portal-document-panel > label,
+  .portal-document-panel > .portal-button,
+  .portal-document-panel > ul { width: 100%; min-width: 0; grid-column: 1; }
+  .portal-document-panel > .portal-button { white-space: normal; }
+  .portal-document-panel > ul li { grid-template-columns: minmax(0, 1fr); gap: .35rem; }
+}
 
 /* Local admin command desk */
 .admin-auth { display: grid; place-items: center; padding: 2rem; background: radial-gradient(circle at 50% 30%, rgb(104 31 29 / 34%), transparent 28rem), #13100f; }
@@ -1371,7 +1411,7 @@ h3 {
   .portal-main { width: min(100% - 1.5rem, 88rem); }
   .portal-hero { align-items: flex-start; flex-direction: column; }
   .portal-hero h1,
-  .portal-registration__header h1 { font-size: clamp(3.7rem, 18vw, 6rem); }
+  .portal-registration__header h1 { font-size: clamp(3rem, 14vw, 5rem); }
   .portal-progress-panel,
   .portal-summary-panel { min-height: 0; padding: 2rem 1.25rem; }
   .portal-notice { grid-template-columns: 1fr; }
@@ -1388,8 +1428,13 @@ h3 {
   .admin-main { width: min(100% - 1.5rem, 96rem); }
   .admin-page-heading,
   .admin-detail__header { align-items: flex-start; flex-direction: column; }
+  .admin-page-heading > *,
+  .admin-detail__header > * { width: 100%; max-width: 100%; min-width: 0; }
   .admin-page-heading h1,
-  .admin-detail__header h1 { font-size: clamp(3.6rem, 17vw, 6rem); }
+  .admin-detail__header h1 {
+    font-size: clamp(2.75rem, 13vw, 5rem);
+    overflow-wrap: anywhere;
+  }
   .admin-export { width: 100%; }
   .admin-metrics { grid-template-columns: 1fr; }
   .admin-metrics article { min-height: 7.5rem; border-right: 0; border-bottom: 1px solid rgb(49 30 23 / 20%); }
@@ -1399,6 +1444,136 @@ h3 {
   .admin-member-list { grid-template-columns: 1fr; }
   .admin-document { grid-template-columns: 2.5rem 1fr; }
   .admin-document em { grid-column: 2; }
+
+  .portal-shell,
+  .portal-main,
+  .portal-dashboard-grid,
+  .portal-progress-panel,
+  .portal-form-panel,
+  .portal-fieldset,
+  .portal-field-row,
+  .portal-document-panel { min-width: 0; max-width: 100%; }
+  .portal-header {
+    width: 100%;
+    max-width: 100%;
+    grid-template-columns: auto minmax(0, 1fr);
+    grid-template-rows: auto auto;
+    overflow: hidden;
+  }
+  .portal-nav {
+    width: 100%;
+    min-width: 0;
+    grid-column: 1 / -1;
+    justify-self: stretch;
+    justify-content: space-between;
+    overflow-x: auto;
+  }
+  .portal-nav a,
+  .portal-nav button { flex: 1 1 auto; min-width: 0; padding-inline: .3rem; }
+  .portal-hero h1,
+  .portal-registration__header h1,
+  .portal-registration__header .portal-eyebrow,
+  .portal-panel-heading h2,
+  .portal-progress-panel p { overflow-wrap: anywhere; }
+  .portal-registration__header > *,
+  .portal-panel-heading > * { width: 100%; max-width: 100%; min-width: 0; }
+  .portal-panel-heading { min-width: 0; flex-wrap: wrap; }
+  .portal-panel-heading > div { min-width: 0; }
+  .portal-progress-panel > div:last-child { display: grid; min-width: 0; gap: .75rem; }
+  .portal-progress-panel .portal-button {
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    padding-inline: .75rem;
+    white-space: normal;
+    overflow-wrap: anywhere;
+    text-align: center;
+  }
+
+  .admin-shell,
+  .admin-workspace,
+  .admin-main,
+  .admin-register { width: 100%; max-width: 100%; min-width: 0; }
+  .admin-sidebar {
+    display: grid;
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    grid-template-rows: auto auto;
+    gap: .5rem;
+    padding: .75rem;
+    overflow: hidden;
+  }
+  .admin-sidebar .admin-brand { grid-column: 1; grid-row: 1; }
+  .admin-signout {
+    max-width: 100%;
+    grid-column: 3;
+    grid-row: 1;
+    padding-inline: .65rem;
+  }
+  .admin-sidebar nav {
+    display: flex;
+    width: 100%;
+    min-width: 0;
+    grid-column: 1 / -1;
+    grid-row: 2;
+    justify-content: flex-start;
+    margin: 0;
+    overflow-x: auto;
+  }
+  .admin-sidebar nav a { flex: 1 0 auto; min-width: max-content; }
+  .admin-topbar {
+    display: grid;
+    min-width: 0;
+    gap: .35rem;
+    padding: .75rem;
+  }
+  .admin-topbar > * { min-width: 0; overflow-wrap: anywhere; }
+  .admin-register { overflow: hidden; }
+  .admin-table-wrap {
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    overflow-x: auto;
+    contain: inline-size;
+  }
+  .admin-table-wrap {
+    overflow: visible;
+    contain: none;
+  }
+  .admin-table-wrap table,
+  .admin-table-wrap thead,
+  .admin-table-wrap tbody,
+  .admin-table-wrap tr,
+  .admin-table-wrap th,
+  .admin-table-wrap td { display: block; width: 100%; min-width: 0; max-width: 100%; }
+  .admin-table-wrap table { min-width: 0; }
+  .admin-table-wrap thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0, 0, 0, 0); }
+  .admin-table-wrap tr { padding: 1rem 0; border-top: 1px solid rgb(49 30 23 / 18%); }
+  .admin-table-wrap td { display: grid; padding: .55rem 0; grid-template-columns: minmax(5.5rem, .7fr) minmax(0, 1.3fr); gap: .75rem; border: 0; }
+  .admin-table-wrap td::before {
+    color: #806b5c;
+    font-family: var(--font-mono);
+    font-size: .5rem;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+  }
+  .admin-table-wrap td:nth-child(1)::before { content: 'Tim'; }
+  .admin-table-wrap td:nth-child(2)::before { content: 'Kompetisi'; }
+  .admin-table-wrap td:nth-child(3)::before { content: 'Status'; }
+  .admin-table-wrap td:nth-child(4)::before { content: 'Diperbarui'; }
+  .admin-table-wrap td:nth-child(5)::before { content: 'Aksi'; }
+  .admin-table-wrap td:nth-child(5) a {
+    display: inline-flex;
+    min-width: 0;
+    min-height: 2.75rem;
+    align-items: center;
+    justify-content: flex-start;
+  }
+  .admin-table-wrap td strong,
+  .admin-table-wrap td span,
+  .admin-table-wrap td a { min-width: 0; overflow-wrap: anywhere; }
 }
 
 .section-heading {
