@@ -35,7 +35,7 @@ export function SiteFooter() {
           <a href="/#jadwal">Jadwal</a>
           <a href="/#sejarah">Sejarah</a>
           <a href="/#informasi">Informasi</a>
-          <Link to="/portal/masuk">Demo portal peserta</Link>
+          <Link to="/portal/masuk">Portal peserta</Link>
         </nav>
 
         <div className="footer-section__legal">

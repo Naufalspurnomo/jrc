@@ -3,3 +3,10 @@ dist/
 .vite/
 .pnpm-store/
 *.log
+
+server/.env
+server/.env.*
+!server/.env.example
+server/storage/
+server/backups/
+server/coverage/

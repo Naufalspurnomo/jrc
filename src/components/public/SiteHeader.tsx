@@ -167,8 +167,8 @@ export function SiteHeader() {
             to="/portal/masuk"
             onClick={() => setIsOpen(false)}
           >
-            <span>Demo portal peserta</span>
-            <span aria-hidden="true">Buka demo&nbsp; ↗</span>
+            <span>Portal peserta</span>
+            <span aria-hidden="true">Buka portal&nbsp; ↗</span>
           </Link>
           <p className="site-header__nav-edition" aria-hidden="true">
             JRC 14 · Imperium Machina
@@ -185,7 +185,7 @@ export function SiteHeader() {
         />
 
         <Link className="site-header__portal-link" to="/portal/masuk">
-          <span>Demo portal peserta</span>
+          <span>Portal peserta</span>
           <span aria-hidden="true">↗</span>
         </Link>
       </div>

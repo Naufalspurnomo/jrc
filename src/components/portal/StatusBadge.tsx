@@ -1,4 +1,10 @@
-import type { RegistrationStatus } from '../../features/registration';
+export type RegistrationStatus =
+  | 'draft'
+  | 'submitted'
+  | 'under_review'
+  | 'revision_requested'
+  | 'verified'
+  | 'rejected';
 
 const labels: Record<RegistrationStatus, string> = {
   draft: 'Draft',
