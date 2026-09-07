@@ -1,0 +1,83 @@
+services:
+  jrc-db:
+    image: postgres:17-bookworm
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: "${POSTGRES_DB:?POSTGRES_DB is required}"
+      POSTGRES_USER: "${POSTGRES_USER:?POSTGRES_USER is required}"
+      POSTGRES_PASSWORD: "${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}"
+    volumes:
+      - jrc-database:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U \"$${POSTGRES_USER}\" -d \"$${POSTGRES_DB}\""]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    security_opt:
+      - no-new-privileges:true
+    networks:
+      - jrc-private
+
+  jrc-api:
+    build:
+      context: ./server
+      dockerfile: Dockerfile
+      target: production
+    restart: unless-stopped
+    env_file:
+      - path: ./server/.env
+        required: false
+    environment:
+      NODE_ENV: production
+      PORT: "3000"
+      DATABASE_URL: "${COMPOSE_DATABASE_URL:?COMPOSE_DATABASE_URL is required}"
+    depends_on:
+      jrc-db:
+        condition: service_healthy
+        restart: true
+      jrc-migrate:
+        condition: service_completed_successfully
+    ports:
+      - "${API_BIND_ADDRESS:-127.0.0.1}:${API_PORT:-3010}:3000"
+    volumes:
+      - jrc-private-storage:/app/storage
+    read_only: true
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,nodev,size=64m
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    pids_limit: 256
+    networks:
+      - jrc-private
+
+  jrc-migrate:
+    build:
+      context: ./server
+      dockerfile: Dockerfile
+      target: migration
+    restart: "no"
+    env_file:
+      - path: ./server/.env
+        required: false
+    environment:
+      DATABASE_URL: "${COMPOSE_DATABASE_URL:?COMPOSE_DATABASE_URL is required}"
+    depends_on:
+      jrc-db:
+        condition: service_healthy
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    networks:
+      - jrc-private
+
+volumes:
+  jrc-database:
+  jrc-private-storage:
+
+networks:
+  jrc-private:
+    driver: bridge

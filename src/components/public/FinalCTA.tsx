@@ -26,12 +26,12 @@ export function FinalCTA() {
           <strong>masuki arena.</strong>
         </h2>
         <p>
-          Susun timmu sekarang. Portal demo sudah dapat dijelajahi sambil menunggu pengumuman
-          resmi JRC XIV.
+          Susun timmu sekarang. Daftar, lengkapi data, dan pantau status tim melalui portal
+          peserta JRC XIV.
         </p>
         <div className="cta-section__actions">
           <Link className="site-action site-action--primary button-primary" to="/portal/masuk">
-            Buka demo portal peserta
+            Buka portal peserta
             <span aria-hidden="true">↗</span>
           </Link>
           <a className="site-action site-action--quiet button-secondary" href="#perlombaan">

@@ -25,7 +25,7 @@ export function PortalShell({ children, eyebrow = 'PORTA PARTICIPANTIUM', onSign
       {children}
       <footer className="portal-footer">
         <span>JRC XIV · IMPERIUM MACHINA</span>
-        <span>Prototype lokal · tanpa pembayaran</span>
+        <span>Pendaftaran · pembayaran · tiket digital</span>
       </footer>
     </div>
   );

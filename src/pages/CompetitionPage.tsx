@@ -106,8 +106,8 @@ export default function CompetitionPage() {
             <p className="site-kicker kicker">Persiapan peserta</p>
             <h2 id="competition-cta-title">Siapkan tim sebelum gerbang dibuka.</h2>
             <p>
-              Jelajahi portal lokal untuk memahami alur pendaftaran. Data demo tidak dikirim ke
-              panitia dan bukan pendaftaran resmi.
+              Gunakan portal peserta untuk membuat akun, melengkapi data tim, dan memantau
+              status pendaftaran.
             </p>
             <Link className="site-action site-action--primary button-primary" to="/portal/masuk">
               Buka portal peserta

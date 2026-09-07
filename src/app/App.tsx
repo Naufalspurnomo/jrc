@@ -3,6 +3,7 @@ import {
   BrowserRouter,
   Link,
   matchPath,
+  Navigate,
   Route,
   Routes,
   useLocation,
@@ -12,16 +13,26 @@ import EntryGate, { shouldPlayEntryGate } from '../components/motion/EntryGate';
 import { SiteFooter } from '../components/public/SiteFooter';
 import { SiteHeader } from '../components/public/SiteHeader';
 import { findCompetition } from '../content/jrc';
+import { RequireAuth } from '../features/auth';
 import HomePage from '../pages/HomePage';
 
 const CompetitionPage = lazy(() => import('../pages/CompetitionPage'));
 const PortalDashboardPage = lazy(() => import('../pages/portal/PortalDashboardPage'));
 const PortalLoginPage = lazy(() => import('../pages/portal/PortalLoginPage'));
+const PortalPaymentPage = lazy(() => import('../pages/portal/PortalPaymentPage'));
 const PortalRegistrationPage = lazy(() => import('../pages/portal/PortalRegistrationPage'));
+const PortalSignupPage = lazy(() => import('../pages/portal/PortalSignupPage'));
+const PortalTicketPage = lazy(() => import('../pages/portal/PortalTicketPage'));
+const PublicTicketVerificationPage = lazy(
+  () => import('../pages/ticket/PublicTicketVerificationPage'),
+);
+const AdminLoginPage = lazy(() => import('../pages/admin/AdminLoginPage'));
 const AdminDashboardPage = lazy(() => import('../pages/admin/AdminDashboardPage'));
 const AdminRegistrationDetailPage = lazy(
   () => import('../pages/admin/AdminRegistrationDetailPage'),
 );
+const AdminFinancePage = lazy(() => import('../pages/admin/AdminFinancePage'));
+const AdminScannerPage = lazy(() => import('../pages/admin/AdminScannerPage'));
 
 function NotFoundPage() {
   return (
@@ -47,13 +58,55 @@ export function AppRoutes({ homeStartupReady = true }: { homeStartupReady?: bool
         <Route path="/" element={<HomePage startupReady={homeStartupReady} />} />
         <Route path="/perlombaan/:slug" element={<CompetitionPage />} />
         <Route path="/portal/masuk" element={<PortalLoginPage />} />
-        <Route path="/portal" element={<PortalDashboardPage />} />
-        <Route path="/portal/pendaftaran" element={<PortalRegistrationPage />} />
-        <Route path="/admin" element={<AdminDashboardPage />} />
+        <Route path="/portal/daftar" element={<PortalSignupPage />} />
+        <Route path="/ticket/verify" element={<PublicTicketVerificationPage />} />
         <Route
-          path="/admin/pendaftaran/:registrationId"
-          element={<AdminRegistrationDetailPage />}
-        />
+          element={<RequireAuth roles={['PARTICIPANT']} redirectTo="/portal/masuk" />}
+        >
+          <Route path="/portal" element={<PortalDashboardPage />} />
+          <Route path="/portal/pendaftaran/baru" element={<PortalRegistrationPage />} />
+          <Route
+            path="/portal/pendaftaran/:registrationId"
+            element={<PortalRegistrationPage />}
+          />
+          <Route
+            path="/portal/pendaftaran/:registrationId/pembayaran"
+            element={<PortalPaymentPage />}
+          />
+          <Route
+            path="/portal/pendaftaran/:registrationId/tiket"
+            element={<PortalTicketPage />}
+          />
+          <Route
+            path="/portal/pendaftaran"
+            element={<Navigate replace to="/portal/pendaftaran/baru" />}
+          />
+        </Route>
+        <Route path="/admin/masuk" element={<AdminLoginPage />} />
+        <Route
+          element={(
+            <RequireAuth
+              roles={['SUPER_ADMIN', 'REGISTRATION_REVIEWER', 'SUPPORT']}
+              redirectTo="/admin/masuk"
+            />
+          )}
+        >
+          <Route path="/admin" element={<AdminDashboardPage />} />
+          <Route
+            path="/admin/pendaftaran/:registrationId"
+            element={<AdminRegistrationDetailPage />}
+          />
+        </Route>
+        <Route
+          element={<RequireAuth roles={['SUPER_ADMIN', 'FINANCE']} redirectTo="/admin/masuk" />}
+        >
+          <Route path="/admin/finance" element={<AdminFinancePage />} />
+        </Route>
+        <Route
+          element={<RequireAuth roles={['SUPER_ADMIN', 'GATE_STAFF']} redirectTo="/admin/masuk" />}
+        >
+          <Route path="/admin/scanner" element={<AdminScannerPage />} />
+        </Route>
         <Route path="*" element={<NotFoundPage />} />
       </Routes>
     </Suspense>
@@ -119,19 +172,25 @@ function getRouteMetadata(pathname: string) {
     };
   }
 
-  const isParticipantPortal = ['/portal', '/portal/masuk', '/portal/pendaftaran'].includes(pathname);
-  if (isParticipantPortal) {
+  if (pathname === '/ticket/verify') {
     return {
-      title: 'Portal Peserta Demo — JRC XIV',
+      title: 'Verifikasi Tiket — JRC XIV',
       robots: privateRobots,
     };
   }
 
-  const isAdmin = pathname === '/admin'
-    || matchPath('/admin/pendaftaran/:registrationId', pathname) !== null;
+  const isParticipantPortal = pathname === '/portal' || pathname.startsWith('/portal/');
+  if (isParticipantPortal) {
+    return {
+      title: 'Portal Peserta — JRC XIV',
+      robots: privateRobots,
+    };
+  }
+
+  const isAdmin = pathname === '/admin' || pathname.startsWith('/admin/');
   if (isAdmin) {
     return {
-      title: 'Admin Demo — JRC XIV',
+      title: 'Admin JRC XIV',
       robots: privateRobots,
     };
   }

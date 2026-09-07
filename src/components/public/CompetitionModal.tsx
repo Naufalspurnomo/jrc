@@ -169,7 +169,7 @@ export function CompetitionModal({ competition, open, onClose, portraitSrc }: Co
               to="/portal/masuk"
               onClick={() => onCloseRef.current()}
             >
-              Buka demo portal peserta <span aria-hidden="true">↗</span>
+              Buka portal peserta <span aria-hidden="true">↗</span>
             </Link>
             <Link
               className="site-action site-action--quiet"
