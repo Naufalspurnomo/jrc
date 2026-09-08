@@ -17,7 +17,7 @@ const registration: RegistrationRecord = {
   competitionId: 'competition-1',
   competition: {
     id: 'competition-1',
-    name: 'Ring Rumble — Sumo',
+    name: 'Colosseum Clash — Sumo',
     eventId: 'jrc-xiv',
     eventName: 'JRC XIV',
   },
@@ -65,7 +65,7 @@ describe('PortalTicketPage', () => {
     expect(screen.getByTestId('ticket-qr').getAttribute('data-value')).not.toContain('private@example.test');
     expect(screen.getByTestId('ticket-qr').getAttribute('data-value')).not.toContain('081234567890');
     expect(screen.getByText('JRC14-2026-0001')).toBeInTheDocument();
-    expect(screen.getByText('Ring Rumble — Sumo')).toBeInTheDocument();
+    expect(screen.getByText('Colosseum Clash — Sumo')).toBeInTheDocument();
     expect(screen.getByText('JRC XIV')).toBeInTheDocument();
     expect(screen.queryByText('private@example.test')).not.toBeInTheDocument();
     expect(screen.queryByText('081234567890')).not.toBeInTheDocument();

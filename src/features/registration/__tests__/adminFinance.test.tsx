@@ -42,7 +42,7 @@ const pendingInvoice: FinanceInvoiceRecord = {
     teamName: 'Garuda Robotika',
     institution: 'PENS',
     owner: { displayName: 'Ayu Ketua' },
-    competition: { id: 'competition-1', name: 'Ring Rumble — Sumo' },
+    competition: { id: 'competition-1', name: 'Colosseum Clash — Sumo' },
   },
 };
 
@@ -95,7 +95,7 @@ describe('AdminFinancePage', () => {
     const item = await screen.findByRole('article', { name: 'Invoice INV-JRC-0001' });
     expect(within(item).getByText('Garuda Robotika')).toBeInTheDocument();
     expect(within(item).getByText('PENS')).toBeInTheDocument();
-    expect(within(item).getByText('Ring Rumble — Sumo')).toBeInTheDocument();
+    expect(within(item).getByText('Colosseum Clash — Sumo')).toBeInTheDocument();
     expect(within(item).getByText('Ayu Ketua')).toBeInTheDocument();
     expect(within(item).getByText(/Rp\s*900\.000/)).toBeInTheDocument();
     expect(within(item).getByText(/20 September 2026/)).toBeInTheDocument();

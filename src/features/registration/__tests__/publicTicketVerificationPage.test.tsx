@@ -12,7 +12,7 @@ function createApi(): RegistrationApi {
         result: 'VALID',
         teamName: 'Garuda Robotika',
         institution: 'PENS',
-        competitionName: 'Ring Rumble — Sumo',
+        competitionName: 'Colosseum Clash — Sumo',
         registrationNumber: 'JRC14-2026-0001',
         eventId: 'jrc-xiv',
         eventName: 'JRC XIV',

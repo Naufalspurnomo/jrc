@@ -136,7 +136,7 @@ describe('competition serialization', () => {
     const competition = serializeCompetition({
       id: 'competition-id',
       slug: 'wacky-rally-line-follower-mikro',
-      name: 'Wacky Rally — Line Follower Mikro',
+      name: 'Chariot Line — Line Follower Mikro',
       level: 'Umum',
       discipline: 'Line Follower Mikro',
       description: null,
@@ -153,7 +153,7 @@ describe('competition serialization', () => {
     expect(competition).toEqual({
       id: 'competition-id',
       slug: 'wacky-rally-line-follower-mikro',
-      name: 'Wacky Rally — Line Follower Mikro',
+      name: 'Chariot Line — Line Follower Mikro',
       level: 'Umum',
       discipline: 'Line Follower Mikro',
       description: null,

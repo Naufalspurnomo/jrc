@@ -20,7 +20,7 @@ function registration(id: string, teamName: string, status: RegistrationRecord['
     id,
     registrationNumber: `JRC-${id}`,
     competitionId: 'competition-1',
-    competition: { id: 'competition-1', name: 'Ring Rumble — Sumo' },
+    competition: { id: 'competition-1', name: 'Colosseum Clash — Sumo' },
     teamName,
     institution: 'PENS',
     status,

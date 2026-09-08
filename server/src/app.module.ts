@@ -75,6 +75,43 @@ const configuredLogLevel = process.env.LOG_LEVEL ?? 'info';
 const pinoLogLevel = PINO_LOG_LEVELS.has(configuredLogLevel)
   ? configuredLogLevel
   : 'info';
+const CANONICAL_COMPETITION_SLUGS = [
+  'donatopia-transporter',
+  'nightmaze-rescue-transporter',
+  'pirate-clash-transporter-shooter',
+  'wacky-rally-line-follower-mikro',
+  'ring-rumble-sumo',
+  'goal-rush-soccer',
+] as const;
+const COMPETITION_SLUG_RANK = new Map<string, number>(
+  CANONICAL_COMPETITION_SLUGS.map((slug, index) => [slug, index]),
+);
+
+type OrderableCompetition = {
+  slug: string;
+  registrationDeadline: Date;
+};
+
+function compareCompetitions(
+  first: OrderableCompetition,
+  second: OrderableCompetition,
+): number {
+  const deadlineOrder =
+    first.registrationDeadline.getTime() -
+    second.registrationDeadline.getTime();
+  if (deadlineOrder !== 0) return deadlineOrder;
+
+  const firstRank = COMPETITION_SLUG_RANK.get(first.slug);
+  const secondRank = COMPETITION_SLUG_RANK.get(second.slug);
+  if (firstRank !== undefined && secondRank !== undefined) {
+    return firstRank - secondRank;
+  }
+  if (firstRank !== undefined) return -1;
+  if (secondRank !== undefined) return 1;
+  if (first.slug < second.slug) return -1;
+  if (first.slug > second.slug) return 1;
+  return 0;
+}
 
 @Injectable()
 export class RequestIdMiddleware implements NestMiddleware {
@@ -100,10 +137,10 @@ export class CompetitionsController {
   constructor(private readonly prisma: PrismaService) {}
 
   @Get()
-  list() {
-    return this.prisma.competition.findMany({
+  async list() {
+    const competitions = await this.prisma.competition.findMany({
       where: { active: true },
-      orderBy: [{ registrationDeadline: 'asc' }, { name: 'asc' }],
+      orderBy: [{ registrationDeadline: 'asc' }, { slug: 'asc' }],
       select: {
         id: true,
         slug: true,
@@ -119,6 +156,8 @@ export class CompetitionsController {
         registrationDeadline: true,
       },
     });
+
+    return competitions.sort(compareCompetitions);
   }
 }
 

@@ -46,10 +46,18 @@ export default function CompetitionPage() {
               Kembali ke enam arena
             </Link>
             <p className="competition-hero__fixture">{competition.fixtureLabel}</p>
+            <img
+              className="competition-hero__emblem"
+              src={competition.emblem.src}
+              alt={competition.emblem.alt}
+              draggable={false}
+            />
             <div className="competition-hero__title-row">
               <span aria-hidden="true">{competition.romanNumeral}</span>
               <div>
-                <p>{competition.level} · {competition.discipline}</p>
+                <p>
+                  <span>{competition.level}</span> · <span>{competition.discipline}</span>
+                </p>
                 <h1>{competition.shortName}</h1>
               </div>
             </div>

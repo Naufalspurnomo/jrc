@@ -13,7 +13,7 @@ import type {
 
 const competition: CompetitionRecord = {
   id: 'competition-1',
-  name: 'Ring Rumble — Sumo',
+  name: 'Colosseum Clash — Sumo',
   level: 'Nasional',
 };
 

@@ -40,7 +40,7 @@ function detail(
     competitionId: 'competition-1',
     competition: {
       id: 'competition-1',
-      name: 'Ring Rumble — Sumo',
+      name: 'Colosseum Clash — Sumo',
       eventId: 'jrc-xiv',
       eventName: 'JRC XIV',
     },
@@ -125,7 +125,7 @@ describe('AdminRegistrationDetailPage', () => {
     expect(api.admin.getRegistration).toHaveBeenCalledWith('registration-1');
     expect(screen.getByText('Ayu Peserta')).toBeInTheDocument();
     expect(screen.getByText('ayu@example.test')).toBeInTheDocument();
-    expect(screen.getByText('Ring Rumble — Sumo')).toBeInTheDocument();
+    expect(screen.getByText('Colosseum Clash — Sumo')).toBeInTheDocument();
     expect(screen.getByText('Budi Ketua')).toBeInTheDocument();
     expect(screen.getByText('NRP-001')).toBeInTheDocument();
     expect(screen.getByText('Aktif')).toBeInTheDocument();

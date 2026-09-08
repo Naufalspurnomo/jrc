@@ -805,13 +805,14 @@ h3 {
 /* Competition detail */
 .competition-hero { position: relative; min-height: 48rem; padding: 10rem 0 5rem; overflow: hidden; background: linear-gradient(140deg, #201411, #5d211f 60%, #1c2838); }
 .competition-hero__texture { position: absolute; inset: 0; background: radial-gradient(circle at 72% 30%, rgb(236 189 87 / 22%), transparent 23rem), repeating-linear-gradient(115deg, transparent 0 3.8rem, rgb(255 255 255 / 2%) 3.85rem 3.9rem); }
-.competition-hero__inner { position: relative; z-index: 1; display: flex; min-height: 33rem; flex-direction: column; justify-content: flex-end; }
+.competition-hero__inner { position: relative; z-index: 1; display: flex; min-height: 33rem; flex-direction: column; justify-content: flex-end; padding-right: clamp(16rem, 27vw, 24rem); }
 .competition-hero__back { position: absolute; top: 0; left: 0; display: flex; gap: .7rem; align-items: center; color: var(--imperial-pale); font-family: var(--font-mono); font-size: .62rem; letter-spacing: .08em; text-transform: uppercase; }
+.competition-hero .competition-hero__emblem { position: absolute; top: clamp(2.25rem, 5vh, 4rem); right: 0; z-index: 0; width: clamp(12rem, 18vw, 17rem); max-height: 20rem; object-fit: contain; object-position: center; filter: drop-shadow(0 1.25rem 1.5rem rgb(0 0 0 / 30%)); pointer-events: none; }
 .competition-hero__fixture { align-self: flex-start; margin-bottom: 1.3rem; padding: .35rem .5rem; border: 1px solid rgb(255 228 174 / 24%); color: var(--imperial-pale); font-family: var(--font-mono); font-size: .55rem; letter-spacing: .1em; text-transform: uppercase; }
 .competition-hero__title-row { display: grid; grid-template-columns: clamp(7rem, 14vw, 15rem) 1fr; align-items: end; }
 .competition-hero__title-row > span { color: rgb(232 215 184 / 14%); font-family: var(--font-display); font-size: clamp(8rem, 17vw, 18rem); line-height: .64; }
 .competition-hero__title-row p { margin-bottom: .65rem; color: var(--imperial-pale); font-family: var(--font-mono); font-size: .62rem; letter-spacing: .12em; text-transform: uppercase; }
-.competition-hero h1 { margin: 0; font-size: clamp(5rem, 11vw, 12rem); line-height: .66; }
+.competition-hero h1 { max-width: 9ch; margin: 0; font-size: clamp(4.75rem, 8.5vw, 9rem); line-height: .7; text-wrap: balance; }
 .competition-hero__provocation { max-width: 38rem; margin: 2rem 0 0 clamp(7rem, 14vw, 15rem); color: rgb(232 215 184 / 74%); font-family: var(--font-display); font-size: 1.2rem; }
 .competition-brief { padding: clamp(6rem, 10vw, 10rem) 0; background: #eadfc9; color: #291b15; }
 .competition-brief .site-kicker,
@@ -1383,9 +1384,11 @@ h3 {
   .footer-section nav { grid-template-columns: repeat(2, 1fr); }
   .footer-section__legal { display: grid; gap: .5rem; color: rgb(232 215 184 / 68%); }
   .competition-hero { min-height: 42rem; }
-  .competition-hero__title-row { grid-template-columns: 4rem 1fr; }
-  .competition-hero__title-row > span { font-size: 5rem; }
-  .competition-hero h1 { font-size: clamp(4.2rem, 20vw, 7rem); }
+  .competition-hero__inner { padding-right: 0; }
+  .competition-hero .competition-hero__emblem { top: 3.5rem; right: clamp(.25rem, 3vw, 1.25rem); width: clamp(7.5rem, 34vw, 10.5rem); max-height: 12.5rem; }
+  .competition-hero__title-row { position: relative; grid-template-columns: minmax(0, 1fr); }
+  .competition-hero__title-row > span { position: absolute; bottom: 0; left: 0; font-size: 5rem; pointer-events: none; }
+  .competition-hero h1 { position: relative; max-width: 100%; font-size: clamp(2.7rem, 13vw, 4.5rem); line-height: .8; }
   .competition-hero__provocation { margin-left: 4rem; }
   .competition-intel dl { grid-template-columns: 1fr; }
   .competition-intel dl > div { min-height: 8rem; border-right: 0; border-bottom: 1px solid rgb(51 31 23 / 26%); }
@@ -1704,9 +1707,10 @@ h3 {
 .arena-modal__portrait {
   width: 100%;
   height: 100%;
-  object-fit: cover;
-  object-position: 50% 38%;
-  filter: saturate(.86) contrast(1.06) brightness(.92);
+  padding: clamp(.65rem, 2vw, 1.25rem);
+  object-fit: contain;
+  object-position: center;
+  filter: drop-shadow(0 .85rem 1rem rgb(0 0 0 / 36%));
 }
 .arena-modal__portrait-fallback {
   width: 100%;

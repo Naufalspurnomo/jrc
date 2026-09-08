@@ -12,12 +12,12 @@ import type {
 } from '../api';
 
 const competitions: CompetitionRecord[] = [
-  { id: 'competition-1', name: 'Donatopia — Transporter', level: 'SD' },
-  { id: 'competition-2', name: 'Nightmaze — Rescue Transporter', level: 'SMP' },
-  { id: 'competition-3', name: 'Pirate Clash — Transporter Shooter', level: 'SMA' },
-  { id: 'competition-4', name: 'Wacky Rally — Line Follower Mikro', level: 'Umum' },
-  { id: 'competition-5', name: 'Ring Rumble — Sumo', level: 'Umum' },
-  { id: 'competition-6', name: 'Goal Rush — Soccer', level: 'Umum' },
+  { id: 'competition-1', name: 'Aquaduct Romana — Transporter', level: 'SD' },
+  { id: 'competition-2', name: 'Castra Guardian — Rescue Transporter', level: 'SMP' },
+  { id: 'competition-3', name: 'Robo-Chiper — Transporter Shooter', level: 'SMA' },
+  { id: 'competition-4', name: 'Chariot Line — Line Follower Mikro', level: 'Umum' },
+  { id: 'competition-5', name: 'Colosseum Clash — Sumo', level: 'Umum' },
+  { id: 'competition-6', name: 'Harpastum Arena — Soccer', level: 'Umum' },
 ];
 const competition = competitions[4];
 
@@ -197,7 +197,7 @@ describe('PortalRegistrationPage', () => {
     const api = createApi();
     renderPage(api);
 
-    const competitionCard = await screen.findByRole('radio', { name: 'Umum · Ring Rumble — Sumo' });
+    const competitionCard = await screen.findByRole('radio', { name: 'Umum · Colosseum Clash — Sumo' });
     await user.click(competitionCard);
     await user.type(screen.getByLabelText('Nama tim'), 'Nova');
     await user.type(screen.getByLabelText('Institusi'), 'ITS');
@@ -233,7 +233,7 @@ describe('PortalRegistrationPage', () => {
     });
     renderPage(api, '/portal/pendaftaran/registration-1');
 
-    const selectedCompetition = await screen.findByRole('radio', { name: 'Umum · Ring Rumble — Sumo' });
+    const selectedCompetition = await screen.findByRole('radio', { name: 'Umum · Colosseum Clash — Sumo' });
     expect(selectedCompetition).toHaveAttribute('aria-checked', 'true');
     expect(selectedCompetition).toHaveAttribute('tabindex', '0');
     expect(screen.getAllByRole('radio').filter((card) => card.tabIndex === 0)).toEqual([selectedCompetition]);

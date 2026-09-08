@@ -37,7 +37,7 @@ function createApi(): RegistrationApi {
         result: 'VALID',
         teamName: 'Garuda Robotika',
         institution: 'PENS',
-        competitionName: 'Ring Rumble — Sumo',
+        competitionName: 'Colosseum Clash — Sumo',
         registrationNumber: 'JRC14-2026-0001',
         eventName: 'JRC XIV',
         email: 'private@example.test',
@@ -48,7 +48,7 @@ function createApi(): RegistrationApi {
         result: 'CHECKED_IN',
         teamName: 'Garuda Robotika',
         institution: 'PENS',
-        competitionName: 'Ring Rumble — Sumo',
+        competitionName: 'Colosseum Clash — Sumo',
         registrationNumber: 'JRC14-2026-0001',
         eventName: 'JRC XIV',
       }),
@@ -87,7 +87,7 @@ describe('AdminScannerPage', () => {
     expect(await screen.findByText('Valid')).toBeInTheDocument();
     expect(screen.getByText('Garuda Robotika')).toBeInTheDocument();
     expect(screen.getByText('PENS')).toBeInTheDocument();
-    expect(screen.getByText('Ring Rumble — Sumo')).toBeInTheDocument();
+    expect(screen.getByText('Colosseum Clash — Sumo')).toBeInTheDocument();
     expect(screen.getByText('JRC14-2026-0001')).toBeInTheDocument();
     expect(screen.queryByText('private@example.test')).not.toBeInTheDocument();
     expect(screen.queryByText('081234567890')).not.toBeInTheDocument();

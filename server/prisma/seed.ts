@@ -16,7 +16,7 @@ const STAFF_ROLES = [
 const COMPETITION_DEFINITIONS = [
   {
     slug: 'donatopia-transporter',
-    name: 'Donatopia — Transporter',
+    name: 'Aquaduct Romana — Transporter',
     level: 'SD',
     discipline: 'Transporter',
     feeEnv: 'TRANSPORTER_SD_FEE',
@@ -24,7 +24,7 @@ const COMPETITION_DEFINITIONS = [
   },
   {
     slug: 'nightmaze-rescue-transporter',
-    name: 'Nightmaze — Rescue Transporter',
+    name: 'Castra Guardian — Rescue Transporter',
     level: 'SMP',
     discipline: 'Rescue Transporter',
     feeEnv: 'RESCUE_SMP_FEE',
@@ -32,7 +32,7 @@ const COMPETITION_DEFINITIONS = [
   },
   {
     slug: 'pirate-clash-transporter-shooter',
-    name: 'Pirate Clash — Transporter Shooter',
+    name: 'Robo-Chiper — Transporter Shooter',
     level: 'SMA',
     discipline: 'Transporter Shooter',
     feeEnv: 'SHOOTER_SMA_FEE',
@@ -40,7 +40,7 @@ const COMPETITION_DEFINITIONS = [
   },
   {
     slug: 'wacky-rally-line-follower-mikro',
-    name: 'Wacky Rally — Line Follower Mikro',
+    name: 'Chariot Line — Line Follower Mikro',
     level: 'Umum',
     discipline: 'Line Follower Mikro',
     feeEnv: 'LINE_FOLLOWER_FEE',
@@ -48,7 +48,7 @@ const COMPETITION_DEFINITIONS = [
   },
   {
     slug: 'ring-rumble-sumo',
-    name: 'Ring Rumble — Sumo',
+    name: 'Colosseum Clash — Sumo',
     level: 'Umum',
     discipline: 'Sumo',
     feeEnv: 'SUMO_FEE',
@@ -56,7 +56,7 @@ const COMPETITION_DEFINITIONS = [
   },
   {
     slug: 'goal-rush-soccer',
-    name: 'Goal Rush — Soccer',
+    name: 'Harpastum Arena — Soccer',
     level: 'Umum',
     discipline: 'Soccer',
     feeEnv: 'SOCCER_FEE',

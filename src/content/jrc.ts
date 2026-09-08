@@ -9,6 +9,10 @@ export interface Competition {
   romanNumeral: string;
   name: string;
   shortName: string;
+  emblem: {
+    src: string;
+    alt: string;
+  };
   level: CompetitionLevel;
   discipline: string;
   fixtureLabel: 'Kategori resmi JRC XIV';
@@ -28,8 +32,12 @@ export const competitions: readonly Competition[] = [
   {
     slug: 'donatopia-transporter',
     romanNumeral: 'I',
-    name: 'Donatopia — Transporter',
-    shortName: 'Donatopia',
+    name: 'Aquaduct Romana — Transporter',
+    shortName: 'AQUADUCT ROMANA',
+    emblem: {
+      src: '/assets/arena-emblems/aquaduct-romana.webp',
+      alt: 'Lambang AQUADUCT ROMANA',
+    },
     level: 'SD',
     discipline: 'Transporter',
     fixtureLabel: 'Kategori resmi JRC XIV',
@@ -44,8 +52,12 @@ export const competitions: readonly Competition[] = [
   {
     slug: 'nightmaze-rescue-transporter',
     romanNumeral: 'II',
-    name: 'Nightmaze — Rescue Transporter',
-    shortName: 'Nightmaze',
+    name: 'Castra Guardian — Rescue Transporter',
+    shortName: 'CASTRA GUARDIAN',
+    emblem: {
+      src: '/assets/arena-emblems/castra-guardian.webp',
+      alt: 'Lambang CASTRA GUARDIAN',
+    },
     level: 'SMP',
     discipline: 'Rescue Transporter',
     fixtureLabel: 'Kategori resmi JRC XIV',
@@ -60,8 +72,12 @@ export const competitions: readonly Competition[] = [
   {
     slug: 'pirate-clash-transporter-shooter',
     romanNumeral: 'III',
-    name: 'Pirate Clash — Transporter Shooter',
-    shortName: 'Pirate Clash',
+    name: 'Robo-Chiper — Transporter Shooter',
+    shortName: 'ROBO-CHIPER',
+    emblem: {
+      src: '/assets/arena-emblems/robo-chiper.webp',
+      alt: 'Lambang ROBO-CHIPER',
+    },
     level: 'SMA',
     discipline: 'Transporter Shooter',
     fixtureLabel: 'Kategori resmi JRC XIV',
@@ -76,8 +92,12 @@ export const competitions: readonly Competition[] = [
   {
     slug: 'wacky-rally-line-follower-mikro',
     romanNumeral: 'IV',
-    name: 'Wacky Rally — Line Follower Mikro',
-    shortName: 'Wacky Rally',
+    name: 'Chariot Line — Line Follower Mikro',
+    shortName: 'CHARIOT LINE',
+    emblem: {
+      src: '/assets/arena-emblems/chariot-line.webp',
+      alt: 'Lambang CHARIOT LINE',
+    },
     level: 'Umum',
     discipline: 'Line Follower Mikro',
     fixtureLabel: 'Kategori resmi JRC XIV',
@@ -92,8 +112,12 @@ export const competitions: readonly Competition[] = [
   {
     slug: 'ring-rumble-sumo',
     romanNumeral: 'V',
-    name: 'Ring Rumble — Sumo',
-    shortName: 'Ring Rumble',
+    name: 'Colosseum Clash — Sumo',
+    shortName: 'COLOSSEUM CLASH',
+    emblem: {
+      src: '/assets/arena-emblems/colosseum-clash.webp',
+      alt: 'Lambang COLOSSEUM CLASH',
+    },
     level: 'Umum',
     discipline: 'Sumo',
     fixtureLabel: 'Kategori resmi JRC XIV',
@@ -108,8 +132,12 @@ export const competitions: readonly Competition[] = [
   {
     slug: 'goal-rush-soccer',
     romanNumeral: 'VI',
-    name: 'Goal Rush — Soccer',
-    shortName: 'Goal Rush',
+    name: 'Harpastum Arena — Soccer',
+    shortName: 'HARPASTUM ARENA',
+    emblem: {
+      src: '/assets/arena-emblems/harpastum-arena.webp',
+      alt: 'Lambang HARPASTUM ARENA',
+    },
     level: 'Umum',
     discipline: 'Soccer',
     fixtureLabel: 'Kategori resmi JRC XIV',
@@ -285,7 +313,7 @@ export const faqItems = [
   {
     question: 'Apa saja kategori resmi JRC XIV?',
     answer:
-      'JRC XIV memiliki enam kategori resmi: Donatopia — Transporter, Nightmaze — Rescue Transporter, Pirate Clash — Transporter Shooter, Wacky Rally — Line Follower Mikro, Ring Rumble — Sumo, dan Goal Rush — Soccer.',
+      'JRC XIV memiliki enam kategori resmi: Aquaduct Romana — Transporter, Castra Guardian — Rescue Transporter, Robo-Chiper — Transporter Shooter, Chariot Line — Line Follower Mikro, Colosseum Clash — Sumo, dan Harpastum Arena — Soccer.',
   },
   {
     question: 'Di mana guidebook dapat diunduh?',

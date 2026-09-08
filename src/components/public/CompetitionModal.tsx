@@ -15,10 +15,9 @@ interface CompetitionModalProps {
   competition: Competition | null;
   open: boolean;
   onClose: () => void;
-  portraitSrc?: string;
 }
 
-export function CompetitionModal({ competition, open, onClose, portraitSrc }: CompetitionModalProps) {
+export function CompetitionModal({ competition, open, onClose }: CompetitionModalProps) {
   const dialogRef = useRef<HTMLDivElement>(null);
   const closeRef = useRef<HTMLButtonElement>(null);
   const onCloseRef = useRef(onClose);
@@ -118,12 +117,13 @@ export function CompetitionModal({ competition, open, onClose, portraitSrc }: Co
           <span aria-hidden="true">×</span>
         </button>
 
-        <div className="arena-modal__media" aria-hidden="true">
-          {portraitSrc ? (
-            <img className="arena-modal__portrait" src={portraitSrc} alt="" draggable={false} />
-          ) : (
-            <div className="arena-modal__portrait-fallback" />
-          )}
+        <div className="arena-modal__media">
+          <img
+            className="arena-modal__portrait"
+            src={competition.emblem.src}
+            alt={competition.emblem.alt}
+            draggable={false}
+          />
           <span className="arena-modal__numeral" aria-hidden="true">
             {competition.romanNumeral}
           </span>
@@ -133,10 +133,9 @@ export function CompetitionModal({ competition, open, onClose, portraitSrc }: Co
           <p className="arena-modal__eyebrow">
             {competition.fixtureLabel} · {competition.level} · {competition.discipline}
           </p>
-          <h2 id={titleId} className="arena-modal__title">
+          <h2 id={titleId} className="arena-modal__title" aria-label={competition.shortName}>
             <span className="arena-modal__title-short">{competition.shortName}</span>
             <span className="arena-modal__title-full" aria-hidden="true">{competition.name}</span>
-            <span className="sr-only">{competition.name}</span>
           </h2>
           <p className="arena-modal__provocation">“{competition.provocation}”</p>
           <p id={descId} className="arena-modal__description">
