@@ -260,6 +260,10 @@
   line-height: .78;
 }
 
+.portal-shell .portal-registration__header h1 > span {
+  white-space: nowrap;
+}
+
 .portal-shell .portal-hero > div > p:last-child,
 .portal-shell .portal-registration__header > p,
 .portal-shell .portal-progress-panel > p,

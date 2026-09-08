@@ -336,7 +336,9 @@ export default function PortalRegistrationPage({ api = registrationApi }: Portal
         <header className="portal-registration__header">
           <div>
             <p className="portal-eyebrow">TABULA REGISTRATIONIS</p>
-            <h1>{loading ? 'Menyiapkan pendaftaran.' : 'Pilih kompetisi JRC XIV'}</h1>
+            <h1>
+              {loading ? 'Menyiapkan pendaftaran.' : <>Pilih kompetisi <span>JRC XIV</span></>}
+            </h1>
           </div>
           <p>Pilih satu kompetisi sebelum mengisi identitas tim dan anggota.</p>
         </header>
