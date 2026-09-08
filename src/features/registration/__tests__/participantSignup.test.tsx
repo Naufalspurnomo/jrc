@@ -34,6 +34,10 @@ function renderSignup(api: RegistrationApi) {
         <Routes>
           <Route path="/portal/daftar" element={<PortalSignupPage />} />
           <Route path="/portal" element={<h1>Portal peserta</h1>} />
+          <Route
+            path="/portal/pendaftaran/baru"
+            element={<h1>Pilih kompetisi JRC XIV</h1>}
+          />
         </Routes>
       </AuthProvider>
     </MemoryRouter>,
@@ -41,7 +45,7 @@ function renderSignup(api: RegistrationApi) {
 }
 
 describe('PortalSignupPage', () => {
-  it('registers a participant then enters the participant portal', async () => {
+  it('registers a participant then starts a new registration with competition selection', async () => {
     const register = vi.fn().mockResolvedValue(session);
     const user = userEvent.setup();
     renderSignup(createApi(register));
@@ -58,7 +62,7 @@ describe('PortalSignupPage', () => {
       email: 'ari@example.test',
       password: 'rahasia-aman',
     }));
-    expect(await screen.findByRole('heading', { name: 'Portal peserta' })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: 'Pilih kompetisi JRC XIV' })).toBeInTheDocument();
   });
 
   it('validates participant details before registration', async () => {

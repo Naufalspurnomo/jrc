@@ -30,8 +30,9 @@ export default function PortalSignupPage() {
   const [validationErrors, setValidationErrors] = useState<ValidationErrors>({});
   const [serverError, setServerError] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const [signupNavigationPending, setSignupNavigationPending] = useState(false);
 
-  if (!authLoading && user?.role === 'PARTICIPANT') {
+  if (!authLoading && user?.role === 'PARTICIPANT' && !signupNavigationPending) {
     return <Navigate replace to="/portal" />;
   }
 
@@ -54,14 +55,16 @@ export default function PortalSignupPage() {
     if (Object.keys(nextErrors).length > 0) return;
 
     setSubmitting(true);
+    setSignupNavigationPending(true);
     try {
       await register({
         displayName: trimmedDisplayName,
         email: trimmedEmail,
         password,
       });
-      navigate('/portal', { replace: true });
+      navigate('/portal/pendaftaran/baru', { replace: true });
     } catch (error) {
+      setSignupNavigationPending(false);
       setServerError(getErrorMessage(error));
     } finally {
       setSubmitting(false);

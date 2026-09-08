@@ -1,4 +1,4 @@
-import { useEffect, useState, type FormEvent } from 'react';
+import { useEffect, useRef, useState, type FormEvent, type KeyboardEvent } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 
 import { PortalShell } from '../../components/portal/PortalShell';
@@ -74,13 +74,16 @@ export default function PortalRegistrationPage({ api = registrationApi }: Portal
   const [removingMemberIds, setRemovingMemberIds] = useState<string[]>([]);
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
+  const [loadError, setLoadError] = useState('');
+  const [loadAttempt, setLoadAttempt] = useState(0);
+  const competitionCardRefs = useRef<Array<HTMLButtonElement | null>>([]);
 
   useEffect(() => {
     let active = true;
 
     const load = async () => {
       setLoading(true);
-      setError('');
+      setLoadError('');
 
       try {
         const [competitionRecords, existingRegistration] = await Promise.all([
@@ -118,7 +121,7 @@ export default function PortalRegistrationPage({ api = registrationApi }: Portal
           setMembers(existingMembers.filter((_, index) => index !== leaderIndex).map(toDraft));
         }
       } catch {
-        if (active) setError('Pendaftaran gagal dimuat. Silakan coba lagi.');
+        if (active) setLoadError('Pendaftaran gagal dimuat. Silakan coba lagi.');
       } finally {
         if (active) setLoading(false);
       }
@@ -128,9 +131,42 @@ export default function PortalRegistrationPage({ api = registrationApi }: Portal
     return () => {
       active = false;
     };
-  }, [api, existingRegistrationId]);
+  }, [api, existingRegistrationId, loadAttempt]);
 
   const editable = editableStatuses.includes(status);
+  const selectedCompetitionIndex = competitions.findIndex((competition) => competition.id === competitionId);
+  const tabbableCompetitionIndex = selectedCompetitionIndex >= 0 ? selectedCompetitionIndex : 0;
+
+  const handleCompetitionKeyDown = (
+    event: KeyboardEvent<HTMLButtonElement>,
+    currentIndex: number,
+  ) => {
+    if (!editable || competitions.length === 0) return;
+
+    let nextIndex: number;
+    switch (event.key) {
+      case 'ArrowRight':
+      case 'ArrowDown':
+        nextIndex = (currentIndex + 1) % competitions.length;
+        break;
+      case 'ArrowLeft':
+      case 'ArrowUp':
+        nextIndex = (currentIndex - 1 + competitions.length) % competitions.length;
+        break;
+      case 'Home':
+        nextIndex = 0;
+        break;
+      case 'End':
+        nextIndex = competitions.length - 1;
+        break;
+      default:
+        return;
+    }
+
+    event.preventDefault();
+    setCompetitionId(competitions[nextIndex].id);
+    competitionCardRefs.current[nextIndex]?.focus();
+  };
 
   const updateMember = (index: number, field: keyof Omit<MemberDraft, 'id'>, value: string) => {
     setMembers((current) => current.map((member, memberIndex) => (
@@ -300,15 +336,75 @@ export default function PortalRegistrationPage({ api = registrationApi }: Portal
         <header className="portal-registration__header">
           <div>
             <p className="portal-eyebrow">TABULA REGISTRATIONIS</p>
-            <h1>Daftarkan tim.</h1>
+            <h1>{loading ? 'Menyiapkan pendaftaran.' : 'Pilih kompetisi JRC XIV'}</h1>
           </div>
-          <p>Simpan identitas tim dan anggota sebelum melengkapi dokumen.</p>
+          <p>Pilih satu kompetisi sebelum mengisi identitas tim dan anggota.</p>
         </header>
 
         {loading ? (
           <p>Memuat formulir pendaftaran…</p>
+        ) : loadError ? (
+          <section className="portal-notice" role="alert">
+            <span className="portal-notice__number" aria-hidden="true">!</span>
+            <div>
+              <h2>Pendaftaran tidak dapat dimuat.</h2>
+              <p>{loadError}</p>
+              <button
+                className="portal-button portal-button--primary"
+                type="button"
+                onClick={() => setLoadAttempt((attempt) => attempt + 1)}
+              >
+                Coba lagi
+              </button>
+            </div>
+          </section>
+        ) : competitions.length === 0 ? (
+          <section className="portal-notice" role="status">
+            <span className="portal-notice__number" aria-hidden="true">0</span>
+            <div>
+              <h2>Belum ada kompetisi aktif.</h2>
+              <p>Pendaftaran akan tersedia setelah kompetisi dibuka oleh panitia.</p>
+            </div>
+          </section>
         ) : (
-          <form className="portal-form-panel" onSubmit={saveDraft}>
+          <>
+            <section className="portal-form-panel" aria-labelledby="competition-selection-title">
+              <div className="portal-fieldset">
+                <h2 id="competition-selection-title">Tentukan arena tim</h2>
+                <p>Pilih satu dari enam kompetisi JRC XIV untuk melanjutkan pendaftaran.</p>
+                <div className="portal-competition-grid" role="radiogroup" aria-label="Kompetisi JRC XIV">
+                  {competitions.map((competition, index) => {
+                    const selected = competition.id === competitionId;
+                    const competitionLabel = `${competition.level ?? 'Umum'} · ${competition.name}`;
+
+                    return (
+                      <button
+                        key={competition.id}
+                        ref={(node) => {
+                          competitionCardRefs.current[index] = node;
+                        }}
+                        aria-label={competitionLabel}
+                        aria-checked={selected}
+                        className="portal-button portal-button--ghost portal-competition-card"
+                        disabled={!editable}
+                        role="radio"
+                        tabIndex={index === tabbableCompetitionIndex ? 0 : -1}
+                        type="button"
+                        onClick={() => setCompetitionId(competition.id)}
+                        onKeyDown={(event) => handleCompetitionKeyDown(event, index)}
+                      >
+                        <span>{competition.level ?? 'Umum'}</span>
+                        <strong>{competition.name}</strong>
+                        {selected && <span>Kompetisi terpilih</span>}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            </section>
+
+            {competitionId && (
+              <form className="portal-form-panel" onSubmit={saveDraft}>
             <fieldset className="portal-fieldset">
               <legend><span>I</span> Identitas tim</legend>
               <label>
@@ -338,22 +434,6 @@ export default function PortalRegistrationPage({ api = registrationApi }: Portal
                   value={phone}
                   onChange={(event) => setPhone(event.target.value)}
                 />
-              </label>
-              <label>
-                Kompetisi
-                <select
-                  required
-                  disabled={!editable}
-                  value={competitionId}
-                  onChange={(event) => setCompetitionId(event.target.value)}
-                >
-                  <option value="">Pilih kompetisi</option>
-                  {competitions.map((competition) => (
-                    <option key={competition.id} value={competition.id}>
-                      {competition.level} · {competition.name}
-                    </option>
-                  ))}
-                </select>
               </label>
             </fieldset>
 
@@ -546,7 +626,9 @@ export default function PortalRegistrationPage({ api = registrationApi }: Portal
                 )}
               </div>
             )}
-          </form>
+              </form>
+            )}
+          </>
         )}
       </main>
     </PortalShell>

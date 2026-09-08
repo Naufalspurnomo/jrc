@@ -19,6 +19,7 @@ import './styles/system/performance.css';
 import './styles/system/site-shell.css';
 import './styles/sections/lower-world.css';
 import './styles/system/motion.css';
+import './styles/system/registration-system.css';
 
 const root = document.getElementById('root');
 

@@ -11,11 +11,15 @@ import type {
   TeamMemberRecord,
 } from '../api';
 
-const competition: CompetitionRecord = {
-  id: 'competition-1',
-  name: 'Ring Rumble — Sumo',
-  level: 'Nasional',
-};
+const competitions: CompetitionRecord[] = [
+  { id: 'competition-1', name: 'Donatopia — Transporter', level: 'SD' },
+  { id: 'competition-2', name: 'Nightmaze — Rescue Transporter', level: 'SMP' },
+  { id: 'competition-3', name: 'Pirate Clash — Transporter Shooter', level: 'SMA' },
+  { id: 'competition-4', name: 'Wacky Rally — Line Follower Mikro', level: 'Umum' },
+  { id: 'competition-5', name: 'Ring Rumble — Sumo', level: 'Umum' },
+  { id: 'competition-6', name: 'Goal Rush — Soccer', level: 'Umum' },
+];
+const competition = competitions[4];
 
 function registration(overrides: Partial<RegistrationRecord> = {}): RegistrationRecord {
   return {
@@ -41,7 +45,7 @@ function createApi(overrides: Partial<RegistrationApi['registrations']> = {}): R
 
   return {
     competitions: {
-      list: vi.fn().mockResolvedValue([competition]),
+      list: vi.fn().mockResolvedValue(competitions),
     },
     registrations: {
       list: vi.fn(),
@@ -79,16 +83,125 @@ function renderPage(api: RegistrationApi, entry = '/portal/pendaftaran/baru') {
 }
 
 describe('PortalRegistrationPage', () => {
+  it('shows a load alert and retries competition loading without creating a registration', async () => {
+    const user = userEvent.setup();
+    const api = createApi();
+    vi.mocked(api.competitions.list).mockRejectedValueOnce(new Error('network error'));
+    renderPage(api);
+
+    const alert = await screen.findByRole('alert');
+    expect(alert).toHaveTextContent('Pendaftaran gagal dimuat. Silakan coba lagi.');
+    expect(screen.queryByRole('radio')).not.toBeInTheDocument();
+    expect(screen.queryByLabelText('Nama tim')).not.toBeInTheDocument();
+    expect(api.registrations.create).not.toHaveBeenCalled();
+    expect(api.registrations.update).not.toHaveBeenCalled();
+
+    await user.click(screen.getByRole('button', { name: 'Coba lagi' }));
+
+    expect(await screen.findAllByRole('radio')).toHaveLength(competitions.length);
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+    expect(api.competitions.list).toHaveBeenCalledTimes(2);
+    expect(screen.queryByLabelText('Nama tim')).not.toBeInTheDocument();
+    expect(api.registrations.create).not.toHaveBeenCalled();
+    expect(api.registrations.update).not.toHaveBeenCalled();
+  });
+
+  it('shows an accessible empty state without revealing or creating a registration', async () => {
+    const api = createApi();
+    vi.mocked(api.competitions.list).mockResolvedValueOnce([]);
+    renderPage(api);
+
+    const emptyState = await screen.findByRole('status');
+    expect(emptyState).toHaveTextContent('Belum ada kompetisi aktif.');
+    expect(screen.queryByRole('radio')).not.toBeInTheDocument();
+    expect(screen.queryByLabelText('Nama tim')).not.toBeInTheDocument();
+    expect(api.registrations.create).not.toHaveBeenCalled();
+    expect(api.registrations.update).not.toHaveBeenCalled();
+  });
+
+  it('starts with six accessible competition cards and makes no registration request before choice and save', async () => {
+    const user = userEvent.setup();
+    const api = createApi();
+    renderPage(api);
+
+    expect(await screen.findByRole('heading', { name: 'Pilih kompetisi JRC XIV' })).toBeInTheDocument();
+    for (const availableCompetition of competitions) {
+      expect(screen.getByRole('radio', {
+        name: `${availableCompetition.level} · ${availableCompetition.name}`,
+      })).toBeInTheDocument();
+    }
+    expect(screen.queryByLabelText('Nama tim')).not.toBeInTheDocument();
+    expect(screen.queryByRole('combobox', { name: 'Kompetisi' })).not.toBeInTheDocument();
+    expect(api.registrations.create).not.toHaveBeenCalled();
+    expect(api.registrations.update).not.toHaveBeenCalled();
+
+    const selectedCompetition = competitions[1];
+    await user.click(screen.getByRole('radio', {
+      name: `${selectedCompetition.level} · ${selectedCompetition.name}`,
+    }));
+
+    expect(screen.getByLabelText('Nama tim')).toBeInTheDocument();
+    expect(api.registrations.create).not.toHaveBeenCalled();
+    expect(api.registrations.update).not.toHaveBeenCalled();
+  });
+
+  it('uses a roving tab stop and selects competitions with wrapped radio keyboard navigation', async () => {
+    const user = userEvent.setup();
+    const api = createApi();
+    renderPage(api);
+
+    const competitionCards = await screen.findAllByRole('radio');
+    expect(competitionCards).toHaveLength(competitions.length);
+    expect(competitionCards.map((card) => card.tabIndex)).toEqual([0, -1, -1, -1, -1, -1]);
+
+    competitionCards[0].focus();
+    await user.keyboard('{ArrowRight}');
+    expect(competitionCards[1]).toHaveFocus();
+    expect(competitionCards[1]).toHaveAttribute('aria-checked', 'true');
+    expect(competitionCards.map((card) => card.tabIndex)).toEqual([-1, 0, -1, -1, -1, -1]);
+    expect(screen.getByLabelText('Nama tim')).toBeInTheDocument();
+
+    await user.keyboard('{ArrowDown}');
+    expect(competitionCards[2]).toHaveFocus();
+    expect(competitionCards[2]).toHaveAttribute('aria-checked', 'true');
+
+    await user.keyboard('{ArrowLeft}');
+    expect(competitionCards[1]).toHaveFocus();
+    expect(competitionCards[1]).toHaveAttribute('aria-checked', 'true');
+
+    await user.keyboard('{ArrowUp}');
+    expect(competitionCards[0]).toHaveFocus();
+    expect(competitionCards[0]).toHaveAttribute('aria-checked', 'true');
+
+    await user.keyboard('{ArrowLeft}');
+    expect(competitionCards[5]).toHaveFocus();
+    expect(competitionCards[5]).toHaveAttribute('aria-checked', 'true');
+
+    await user.keyboard('{ArrowRight}');
+    expect(competitionCards[0]).toHaveFocus();
+    expect(competitionCards[0]).toHaveAttribute('aria-checked', 'true');
+
+    await user.keyboard('{End}');
+    expect(competitionCards[5]).toHaveFocus();
+    expect(competitionCards[5]).toHaveAttribute('aria-checked', 'true');
+
+    await user.keyboard('{Home}');
+    expect(competitionCards[0]).toHaveFocus();
+    expect(competitionCards[0]).toHaveAttribute('aria-checked', 'true');
+    expect(api.registrations.create).not.toHaveBeenCalled();
+    expect(api.registrations.update).not.toHaveBeenCalled();
+  });
+
   it('creates the registration before adding leader and dynamic members with backend-supported fields', async () => {
     const user = userEvent.setup();
     const api = createApi();
     renderPage(api);
 
-    expect(await screen.findByRole('option', { name: 'Nasional · Ring Rumble — Sumo' })).toBeInTheDocument();
+    const competitionCard = await screen.findByRole('radio', { name: 'Umum · Ring Rumble — Sumo' });
+    await user.click(competitionCard);
     await user.type(screen.getByLabelText('Nama tim'), 'Nova');
     await user.type(screen.getByLabelText('Institusi'), 'ITS');
     await user.type(screen.getByLabelText('Nomor WhatsApp tim'), '081234567890');
-    await user.selectOptions(screen.getByLabelText('Kompetisi'), competition.id);
     await user.type(screen.getByLabelText('Nama ketua'), 'Ari Wijaya');
     await user.type(screen.getByLabelText('NIS/NIM ketua'), '5025211001');
     await user.click(screen.getByRole('button', { name: 'Tambah anggota' }));
@@ -110,7 +223,40 @@ describe('PortalRegistrationPage', () => {
       name: 'Bima Putra',
       studentId: '5025211002',
     });
+    expect(competitionCard).toHaveAttribute('aria-checked', 'true');
     expect(await screen.findByRole('status')).toHaveTextContent('Pendaftaran tersimpan.');
+  });
+
+  it('preloads and displays the selected competition when editing a draft', async () => {
+    const api = createApi({
+      get: vi.fn().mockResolvedValue(registration()),
+    });
+    renderPage(api, '/portal/pendaftaran/registration-1');
+
+    const selectedCompetition = await screen.findByRole('radio', { name: 'Umum · Ring Rumble — Sumo' });
+    expect(selectedCompetition).toHaveAttribute('aria-checked', 'true');
+    expect(selectedCompetition).toHaveAttribute('tabindex', '0');
+    expect(screen.getAllByRole('radio').filter((card) => card.tabIndex === 0)).toEqual([selectedCompetition]);
+    expect(screen.getByText('Kompetisi terpilih')).toBeInTheDocument();
+    expect(screen.getByLabelText('Nama tim')).toHaveValue('Garuda Robotika');
+    expect(api.registrations.create).not.toHaveBeenCalled();
+  });
+
+  it('keeps competition choices disabled when the registration is not editable', async () => {
+    const user = userEvent.setup();
+    const api = createApi({
+      get: vi.fn().mockResolvedValue(registration({ status: 'SUBMITTED' })),
+    });
+    renderPage(api, '/portal/pendaftaran/registration-1');
+
+    const competitionCards = await screen.findAllByRole('radio');
+    competitionCards.forEach((card) => expect(card).toBeDisabled());
+    await user.click(competitionCards[0]);
+
+    expect(competitionCards[0]).toHaveAttribute('aria-checked', 'false');
+    expect(competitionCards[4]).toHaveAttribute('aria-checked', 'true');
+    expect(api.registrations.create).not.toHaveBeenCalled();
+    expect(api.registrations.update).not.toHaveBeenCalled();
   });
 
   it('uploads a categorized document then refreshes and displays safe metadata', async () => {
