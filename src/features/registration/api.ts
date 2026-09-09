@@ -5,6 +5,8 @@ export const API_PATHS = {
     register: '/api/auth/register',
     login: '/api/auth/login',
     logout: '/api/auth/logout',
+    verifyEmail: '/api/auth/email-verification/verify',
+    resendEmailVerification: '/api/auth/email-verification/resend',
   },
   competitions: '/api/competitions',
   registrations: {
@@ -196,6 +198,7 @@ export interface AuthUser {
   displayName: string;
   role: AuthRole;
   active?: boolean;
+  emailVerified: boolean;
 }
 
 export interface AuthSession {
@@ -404,6 +407,8 @@ export interface RegistrationApi {
     login(input: LoginInput): Promise<AuthSession>;
     register(input: RegisterInput): Promise<AuthSession>;
     logout(): Promise<void>;
+    verifyEmail(token: string): Promise<void>;
+    resendEmailVerification(): Promise<void>;
   };
   competitions: {
     list(): Promise<CompetitionRecord[]>;
@@ -453,6 +458,19 @@ export function createRegistrationApi(client = new ApiClient()): RegistrationApi
         } finally {
           client.clearCsrfToken();
         }
+      },
+      verifyEmail: async (token) => {
+        await client.request<void>(API_PATHS.auth.verifyEmail, {
+          method: 'POST',
+          body: { token },
+          csrf: false,
+        });
+        client.clearCsrfToken();
+      },
+      resendEmailVerification: async () => {
+        await client.request<void>(API_PATHS.auth.resendEmailVerification, {
+          method: 'POST',
+        });
       },
     },
     competitions: {

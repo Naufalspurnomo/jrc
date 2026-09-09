@@ -10,6 +10,7 @@ const VALID_PRODUCTION_ENV = {
   TICKET_SECRET: 'a-production-ticket-secret-with-32-characters',
   STORAGE_PATH: '/srv/jrc/private',
   PUBLIC_VERIFICATION_URL: 'https://jrc.example.test/ticket/verify',
+  PUBLIC_EMAIL_VERIFICATION_URL: 'https://jrc.example.test/portal/verifikasi-email',
   DATABASE_URL: 'postgresql://jrc@example.test:5432/jrc',
 };
 
@@ -41,6 +42,7 @@ describe('RuntimeConfigValidator', () => {
       TICKET_SECRET: 'replace-me-secret-value',
       STORAGE_PATH: '   ',
       PUBLIC_VERIFICATION_URL: 'not-a-secret-value',
+      PUBLIC_EMAIL_VERIFICATION_URL: 'not-an-email-verification-url',
       DATABASE_URL: '',
     };
 
@@ -57,6 +59,7 @@ describe('RuntimeConfigValidator', () => {
     expect(message).toMatch(/TICKET_SECRET/);
     expect(message).toMatch(/STORAGE_PATH/);
     expect(message).toMatch(/PUBLIC_VERIFICATION_URL/);
+    expect(message).toMatch(/PUBLIC_EMAIL_VERIFICATION_URL/);
     expect(message).toMatch(/DATABASE_URL/);
     expect(message).not.toContain('replace-me-secret-value');
     expect(message).not.toContain('not-a-secret-value');

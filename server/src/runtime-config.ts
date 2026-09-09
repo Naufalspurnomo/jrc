@@ -77,6 +77,9 @@ export class RuntimeConfigValidator implements OnModuleInit {
     if (!hasSafeVerificationUrl(process.env.PUBLIC_VERIFICATION_URL)) {
       invalidVariables.push('PUBLIC_VERIFICATION_URL');
     }
+    if (!hasSafeVerificationUrl(process.env.PUBLIC_EMAIL_VERIFICATION_URL)) {
+      invalidVariables.push('PUBLIC_EMAIL_VERIFICATION_URL');
+    }
     if (!process.env.DATABASE_URL?.trim()) {
       invalidVariables.push('DATABASE_URL');
     }

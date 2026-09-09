@@ -3,6 +3,7 @@ import {
   Body,
   Controller,
   Delete,
+  ForbiddenException,
   Get,
   HttpCode,
   HttpStatus,
@@ -607,6 +608,16 @@ export class RegistrationsService {
         },
       });
       if (!current) throw new NotFoundException('Registration not found');
+
+      const owner = await transaction.user.findUnique({
+        where: { id: ownerId },
+        select: { emailVerifiedAt: true },
+      });
+      if (!owner?.emailVerifiedAt) {
+        throw new ForbiddenException(
+          'Verify your email address before submitting a registration',
+        );
+      }
 
       if (
         !current.teamName.trim() ||

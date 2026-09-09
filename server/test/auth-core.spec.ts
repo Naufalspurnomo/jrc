@@ -34,6 +34,7 @@ describe('optional session probe', () => {
         passwordHash: 'secret-hash',
         role: Role.PARTICIPANT,
         active: true,
+        emailVerifiedAt: null,
         createdAt: new Date('2026-01-01T00:00:00.000Z'),
         updatedAt: new Date('2026-01-02T00:00:00.000Z'),
       },
@@ -51,6 +52,7 @@ describe('optional session probe', () => {
         email: 'user@example.test',
         displayName: 'User',
         role: Role.PARTICIPANT,
+        emailVerified: false,
       },
     });
     expect(findFirst).toHaveBeenCalledWith({

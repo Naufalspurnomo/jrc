@@ -26,6 +26,7 @@ CMD ["npx", "prisma", "migrate", "deploy"]
 FROM build AS runtime-dependencies
 
 RUN npm prune --omit=dev --omit=optional \
+    && rm -rf node_modules/prisma node_modules/@prisma/config node_modules/deepmerge-ts \
     && npm cache clean --force
 
 FROM node:22-bookworm-slim AS production
@@ -41,7 +42,7 @@ RUN apt-get update \
     && mkdir -p /app/storage \
     && chown node:node /app/storage
 
-COPY --from=runtime-dependencies --chown=node:node /app/package.json /app/package-lock.json ./
+COPY --from=runtime-dependencies --chown=node:node /app/package.json ./
 COPY --from=runtime-dependencies --chown=node:node /app/node_modules ./node_modules
 COPY --from=build --chown=node:node /app/dist ./dist
 

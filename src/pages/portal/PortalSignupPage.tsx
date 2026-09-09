@@ -62,7 +62,7 @@ export default function PortalSignupPage() {
         email: trimmedEmail,
         password,
       });
-      navigate('/portal/pendaftaran/baru', { replace: true });
+      navigate('/portal/verifikasi-email', { replace: true });
     } catch (error) {
       setSignupNavigationPending(false);
       setServerError(getErrorMessage(error));

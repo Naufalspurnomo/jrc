@@ -13,6 +13,7 @@ const session: AuthSession = {
     displayName: 'Ari Wijaya',
     email: 'ari@example.test',
     role: 'PARTICIPANT',
+    emailVerified: false,
   },
 };
 
@@ -23,6 +24,8 @@ function createApi(register: RegistrationApi['auth']['register']): RegistrationA
       login: vi.fn(),
       register,
       logout: vi.fn(),
+      verifyEmail: vi.fn(),
+      resendEmailVerification: vi.fn(),
     },
   } as unknown as RegistrationApi;
 }
@@ -34,10 +37,7 @@ function renderSignup(api: RegistrationApi) {
         <Routes>
           <Route path="/portal/daftar" element={<PortalSignupPage />} />
           <Route path="/portal" element={<h1>Portal peserta</h1>} />
-          <Route
-            path="/portal/pendaftaran/baru"
-            element={<h1>Pilih kompetisi JRC XIV</h1>}
-          />
+          <Route path="/portal/verifikasi-email" element={<h1>Verifikasi email Anda</h1>} />
         </Routes>
       </AuthProvider>
     </MemoryRouter>,
@@ -45,7 +45,7 @@ function renderSignup(api: RegistrationApi) {
 }
 
 describe('PortalSignupPage', () => {
-  it('registers a participant then starts a new registration with competition selection', async () => {
+  it('registers a participant then requests email verification', async () => {
     const register = vi.fn().mockResolvedValue(session);
     const user = userEvent.setup();
     renderSignup(createApi(register));
@@ -62,7 +62,7 @@ describe('PortalSignupPage', () => {
       email: 'ari@example.test',
       password: 'rahasia-aman',
     }));
-    expect(await screen.findByRole('heading', { name: 'Pilih kompetisi JRC XIV' })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: 'Verifikasi email Anda' })).toBeInTheDocument();
   });
 
   it('validates participant details before registration', async () => {

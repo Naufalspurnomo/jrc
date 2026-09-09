@@ -22,6 +22,9 @@ const PortalLoginPage = lazy(() => import('../pages/portal/PortalLoginPage'));
 const PortalPaymentPage = lazy(() => import('../pages/portal/PortalPaymentPage'));
 const PortalRegistrationPage = lazy(() => import('../pages/portal/PortalRegistrationPage'));
 const PortalSignupPage = lazy(() => import('../pages/portal/PortalSignupPage'));
+const PortalEmailVerificationPage = lazy(
+  () => import('../pages/portal/PortalEmailVerificationPage'),
+);
 const PortalTicketPage = lazy(() => import('../pages/portal/PortalTicketPage'));
 const PublicTicketVerificationPage = lazy(
   () => import('../pages/ticket/PublicTicketVerificationPage'),
@@ -59,11 +62,13 @@ export function AppRoutes({ homeStartupReady = true }: { homeStartupReady?: bool
         <Route path="/perlombaan/:slug" element={<CompetitionPage />} />
         <Route path="/portal/masuk" element={<PortalLoginPage />} />
         <Route path="/portal/daftar" element={<PortalSignupPage />} />
+        <Route path="/portal/verifikasi-email" element={<PortalEmailVerificationPage />} />
         <Route path="/ticket/verify" element={<PublicTicketVerificationPage />} />
         <Route
           element={<RequireAuth roles={['PARTICIPANT']} redirectTo="/portal/masuk" />}
         >
           <Route path="/portal" element={<PortalDashboardPage />} />
+
           <Route path="/portal/pendaftaran/baru" element={<PortalRegistrationPage />} />
           <Route
             path="/portal/pendaftaran/:registrationId"

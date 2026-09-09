@@ -21,10 +21,37 @@ function currentRegistration(documents: number) {
 }
 
 describe('RegistrationsService submission requirements', () => {
+  it('rejects submission when the owner email is not verified', async () => {
+    const transaction = {
+      registration: {
+        findFirst: vi.fn().mockResolvedValue(currentRegistration(1)),
+      },
+      user: { findUnique: vi.fn().mockResolvedValue({ emailVerifiedAt: null }) },
+    };
+    const prisma = {
+      $transaction: vi.fn(
+        (operation: (client: typeof transaction) => Promise<unknown>) =>
+          operation(transaction),
+      ),
+    };
+    const service = new RegistrationsService(
+      prisma as unknown as PrismaService,
+    );
+
+    await expect(
+      service.submit(OWNER_ID, REGISTRATION_ID, AUDIT),
+    ).rejects.toThrow(
+      'Verify your email address before submitting a registration',
+    );
+  });
+
   it('rejects submission without a document selected in the transaction', async () => {
     const transaction = {
       registration: {
         findFirst: vi.fn().mockResolvedValue(currentRegistration(0)),
+      },
+      user: {
+        findUnique: vi.fn().mockResolvedValue({ emailVerifiedAt: new Date() }),
       },
     };
     const prisma = {
@@ -55,6 +82,9 @@ describe('RegistrationsService submission requirements', () => {
       const transaction = {
         registration: {
           findFirst: vi.fn().mockResolvedValue(currentRegistration(1)),
+        },
+        user: {
+          findUnique: vi.fn().mockResolvedValue({ emailVerifiedAt: new Date() }),
         },
         teamMember: { count: vi.fn().mockResolvedValue(leaderCount) },
       };

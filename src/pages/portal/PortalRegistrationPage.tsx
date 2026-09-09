@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, type FormEvent, type KeyboardEvent } from 
 import { useNavigate, useParams } from 'react-router-dom';
 
 import { PortalShell } from '../../components/portal/PortalShell';
+import { useAuth } from '../../features/auth/AuthProvider';
 import {
   registrationApi,
   type CompetitionRecord,
@@ -50,6 +51,8 @@ function formatDocumentType(mimeType: string): string {
 
 export default function PortalRegistrationPage({ api = registrationApi }: PortalRegistrationPageProps) {
   const navigate = useNavigate();
+  const { user } = useAuth();
+  const emailVerified = user?.emailVerified === true;
   const { registrationId: routeRegistrationId } = useParams<{ registrationId: string }>();
   const existingRegistrationId = routeRegistrationId && routeRegistrationId !== 'baru'
     ? routeRegistrationId
@@ -299,6 +302,10 @@ export default function PortalRegistrationPage({ api = registrationApi }: Portal
   };
 
   const submitRegistration = async () => {
+    if (!emailVerified) {
+      setError('Verifikasi email Anda terlebih dahulu sebelum mengirim pendaftaran.');
+      return;
+    }
     if (!registrationId) {
       setError('Simpan draft sebelum mengirim pendaftaran.');
       return;
@@ -609,6 +616,26 @@ export default function PortalRegistrationPage({ api = registrationApi }: Portal
             {message && <p role="status">{message}</p>}
             {error && <p role="alert">{error}</p>}
 
+            {!emailVerified && editable && (
+              <section className="portal-notice" role="alert">
+                <span className="portal-notice__number" aria-hidden="true">@</span>
+                <div>
+                  <h2>Verifikasi email diperlukan.</h2>
+                  <p>
+                    Buka tautan verifikasi yang dikirim ke email Anda sebelum mengirim
+                    pendaftaran. Draft tetap dapat disimpan.
+                  </p>
+                  <button
+                    className="portal-button portal-button--primary"
+                    type="button"
+                    onClick={() => navigate('/portal/verifikasi-email')}
+                  >
+                    Buka halaman verifikasi
+                  </button>
+                </div>
+              </section>
+            )}
+
             {editable && (
               <div className="portal-form-actions">
                 <button className="portal-button portal-button--primary" disabled={saving} type="submit">
@@ -617,7 +644,8 @@ export default function PortalRegistrationPage({ api = registrationApi }: Portal
                 {registrationId && (
                   <button
                     className="portal-button portal-button--primary"
-                    disabled={submitting
+                    disabled={!emailVerified
+                      || submitting
                       || (!leader.id && !members.some((member) => member.id))
                       || documents.length === 0}
                     type="button"

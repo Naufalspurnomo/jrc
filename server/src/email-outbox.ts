@@ -5,7 +5,13 @@ import {
   type OnModuleInit,
 } from '@nestjs/common';
 import { type EmailOutbox, OutboxStatus } from '@prisma/client';
-import { randomUUID } from 'node:crypto';
+import {
+  createCipheriv,
+  createDecipheriv,
+  createHash,
+  randomBytes,
+  randomUUID,
+} from 'node:crypto';
 import nodemailer, { type Transporter } from 'nodemailer';
 import { PrismaService } from './prisma.service';
 
@@ -15,8 +21,50 @@ const RETRY_BASE_DELAY_MS = 60_000;
 const RETRY_MAX_DELAY_MS = 60 * 60_000;
 const MAX_ERROR_LENGTH = 1_000;
 const DEFAULT_PROCESS_INTERVAL_MS = 5_000;
+const ENCRYPTED_BODY_PREFIX = 'jrc-email-v1';
 
 type EmailTransport = 'noop' | 'console' | 'smtp';
+
+function bodyEncryptionKey(): Buffer {
+  const secret = process.env.TICKET_SECRET ?? '';
+  if (secret.length < 32) {
+    throw new Error('TICKET_SECRET must be at least 32 characters');
+  }
+  return createHash('sha256')
+    .update('jrc-email-outbox-v1\0')
+    .update(secret)
+    .digest();
+}
+
+export function encryptEmailBody(body: string): string {
+  const iv = randomBytes(12);
+  const cipher = createCipheriv('aes-256-gcm', bodyEncryptionKey(), iv);
+  const ciphertext = Buffer.concat([cipher.update(body, 'utf8'), cipher.final()]);
+  return [
+    ENCRYPTED_BODY_PREFIX,
+    iv.toString('base64url'),
+    cipher.getAuthTag().toString('base64url'),
+    ciphertext.toString('base64url'),
+  ].join('.');
+}
+
+function decryptEmailBody(body: string): string {
+  if (!body.startsWith(`${ENCRYPTED_BODY_PREFIX}.`)) return body;
+  const [prefix, encodedIv, encodedTag, encodedCiphertext, extra] = body.split('.');
+  if (prefix !== ENCRYPTED_BODY_PREFIX || !encodedIv || !encodedTag || !encodedCiphertext || extra) {
+    throw new Error('Invalid encrypted email body');
+  }
+  const decipher = createDecipheriv(
+    'aes-256-gcm',
+    bodyEncryptionKey(),
+    Buffer.from(encodedIv, 'base64url'),
+  );
+  decipher.setAuthTag(Buffer.from(encodedTag, 'base64url'));
+  return Buffer.concat([
+    decipher.update(Buffer.from(encodedCiphertext, 'base64url')),
+    decipher.final(),
+  ]).toString('utf8');
+}
 
 @Injectable()
 export class EmailOutboxService implements OnModuleInit, OnModuleDestroy {
@@ -97,6 +145,7 @@ export class EmailOutboxService implements OnModuleInit, OnModuleDestroy {
           },
           data: {
             status: OutboxStatus.SENT,
+            body: '[DELIVERED]',
             sentAt: now,
             lastError: null,
             lockedUntil: null,
@@ -152,7 +201,7 @@ export class EmailOutboxService implements OnModuleInit, OnModuleDestroy {
       from: process.env.SMTP_FROM,
       to: row.to,
       subject: row.subject,
-      text: row.body,
+      text: decryptEmailBody(row.body),
       disableFileAccess: true,
       disableUrlAccess: true,
     });

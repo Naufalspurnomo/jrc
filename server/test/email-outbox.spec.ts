@@ -1,7 +1,7 @@
 import { Logger } from '@nestjs/common';
 import { OutboxStatus } from '@prisma/client';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { EmailOutboxService } from '../src/email-outbox';
+import { EmailOutboxService, encryptEmailBody } from '../src/email-outbox';
 import { PrismaService } from '../src/prisma.service';
 
 const mailer = vi.hoisted(() => ({
@@ -64,6 +64,7 @@ beforeEach(() => {
     ...ORIGINAL_ENV,
     NODE_ENV: 'test',
     EMAIL_TRANSPORT: 'noop',
+    TICKET_SECRET: 'test-ticket-secret-with-at-least-32-characters',
   };
   vi.useFakeTimers();
   vi.setSystemTime(NOW);
@@ -127,6 +128,7 @@ describe('EmailOutboxService processing', () => {
       },
       data: {
         status: OutboxStatus.SENT,
+        body: '[DELIVERED]',
         sentAt: NOW,
         lastError: null,
         lockedUntil: null,
@@ -205,6 +207,21 @@ describe('EmailOutboxService transports', () => {
       disableFileAccess: true,
       disableUrlAccess: true,
     });
+  });
+
+  it('decrypts sensitive bodies only for delivery', async () => {
+    configureSmtp();
+    mailer.sendMail.mockResolvedValue({ messageId: 'test-id' });
+    const plaintext = 'https://example.test/verify?token=secret-token';
+    const encrypted = encryptEmailBody(plaintext);
+    const { service } = harness([record({ body: encrypted })]);
+
+    expect(encrypted).not.toContain('secret-token');
+    await service.processOnce();
+
+    expect(mailer.sendMail).toHaveBeenCalledWith(
+      expect.objectContaining({ text: plaintext }),
+    );
   });
 
   it('logs only the outbox ID and recipient domain for console transport', async () => {

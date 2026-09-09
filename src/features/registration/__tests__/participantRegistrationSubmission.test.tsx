@@ -3,6 +3,7 @@ import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { describe, expect, it, vi } from 'vitest';
 
+import { AuthProvider } from '../../auth/AuthProvider';
 import PortalRegistrationPage from '../../../pages/portal/PortalRegistrationPage';
 import type {
   CompetitionRecord,
@@ -42,6 +43,22 @@ function registration(status: RegistrationState, overrides: Partial<Registration
 
 function createApi(record: RegistrationRecord): RegistrationApi {
   return {
+    auth: {
+      me: vi.fn().mockResolvedValue({
+        user: {
+          id: 'user-1',
+          email: 'ari@example.test',
+          displayName: 'Ari Wijaya',
+          role: 'PARTICIPANT',
+          emailVerified: true,
+        },
+      }),
+      login: vi.fn(),
+      register: vi.fn(),
+      logout: vi.fn(),
+      verifyEmail: vi.fn(),
+      resendEmailVerification: vi.fn(),
+    },
     competitions: { list: vi.fn().mockResolvedValue([competition]) },
     registrations: {
       list: vi.fn(),
@@ -61,13 +78,15 @@ function createApi(record: RegistrationRecord): RegistrationApi {
 function renderPage(api: RegistrationApi) {
   return render(
     <MemoryRouter initialEntries={['/portal/pendaftaran/registration-1']}>
-      <Routes>
-        <Route path="/portal" element={<h1>Portal peserta</h1>} />
-        <Route
-          path="/portal/pendaftaran/:registrationId"
-          element={<PortalRegistrationPage api={api} />}
-        />
-      </Routes>
+      <AuthProvider api={api}>
+        <Routes>
+          <Route path="/portal" element={<h1>Portal peserta</h1>} />
+          <Route
+            path="/portal/pendaftaran/:registrationId"
+            element={<PortalRegistrationPage api={api} />}
+          />
+        </Routes>
+      </AuthProvider>
     </MemoryRouter>,
   );
 }
