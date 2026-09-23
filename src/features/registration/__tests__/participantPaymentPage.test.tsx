@@ -135,10 +135,12 @@ describe('PortalPaymentPage', () => {
     expect(receipt).toHaveTextContent(/Rp\s*900\.000/);
     expect(receipt).toHaveTextContent(/21 September 2026.*10\.30/);
     expect(receipt).toHaveTextContent('Pembayaran resmi tercatat. Pendaftaran Anda telah resmi terdaftar.');
-    expect(screen.getByRole('link', { name: 'Lihat tiket peserta' })).toHaveAttribute(
+    const ticketLink = screen.getByRole('link', { name: 'Lihat tiket peserta' });
+    expect(ticketLink).toHaveAttribute(
       'href',
       '/portal/pendaftaran/registration-1/tiket',
     );
+    expect(ticketLink).toHaveClass('portal-button');
     expect(screen.queryByLabelText('Bukti pembayaran (PDF, JPEG, atau PNG)')).not.toBeInTheDocument();
     expect(screen.queryByText(/pemeriksaan riwayat transaksi bank/i)).not.toBeInTheDocument();
   });

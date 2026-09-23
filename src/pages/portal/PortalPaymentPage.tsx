@@ -182,7 +182,12 @@ export default function PortalPaymentPage({ api = registrationApi }: PortalPayme
                       <dd>{invoice.verifiedAt ? `${formatDateTime(invoice.verifiedAt)} WIB` : '—'}</dd>
                     </div>
                   </dl>
-                  <Link to={`/portal/pendaftaran/${registration.id}/tiket`}>Lihat tiket peserta</Link>
+                  <Link
+                    className="portal-button portal-button--primary"
+                    to={`/portal/pendaftaran/${registration.id}/tiket`}
+                  >
+                    Lihat tiket peserta
+                  </Link>
                 </section>
               )}
 
