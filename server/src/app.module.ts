@@ -60,6 +60,55 @@ interface RequestWithId extends Request {
   requestId?: string;
 }
 
+type LogRequest = {
+  id?: unknown;
+  method?: unknown;
+  url?: unknown;
+  remoteAddress?: unknown;
+  remotePort?: unknown;
+  [key: string]: unknown;
+};
+
+type SerializedLogRequest = {
+  id?: string | number | object;
+  method?: string;
+  url: string;
+  remoteAddress?: string;
+  remotePort?: number;
+};
+
+export function serializeRequestForLog(
+  request: LogRequest,
+): SerializedLogRequest {
+  const serialized: SerializedLogRequest = { url: '/' };
+
+  if (
+    typeof request.url === 'string' &&
+    request.url.startsWith('/') &&
+    !request.url.startsWith('//')
+  ) {
+    const pathname = request.url.split(/[?#]/, 1)[0];
+    try {
+      decodeURI(pathname);
+      serialized.url = pathname || '/';
+    } catch {
+      // Keep the fail-closed root pathname.
+    }
+  }
+  if (typeof request.id === 'string' || typeof request.id === 'number') {
+    serialized.id = request.id;
+  }
+  if (typeof request.method === 'string') serialized.method = request.method;
+  if (typeof request.remoteAddress === 'string') {
+    serialized.remoteAddress = request.remoteAddress;
+  }
+  if (typeof request.remotePort === 'number') {
+    serialized.remotePort = request.remotePort;
+  }
+
+  return serialized;
+}
+
 const UUID_PATTERN =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const PINO_LOG_LEVELS = new Set([
@@ -188,6 +237,7 @@ export class HealthController {
     LoggerModule.forRoot({
       pinoHttp: {
         level: pinoLogLevel,
+        serializers: { req: serializeRequestForLog },
         genReqId: (request, response) => {
           const supplied = request.headers['x-request-id'];
           const candidate = Array.isArray(supplied) ? supplied[0] : supplied;

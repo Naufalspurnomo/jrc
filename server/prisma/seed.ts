@@ -178,7 +178,7 @@ async function main(): Promise<void> {
   const eventName = nonEmptyEnv('EVENT_NAME', 'JRC XIV — Imperium Machina');
   const registrationDeadline = dateTimeEnv(
     'REGISTRATION_DEADLINE',
-    '2026-12-31T23:59:59.000+07:00',
+    '2026-10-15T23:59:59+07:00',
   );
   if (registrationDeadline.getTime() <= Date.now()) {
     throw new Error('REGISTRATION_DEADLINE must be later than the current time');
