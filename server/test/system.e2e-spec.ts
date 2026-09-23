@@ -117,6 +117,10 @@ suite('registration system e2e', () => {
         .send({ email: 'b@example.test', displayName: 'Participant B', password: 'Str0ng-password-123' })
         .expect(201)
     ).body.csrfToken as string;
+    await prisma.user.updateMany({
+      where: { email: { in: ['a@example.test', 'b@example.test'] } },
+      data: { emailVerifiedAt: new Date() },
+    });
     csrfReviewer = await login(reviewer, 'reviewer@example.test');
     csrfFinance = await login(finance, 'finance@example.test');
     csrfGate = await login(gate, 'gate@example.test');
@@ -285,6 +289,11 @@ suite('registration system e2e', () => {
       'post',
       `/api/registrations/${registrationId}/submit`,
     ).expect(201);
+    expect(
+      await prisma.emailOutbox.count({
+        where: { to: 'a@example.test', subject: { contains: 'telah dikirim' } },
+      }),
+    ).toBe(1);
   });
 
   it('enforces review transitions and atomically creates a manual invoice', async () => {
@@ -303,6 +312,10 @@ suite('registration system e2e', () => {
     invoiceId = invoice.body.id as string;
     expect(invoice.body.paymentStatus).toBe('UNPAID');
     expect(invoice.body.instructions.provider).toBe('MANUAL');
+    const approvalNotice = await prisma.emailOutbox.findFirstOrThrow({
+      where: { subject: { contains: 'Invoice pendaftaran' } },
+    });
+    expect(approvalNotice.body).toMatch(/^jrc-email-v1\./);
   });
 
   it('keeps proof pending, restricts finance verification, and issues only after paid', async () => {
@@ -311,6 +324,11 @@ suite('registration system e2e', () => {
       .attach('file', png, { filename: 'proof.png', contentType: 'image/png' })
       .expect(201)
       .expect(({ body }: Response) => expect(body.paymentStatus).toBe('PENDING_VERIFICATION'));
+    expect(
+      await prisma.emailOutbox.count({
+        where: { subject: { contains: 'Bukti pembayaran' } },
+      }),
+    ).toBeGreaterThanOrEqual(1);
     await participantA.get(`/api/registrations/${registrationId}/ticket`).expect(409);
     await state(reviewer, csrfReviewer)('post', `/api/admin/invoices/${invoiceId}/verify`)
       .send({ status: 'PAID', reason: 'Not finance' })
@@ -323,6 +341,10 @@ suite('registration system e2e', () => {
     expect(ticket.body.token).toMatch(/^[A-Za-z0-9_-]{43}$/);
     expect(ticket.body.qrDataUrl).toMatch(/^data:image\/png;base64,/);
     expect(JSON.stringify(ticket.body)).not.toContain('a@example.test');
+    const paidNotice = await prisma.emailOutbox.findFirstOrThrow({
+      where: { subject: { contains: 'terverifikasi' } },
+    });
+    expect(paidNotice.body).toMatch(/^jrc-email-v1\./);
   });
 
   it('rejects forged tokens and minimizes public verification output', async () => {
@@ -355,6 +377,13 @@ suite('registration system e2e', () => {
     ]);
     expect([first.status, second.status]).toEqual([201, 201]);
     expect([first.body.result, second.body.result].sort()).toEqual(['ALREADY_CHECKED_IN', 'CHECKED_IN']);
+    const duplicate = [first.body, second.body].find(
+      (body) => body.result === 'ALREADY_CHECKED_IN',
+    );
+    expect(duplicate).toMatchObject({
+      checkedInAt: expect.any(String),
+      checkedInBy: { id: expect.any(String), displayName: expect.any(String) },
+    });
   });
 
   it('records audit history and prevents CSV formula execution', async () => {

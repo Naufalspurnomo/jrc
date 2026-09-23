@@ -1,5 +1,5 @@
 import { useEffect, useState, type FormEvent } from 'react';
-import { useParams } from 'react-router-dom';
+import { Link, useParams } from 'react-router-dom';
 
 import { PaymentStatusNotice } from '../../components/portal/PaymentStatusNotice';
 import { PortalShell } from '../../components/portal/PortalShell';
@@ -29,9 +29,9 @@ function formatAmount(amount: number, currency: string): string {
   }).format(amount);
 }
 
-function formatDeadline(deadline: string): string {
-  const date = new Date(deadline);
-  if (Number.isNaN(date.getTime())) return deadline;
+function formatDateTime(value: string): string {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
   return new Intl.DateTimeFormat('id-ID', {
     dateStyle: 'long',
     timeStyle: 'short',
@@ -118,6 +118,7 @@ export default function PortalPaymentPage({ api = registrationApi }: PortalPayme
     : undefined;
   const qrisImageUrl = invoice ? instruction(invoice, 'qrisImageUrl') : undefined;
   const transferReference = invoice ? instruction(invoice, 'transferReference') : undefined;
+  const canUploadProof = invoice?.paymentStatus === 'UNPAID' || invoice?.paymentStatus === 'REJECTED';
 
   return (
     <PortalShell>
@@ -144,7 +145,7 @@ export default function PortalPaymentPage({ api = registrationApi }: PortalPayme
               </div>
               <dl>
                 <div><dt>Jumlah</dt><dd>{formatAmount(invoice.amount, invoice.currency)}</dd></div>
-                <div><dt>Batas pembayaran</dt><dd>{formatDeadline(invoice.deadline)} WIB</dd></div>
+                <div><dt>Batas pembayaran</dt><dd>{formatDateTime(invoice.deadline)} WIB</dd></div>
                 {bankName && <div><dt>Bank</dt><dd>{bankName}</dd></div>}
                 {accountName && <div><dt>Nama rekening</dt><dd>{accountName}</dd></div>}
                 {accountNumber && <div><dt>Nomor rekening</dt><dd>{accountNumber}</dd></div>}
@@ -157,12 +158,35 @@ export default function PortalPaymentPage({ api = registrationApi }: PortalPayme
 
             <div className="portal-form-panel">
               <PaymentStatusNotice status={invoice.paymentStatus} />
-              <p>
-                Bukti yang diunggah berstatus menunggu verifikasi dan belum dinyatakan lunas
-                sampai tim keuangan menyelesaikan pemeriksaan riwayat transaksi bank.
-              </p>
 
-              {invoice.paymentStatus !== 'PAID' && invoice.paymentStatus !== 'REFUNDED' && (
+              {invoice.paymentStatus === 'PENDING_VERIFICATION' && (
+                <p>Bukti pembayaran Anda sedang menunggu verifikasi tim keuangan.</p>
+              )}
+
+              {invoice.paymentStatus === 'REJECTED' && invoice.verificationReason && (
+                <section role="alert" aria-labelledby="rejection-reason-title">
+                  <strong id="rejection-reason-title">Alasan penolakan</strong>
+                  <p>{invoice.verificationReason}</p>
+                </section>
+              )}
+
+              {invoice.paymentStatus === 'PAID' && (
+                <section aria-labelledby="official-receipt-title">
+                  <h2 id="official-receipt-title">Kuitansi pembayaran resmi</h2>
+                  <p>Pembayaran resmi tercatat. Pendaftaran Anda telah resmi terdaftar.</p>
+                  <dl>
+                    <div><dt>Referensi kuitansi</dt><dd>{invoice.invoiceNumber}</dd></div>
+                    <div><dt>Jumlah dibayar</dt><dd>{formatAmount(invoice.amount, invoice.currency)}</dd></div>
+                    <div>
+                      <dt>Waktu pembayaran</dt>
+                      <dd>{invoice.verifiedAt ? `${formatDateTime(invoice.verifiedAt)} WIB` : '—'}</dd>
+                    </div>
+                  </dl>
+                  <Link to={`/portal/pendaftaran/${registration.id}/tiket`}>Lihat tiket peserta</Link>
+                </section>
+              )}
+
+              {canUploadProof && (
                 <form onSubmit={uploadProof}>
                   <fieldset className="portal-fieldset">
                     <legend><span>II</span> Bukti pembayaran</legend>
@@ -180,7 +204,11 @@ export default function PortalPaymentPage({ api = registrationApi }: PortalPayme
                     {proof && <p>{proof.name}</p>}
                     {uploadError && <p role="alert">{uploadError}</p>}
                     <button className="portal-button portal-button--primary" disabled={uploading} type="submit">
-                      {uploading ? 'Mengunggah…' : 'Unggah bukti'}
+                      {uploading
+                        ? 'Mengunggah…'
+                        : invoice.paymentStatus === 'REJECTED'
+                          ? 'Unggah bukti pengganti'
+                          : 'Unggah bukti'}
                     </button>
                   </fieldset>
                 </form>

@@ -38,6 +38,7 @@ import { csvRow } from './common/csv';
 import { assertRegistrationTransition } from './domain/registration-state';
 import { ManualPaymentProvider } from './payments/manual-payment.provider';
 import { PrismaService } from './prisma.service';
+import { encryptEmailBody } from './email-outbox';
 
 const trim = ({ value }: TransformFnParams): unknown =>
   typeof value === 'string' ? value.trim() : value;
@@ -50,6 +51,8 @@ const REVIEW_STATUSES = [
 ] as const;
 
 type ReviewStatus = (typeof REVIEW_STATUSES)[number];
+export const REVIEW_REASON_CATEGORIES = ['DOCUMENT_INCOMPLETE','DOCUMENT_INVALID','DATA_MISMATCH','ELIGIBILITY','PAYMENT_OR_ADMINISTRATIVE','OTHER'] as const;
+type ReviewReasonCategory = (typeof REVIEW_REASON_CATEGORIES)[number];
 
 export class AdminRegistrationFiltersDto {
   @IsOptional()
@@ -99,7 +102,11 @@ export class ReviewRegistrationDto {
   @IsString()
   @MinLength(1)
   @MaxLength(2_000)
-  reason?: string;
+  reasonComment?: string;
+
+  @IsOptional()
+  @IsIn([...REVIEW_REASON_CATEGORIES])
+  reasonCategory?: ReviewReasonCategory;
 }
 
 const invoiceSelect = {
@@ -128,7 +135,8 @@ const adminRegistrationSelect = {
   institution: true,
   phone: true,
   status: true,
-  reviewReason: true,
+  reviewReasonCategory: true,
+  reviewReasonComment: true,
   submittedAt: true,
   reviewedAt: true,
   createdAt: true,
@@ -246,7 +254,8 @@ function serializeAdminRegistration(registration: AdminRegistrationRecord) {
     institution: registration.institution,
     phone: registration.phone,
     status: registration.status,
-    reviewReason: registration.reviewReason,
+    reviewReasonCategory: registration.reviewReasonCategory,
+    reviewReasonComment: registration.reviewReasonComment,
     submittedAt: registration.submittedAt?.toISOString() ?? null,
     reviewedAt: registration.reviewedAt?.toISOString() ?? null,
     createdAt: registration.createdAt.toISOString(),
@@ -462,14 +471,15 @@ export class AdminRegistrationsService {
     dto: ReviewRegistrationDto,
     audit: AuditContext,
   ): Promise<SerializedAdminRegistration> {
-    const reason = dto.reason?.trim() || null;
+    const reasonComment = dto.reasonComment?.trim() || null;
+    const reasonCategory = dto.reasonCategory ?? null;
     if (
       (dto.status === RegistrationStatus.REVISION_REQUESTED ||
         dto.status === RegistrationStatus.REJECTED) &&
-      !reason
+      (!reasonComment || !reasonCategory)
     ) {
       throw new BadRequestException(
-        'A reason is required for revision requests and rejections',
+        'A reasonCategory and reasonComment are required for revision requests and rejections',
       );
     }
 
@@ -478,7 +488,8 @@ export class AdminRegistrationsService {
         where: { id },
         select: {
           status: true,
-          reviewReason: true,
+          reviewReasonCategory: true,
+          reviewReasonComment: true,
           reviewedAt: true,
           registrationNumber: true,
           teamName: true,
@@ -503,7 +514,8 @@ export class AdminRegistrationsService {
         where: { id, status: current.status },
         data: {
           status: dto.status,
-          reviewReason: reason,
+          reviewReasonCategory: reasonCategory,
+          reviewReasonComment: reasonComment,
           reviewedAt,
         },
       });
@@ -551,7 +563,7 @@ export class AdminRegistrationsService {
           data: {
             to: current.owner.email,
             subject: `Invoice pendaftaran ${current.registrationNumber}`,
-            body: [
+            body: encryptEmailBody([
               `Halo ${current.owner.displayName},`,
               '',
               `Pendaftaran tim ${current.teamName} untuk ${current.competition.name} telah disetujui.`,
@@ -560,9 +572,12 @@ export class AdminRegistrationsService {
               `Batas pembayaran: ${createdInvoice.deadline.toISOString()}`,
               `Referensi transfer: ${current.registrationNumber}`,
               '',
-              'Silakan lihat instruksi pembayaran lengkap di portal peserta.',
-              'Pembayaran dinyatakan lunas setelah diverifikasi oleh tim keuangan.',
-            ].join('\n'),
+              `Bank: ${String(order.instructions.bankName)}`,
+              `Nama rekening: ${String(order.instructions.bankAccountName)}`,
+              `Nomor rekening: ${String(order.instructions.bankAccountNumber)}`,
+              ...(order.instructions.qrisImageUrl ? [`QRIS: ${String(order.instructions.qrisImageUrl)}`] : []),
+              'Status tetap pending until Finance reconciliation.',
+            ].join('\n')),
           },
         });
       } else if (
@@ -577,16 +592,17 @@ export class AdminRegistrationsService {
           data: {
             to: current.owner.email,
             subject: `Status pendaftaran ${current.registrationNumber}`,
-            body: [
+            body: encryptEmailBody([
               `Halo ${current.owner.displayName},`,
               '',
               `Pendaftaran tim ${current.teamName} ${result}.`,
-              `Alasan: ${reason}`,
+              `Kategori alasan: ${reasonCategory}`,
+              `Alasan: ${reasonComment}`,
               '',
               dto.status === RegistrationStatus.REVISION_REQUESTED
                 ? 'Silakan perbarui pendaftaran melalui portal peserta lalu kirim kembali.'
                 : 'Silakan hubungi panitia jika memerlukan informasi lebih lanjut.',
-            ].join('\n'),
+            ].join('\n')),
           },
         });
       }
@@ -599,12 +615,14 @@ export class AdminRegistrationsService {
           entityId: id,
           before: {
             status: current.status,
-            reviewReason: current.reviewReason,
+            reviewReasonCategory: current.reviewReasonCategory,
+            reviewReasonComment: current.reviewReasonComment,
             reviewedAt: current.reviewedAt?.toISOString() ?? null,
           },
           after: {
             status: dto.status,
-            reviewReason: reason,
+            reviewReasonCategory: reasonCategory,
+          reviewReasonComment: reasonComment,
             reviewedAt: reviewedAt.toISOString(),
             ...(createdInvoice
               ? {
@@ -617,7 +635,7 @@ export class AdminRegistrationsService {
                 }
               : {}),
           },
-          reason,
+          reason: reasonCategory && reasonComment ? `${reasonCategory}: ${reasonComment}` : null,
           requestId: audit.requestId,
           ipAddress: audit.ipAddress,
         },

@@ -5,6 +5,7 @@ import { getScannerResultPresentation } from '../scanner';
 describe('scanner result mapping', () => {
   it.each([
     ['VALID', 'Valid', 'success'],
+    ['CHECKED_IN', 'Check-in berhasil', 'success'],
     ['ALREADY_CHECKED_IN', 'Sudah check-in', 'warning'],
     ['REVOKED', 'Tiket dicabut', 'danger'],
     ['UNKNOWN', 'Tiket tidak dikenal', 'danger'],

@@ -119,12 +119,16 @@ describe('PortalRegistrationPage submission', () => {
     expect(api.registrations.submit).not.toHaveBeenCalled();
   });
 
-  it('shows review feedback but makes submitted registrations read-only', async () => {
-    const api = createApi(registration('SUBMITTED', { reviewReason: 'Foto kartu identitas kurang jelas.' }));
+  it('shows structured rejection feedback and makes rejected registrations read-only', async () => {
+    const api = createApi(registration('REJECTED', {
+      reviewReasonCategory: 'DOCUMENT_INVALID',
+      reviewReasonComment: 'Foto kartu identitas kurang jelas.',
+    }));
     renderPage(api);
 
     const teamName = await screen.findByLabelText('Nama tim');
     expect(teamName).toBeDisabled();
+    expect(screen.getByText('Dokumen tidak valid')).toBeInTheDocument();
     expect(screen.getByText('Foto kartu identitas kurang jelas.')).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Simpan draft' })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Unggah dokumen' })).not.toBeInTheDocument();
@@ -133,13 +137,15 @@ describe('PortalRegistrationPage submission', () => {
 
   it('allows a registration requiring revision to be edited', async () => {
     const api = createApi(registration('REVISION_REQUESTED', {
-      reviewReason: 'Unggah ulang dokumen peserta.',
+      reviewReasonCategory: 'DOCUMENT_INCOMPLETE',
+      reviewReasonComment: 'Unggah ulang dokumen peserta.',
     }));
     renderPage(api);
 
     expect(await screen.findByLabelText('Nama tim')).toBeEnabled();
     expect(screen.getByRole('button', { name: 'Simpan draft' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Unggah dokumen' })).toBeInTheDocument();
+    expect(screen.getByText('Dokumen belum lengkap')).toBeInTheDocument();
     expect(screen.getByText('Unggah ulang dokumen peserta.')).toBeInTheDocument();
   });
 });

@@ -44,6 +44,7 @@ import {
   canEditRegistration,
 } from './domain/registration-state';
 import { PrismaService } from './prisma.service';
+import { encryptEmailBody } from './email-outbox';
 
 const MAX_TEAM_MEMBERS = 10;
 const REGISTRATION_NUMBER_ATTEMPTS = 5;
@@ -175,7 +176,8 @@ const registrationSelect = {
   institution: true,
   phone: true,
   status: true,
-  reviewReason: true,
+  reviewReasonCategory: true,
+  reviewReasonComment: true,
   submittedAt: true,
   reviewedAt: true,
   createdAt: true,
@@ -281,7 +283,8 @@ function serializeRegistration(registration: RegistrationRecord) {
     institution: registration.institution,
     phone: registration.phone,
     status: registration.status,
-    reviewReason: registration.reviewReason,
+    reviewReasonCategory: registration.reviewReasonCategory,
+    reviewReasonComment: registration.reviewReasonComment,
     submittedAt: registration.submittedAt?.toISOString() ?? null,
     reviewedAt: registration.reviewedAt?.toISOString() ?? null,
     createdAt: registration.createdAt.toISOString(),
@@ -602,8 +605,11 @@ export class RegistrationsService {
           institution: true,
           competitionId: true,
           submittedAt: true,
-          reviewReason: true,
-          competition: { select: { id: true } },
+          reviewReasonCategory: true,
+          reviewReasonComment: true,
+          competition: { select: { id: true, name: true } },
+          registrationNumber: true,
+          owner: { select: { email: true, displayName: true } },
           _count: { select: { members: true, documents: true } },
         },
       });
@@ -656,7 +662,8 @@ export class RegistrationsService {
         data: {
           status: RegistrationStatus.SUBMITTED,
           submittedAt,
-          reviewReason: null,
+          reviewReasonCategory: null,
+          reviewReasonComment: null,
         },
       });
       if (updated.count !== 1) {
@@ -664,6 +671,19 @@ export class RegistrationsService {
           'Registration status changed before submission',
         );
       }
+
+      await transaction.emailOutbox.create({
+        data: {
+          to: current.owner.email,
+          subject: `Pendaftaran ${current.registrationNumber} telah dikirim`,
+          body: encryptEmailBody([
+            `Halo ${current.owner.displayName},`,
+            '',
+            `Pendaftaran ${current.registrationNumber} untuk tim ${current.teamName} pada kompetisi ${current.competition.name} telah diterima.`,
+            'Status: SUBMITTED. Pendaftaran sedang menunggu peninjauan panitia.',
+          ].join('\n')),
+        },
+      });
 
       await transaction.auditLog.create({
         data: {
@@ -674,13 +694,19 @@ export class RegistrationsService {
           before: {
             status: current.status,
             submittedAt: current.submittedAt?.toISOString() ?? null,
-            reviewReason: current.reviewReason,
+            reviewReasonCategory: current.reviewReasonCategory,
+            reviewReasonComment: current.reviewReasonComment,
           },
           after: {
             status: RegistrationStatus.SUBMITTED,
             submittedAt: submittedAt.toISOString(),
-            reviewReason: null,
+            reviewReasonCategory: null,
+            reviewReasonComment: null,
           },
+          reason:
+            current.reviewReasonCategory && current.reviewReasonComment
+              ? `${current.reviewReasonCategory}: ${current.reviewReasonComment}`
+              : null,
           requestId: audit.requestId,
           ipAddress: audit.ipAddress,
         },

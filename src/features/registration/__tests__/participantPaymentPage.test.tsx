@@ -32,18 +32,23 @@ const invoice: InvoiceRecord = {
   },
   paymentStatus: 'UNPAID',
   deadline: '2026-09-20T16:59:59.000Z',
+  verificationReason: null,
+  verifiedAt: null,
 };
 
-function createApi(): RegistrationApi {
+function createApi(invoiceOverride: Partial<InvoiceRecord> = {}): RegistrationApi {
+  const currentInvoice = { ...invoice, ...invoiceOverride };
   return {
     registrations: {
       get: vi.fn().mockResolvedValue(registration),
-      invoice: vi.fn().mockResolvedValue(invoice),
+      invoice: vi.fn().mockResolvedValue(currentInvoice),
     },
     invoices: {
       uploadProof: vi.fn().mockResolvedValue({
-        ...invoice,
+        ...currentInvoice,
         paymentStatus: 'PENDING_VERIFICATION',
+        verificationReason: null,
+        verifiedAt: null,
       }),
     },
   } as unknown as RegistrationApi;
@@ -62,13 +67,17 @@ function renderPage(api: RegistrationApi) {
   );
 }
 
+async function waitForPage() {
+  await screen.findByRole('heading', { name: /pembayaran garuda robotika/i });
+}
+
 describe('PortalPaymentPage', () => {
-  it('uploads proof as multipart file and keeps payment pending until finance verification', async () => {
+  it('shows payment instructions and allows proof upload for an unpaid invoice', async () => {
     const api = createApi();
     const user = userEvent.setup();
     renderPage(api);
+    await waitForPage();
 
-    expect(await screen.findByRole('heading', { name: /pembayaran garuda robotika/i })).toBeInTheDocument();
     expect(screen.getByText('Bank Mandiri')).toBeInTheDocument();
     expect(screen.getByText('1234567890')).toBeInTheDocument();
 
@@ -81,9 +90,65 @@ describe('PortalPaymentPage', () => {
     expect(invoiceId).toBe('invoice-1');
     expect(body).toBeInstanceOf(FormData);
     expect((body as FormData).get('file')).toBe(proof);
+  });
+
+  it('says an uploaded proof awaits finance verification', async () => {
+    renderPage(createApi({ paymentStatus: 'PENDING_VERIFICATION' }));
+    await waitForPage();
+
+    expect(screen.getByText('Menunggu verifikasi')).toBeInTheDocument();
+    expect(screen.getByText(/bukti pembayaran.*menunggu verifikasi tim keuangan/i)).toBeInTheDocument();
+    expect(screen.queryByLabelText('Bukti pembayaran (PDF, JPEG, atau PNG)')).not.toBeInTheDocument();
+  });
+
+  it('shows the exact rejection reason and uploads a replacement proof', async () => {
+    const reason = 'Nominal pada bukti transfer tidak sesuai tagihan.';
+    const api = createApi({ paymentStatus: 'REJECTED', verificationReason: reason });
+    const user = userEvent.setup();
+    renderPage(api);
+    await waitForPage();
+
+    expect(screen.getByRole('alert')).toHaveTextContent(reason);
+    expect(screen.queryByText(/pemeriksaan riwayat transaksi bank/i)).not.toBeInTheDocument();
+
+    const replacement = new File(['replacement'], 'replacement.png', { type: 'image/png' });
+    await user.upload(screen.getByLabelText('Bukti pembayaran (PDF, JPEG, atau PNG)'), replacement);
+    await user.click(screen.getByRole('button', { name: 'Unggah bukti pengganti' }));
+
+    await waitFor(() => expect(api.invoices.uploadProof).toHaveBeenCalledTimes(1));
+    const [invoiceId, body] = vi.mocked(api.invoices.uploadProof).mock.calls[0] ?? [];
+    expect(invoiceId).toBe('invoice-1');
+    expect((body as FormData).get('file')).toBe(replacement);
     expect(await screen.findByText('Menunggu verifikasi')).toBeInTheDocument();
-    expect(screen.getAllByText(/belum dinyatakan lunas/i)).not.toHaveLength(0);
-    expect(screen.getByText(/pemeriksaan riwayat transaksi bank/i)).toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: /tandai.*lunas/i })).not.toBeInTheDocument();
+    expect(screen.queryByLabelText('Bukti pembayaran (PDF, JPEG, atau PNG)')).not.toBeInTheDocument();
+  });
+
+  it('shows an official paid receipt with ticket link and no upload controls', async () => {
+    renderPage(createApi({
+      paymentStatus: 'PAID',
+      verifiedAt: '2026-09-21T03:30:00.000Z',
+    }));
+    await waitForPage();
+
+    const receipt = screen.getByRole('region', { name: 'Kuitansi pembayaran resmi' });
+    expect(receipt).toHaveTextContent('INV-JRC-0001');
+    expect(receipt).toHaveTextContent(/Rp\s*900\.000/);
+    expect(receipt).toHaveTextContent(/21 September 2026.*10\.30/);
+    expect(receipt).toHaveTextContent('Pembayaran resmi tercatat. Pendaftaran Anda telah resmi terdaftar.');
+    expect(screen.getByRole('link', { name: 'Lihat tiket peserta' })).toHaveAttribute(
+      'href',
+      '/portal/pendaftaran/registration-1/tiket',
+    );
+    expect(screen.queryByLabelText('Bukti pembayaran (PDF, JPEG, atau PNG)')).not.toBeInTheDocument();
+    expect(screen.queryByText(/pemeriksaan riwayat transaksi bank/i)).not.toBeInTheDocument();
+  });
+
+  it('does not allow proof upload or show pending copy for a refunded invoice', async () => {
+    renderPage(createApi({ paymentStatus: 'REFUNDED' }));
+    await waitForPage();
+
+    expect(screen.getByText('Pembayaran dikembalikan')).toBeInTheDocument();
+    expect(screen.queryByLabelText('Bukti pembayaran (PDF, JPEG, atau PNG)')).not.toBeInTheDocument();
+    expect(screen.queryByText(/pemeriksaan riwayat transaksi bank/i)).not.toBeInTheDocument();
   });
 });

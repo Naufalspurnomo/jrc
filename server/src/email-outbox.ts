@@ -22,6 +22,19 @@ const RETRY_MAX_DELAY_MS = 60 * 60_000;
 const MAX_ERROR_LENGTH = 1_000;
 const DEFAULT_PROCESS_INTERVAL_MS = 5_000;
 const ENCRYPTED_BODY_PREFIX = 'jrc-email-v1';
+const MAX_ATTACHMENT_BYTES = 1024 * 1024;
+const MAX_ATTACHMENTS = 4;
+
+export interface RichEmailPayload {
+  text: string;
+  html?: string;
+  attachments?: Array<{
+    filename: string;
+    contentType: string;
+    cid?: string;
+    content: Buffer;
+  }>;
+}
 
 type EmailTransport = 'noop' | 'console' | 'smtp';
 
@@ -48,6 +61,26 @@ export function encryptEmailBody(body: string): string {
   ].join('.');
 }
 
+export function encryptRichEmail(payload: RichEmailPayload): string {
+  if (!payload.text || (payload.attachments?.length ?? 0) > MAX_ATTACHMENTS) {
+    throw new Error('Invalid rich email payload');
+  }
+  const attachments = payload.attachments?.map((attachment) => {
+    if (
+      !/^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$/.test(attachment.filename) ||
+      !/^[a-z0-9.+-]+\/[a-z0-9.+-]+$/i.test(attachment.contentType) ||
+      attachment.content.length > MAX_ATTACHMENT_BYTES ||
+      (attachment.cid && !/^[A-Za-z0-9._@-]{1,128}$/.test(attachment.cid))
+    ) {
+      throw new Error('Rich email attachment is too large or malformed');
+    }
+    return { ...attachment, content: attachment.content.toString('base64') };
+  });
+  return encryptEmailBody(
+    JSON.stringify({ version: 1, text: payload.text, html: payload.html, attachments }),
+  );
+}
+
 function decryptEmailBody(body: string): string {
   if (!body.startsWith(`${ENCRYPTED_BODY_PREFIX}.`)) return body;
   const [prefix, encodedIv, encodedTag, encodedCiphertext, extra] = body.split('.');
@@ -64,6 +97,60 @@ function decryptEmailBody(body: string): string {
     decipher.update(Buffer.from(encodedCiphertext, 'base64url')),
     decipher.final(),
   ]).toString('utf8');
+}
+
+function decodeEmailBody(body: string): RichEmailPayload {
+  const plaintext = decryptEmailBody(body);
+  let value: unknown;
+  try {
+    value = JSON.parse(plaintext);
+  } catch {
+    return { text: plaintext };
+  }
+  if (!value || typeof value !== 'object' || (value as { version?: unknown }).version !== 1) {
+    return { text: plaintext };
+  }
+  const rich = value as { text?: unknown; html?: unknown; attachments?: unknown };
+  if (
+    typeof rich.text !== 'string' ||
+    (rich.html !== undefined && typeof rich.html !== 'string') ||
+    !Array.isArray(rich.attachments ?? [])
+  ) {
+    throw new Error('Invalid rich email payload');
+  }
+  if ((rich.attachments as unknown[]).length > MAX_ATTACHMENTS) {
+    throw new Error('Invalid rich email payload');
+  }
+  const attachments = (rich.attachments as Array<Record<string, unknown>>).map(
+    (attachment) => {
+      if (
+        typeof attachment.filename !== 'string' ||
+        !/^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$/.test(attachment.filename) ||
+        typeof attachment.contentType !== 'string' ||
+        !/^[a-z0-9.+-]+\/[a-z0-9.+-]+$/i.test(attachment.contentType) ||
+        typeof attachment.content !== 'string' ||
+        (attachment.cid !== undefined &&
+          (typeof attachment.cid !== 'string' ||
+            !/^[A-Za-z0-9._@-]{1,128}$/.test(attachment.cid)))
+      ) {
+        throw new Error('Invalid rich email payload');
+      }
+      const content = Buffer.from(attachment.content, 'base64');
+      if (
+        content.length > MAX_ATTACHMENT_BYTES ||
+        content.toString('base64') !== attachment.content
+      ) {
+        throw new Error('Invalid rich email payload');
+      }
+      return {
+        filename: attachment.filename,
+        contentType: attachment.contentType,
+        cid: attachment.cid,
+        content,
+      };
+    },
+  );
+  return { text: rich.text, html: rich.html, attachments };
 }
 
 @Injectable()
@@ -197,11 +284,14 @@ export class EmailOutboxService implements OnModuleInit, OnModuleDestroy {
 
     const smtp = this.smtpTransport ?? this.createSmtpTransport();
     this.smtpTransport = smtp;
+    const payload = decodeEmailBody(row.body);
     await smtp.sendMail({
       from: process.env.SMTP_FROM,
       to: row.to,
       subject: row.subject,
-      text: decryptEmailBody(row.body),
+      text: payload.text,
+      ...(payload.html ? { html: payload.html } : {}),
+      ...(payload.attachments?.length ? { attachments: payload.attachments } : {}),
       disableFileAccess: true,
       disableUrlAccess: true,
     });

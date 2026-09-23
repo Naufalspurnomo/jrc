@@ -229,6 +229,23 @@ export type RegistrationState =
   | 'REJECTED'
   | 'CANCELLED';
 
+export type ReviewReasonCategory =
+  | 'DOCUMENT_INCOMPLETE'
+  | 'DOCUMENT_INVALID'
+  | 'DATA_MISMATCH'
+  | 'ELIGIBILITY'
+  | 'PAYMENT_OR_ADMINISTRATIVE'
+  | 'OTHER';
+
+export const REVIEW_REASON_CATEGORY_LABELS: Record<ReviewReasonCategory, string> = {
+  DOCUMENT_INCOMPLETE: 'Dokumen belum lengkap',
+  DOCUMENT_INVALID: 'Dokumen tidak valid',
+  DATA_MISMATCH: 'Data tidak sesuai',
+  ELIGIBILITY: 'Persyaratan peserta',
+  PAYMENT_OR_ADMINISTRATIVE: 'Pembayaran atau administrasi',
+  OTHER: 'Lainnya',
+};
+
 export type PaymentState =
   | 'NOT_CREATED'
   | 'UNPAID'
@@ -282,7 +299,8 @@ export interface RegistrationRecord {
   competition?: Pick<CompetitionRecord, 'id' | 'name' | 'eventId' | 'eventName'>;
   members?: TeamMemberRecord[];
   documents?: RegistrationDocumentRecord[];
-  reviewReason?: string | null;
+  reviewReasonCategory?: ReviewReasonCategory | null;
+  reviewReasonComment?: string | null;
   submittedAt?: string | null;
   paymentStatus?: PaymentState;
   invoice?: Pick<InvoiceRecord, 'id' | 'paymentStatus'> | null;
@@ -323,6 +341,8 @@ export interface InvoiceRecord {
   instructions: Record<string, string | null>;
   paymentStatus: PaymentState;
   deadline: string;
+  verificationReason: string | null;
+  verifiedAt: string | null;
 }
 
 export interface FinanceInvoiceRecord {
@@ -393,7 +413,8 @@ export interface TicketVerification {
 
 export interface ReviewInput {
   status: RegistrationState;
-  reason?: string;
+  reasonCategory?: ReviewReasonCategory;
+  reasonComment?: string;
 }
 
 export interface PaymentReviewInput {

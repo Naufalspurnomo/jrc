@@ -84,4 +84,16 @@ describe('PortalDashboardPage', () => {
       '/portal/pendaftaran/baru',
     );
   });
+
+  it('shows structured review feedback on the registration card', async () => {
+    const record = {
+      ...registration('003', 'Elang Mekatronika', 'REVISION_REQUESTED'),
+      reviewReasonCategory: 'DATA_MISMATCH' as const,
+      reviewReasonComment: 'Nama ketua tidak sesuai dokumen.',
+    };
+    renderDashboard(createApi([record]));
+
+    expect(await screen.findByText('Data tidak sesuai')).toBeInTheDocument();
+    expect(screen.getByText('Nama ketua tidak sesuai dokumen.')).toBeInTheDocument();
+  });
 });

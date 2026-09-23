@@ -2,7 +2,11 @@ import { TicketStatus } from '@prisma/client';
 import QRCode from 'qrcode';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { hashTicketToken, deriveTicketToken } from '../src/common/ticket-token';
-import { PaymentVerificationService } from '../src/payment-verification';
+import {
+  buildPortalReceiptUrl,
+  PaymentVerificationService,
+  renderRichTextEmail,
+} from '../src/payment-verification';
 import { PrismaService } from '../src/prisma.service';
 
 const ORIGINAL_ENV = { ...process.env };
@@ -13,6 +17,24 @@ const qrCodePromiseApi = QRCode as unknown as {
 afterEach(() => {
   process.env = { ...ORIGINAL_ENV };
   vi.restoreAllMocks();
+});
+
+describe('paid ticket email rendering', () => {
+  it('builds the exact authenticated registration payment route', () => {
+    process.env.NODE_ENV = 'production';
+    process.env.PUBLIC_FRONTEND_URL = 'https://jrc.example.test';
+    expect(buildPortalReceiptUrl('registration/id')).toBe(
+      'https://jrc.example.test/portal/pendaftaran/registration%2Fid/pembayaran',
+    );
+  });
+  it('escapes every HTML-significant character while preserving literal plain text', () => {
+    const text = `Halo <img src=x onerror="alert('x')"> & "quoted",\nInvoice: INV<>&"'\nReferensi rekonsiliasi: <b>paid</b>\nVerifikasi tiket: https://example.test/?a=1&b=<tag>`;
+
+    expect(renderRichTextEmail(text)).toEqual({
+      text,
+      html: `<p>Halo &lt;img src=x onerror=&quot;alert(&#39;x&#39;)&quot;&gt; &amp; &quot;quoted&quot;,<br>Invoice: INV&lt;&gt;&amp;&quot;&#39;<br>Referensi rekonsiliasi: &lt;b&gt;paid&lt;/b&gt;<br>Verifikasi tiket: https://example.test/?a=1&amp;b=&lt;tag&gt;</p>`,
+    });
+  });
 });
 
 function serviceWithRegistration(registration: object): PaymentVerificationService {

@@ -133,7 +133,8 @@ model Registration {
   institution        String
   phone              String?
   status             RegistrationStatus @default(DRAFT)
-  reviewReason       String?            @map("review_reason")
+  reviewReasonCategory String?          @map("review_reason_category")
+  reviewReasonComment  String?          @map("review_reason")
   submittedAt        DateTime?          @map("submitted_at")
   reviewedAt         DateTime?          @map("reviewed_at")
   createdAt          DateTime           @default(now()) @map("created_at")

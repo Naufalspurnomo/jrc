@@ -5,11 +5,13 @@ import { AdminShell } from '../../components/portal/AdminShell';
 import { StatusBadge } from '../../components/portal/StatusBadge';
 import { useAuth } from '../../features/auth';
 import {
+  REVIEW_REASON_CATEGORY_LABELS,
   registrationApi,
   type AuthUser,
   type InvoiceRecord,
   type RegistrationApi,
   type RegistrationRecord,
+  type ReviewReasonCategory,
   type RegistrationState,
 } from '../../features/registration/api';
 
@@ -24,6 +26,7 @@ type AdminRegistrationRecord = Omit<RegistrationRecord, 'invoice'> & {
 };
 
 const allowedRoles = new Set(['SUPER_ADMIN', 'REGISTRATION_REVIEWER', 'SUPPORT']);
+const reviewerRoles = new Set(['SUPER_ADMIN', 'REGISTRATION_REVIEWER']);
 
 const statusBadgeStates: Record<RegistrationState, StatusBadgeState> = {
   DRAFT: 'draft',
@@ -94,7 +97,8 @@ export default function AdminRegistrationDetailPage({ api = registrationApi }: A
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState(false);
   const [requestVersion, setRequestVersion] = useState(0);
-  const [reviewReason, setReviewReason] = useState('');
+  const [reviewReasonCategory, setReviewReasonCategory] = useState<ReviewReasonCategory | ''>('');
+  const [reviewReasonComment, setReviewReasonComment] = useState('');
   const [mutationLoading, setMutationLoading] = useState(false);
   const [mutationError, setMutationError] = useState<string | null>(null);
 
@@ -138,9 +142,9 @@ export default function AdminRegistrationDetailPage({ api = registrationApi }: A
     }
 
     const requiresReason = status === 'REVISION_REQUESTED' || status === 'REJECTED';
-    const reason = reviewReason.trim();
-    if (requiresReason && !reason) {
-      setMutationError('Alasan wajib diisi untuk meminta revisi atau menolak pendaftaran.');
+    const reasonComment = reviewReasonComment.trim();
+    if (requiresReason && (!reviewReasonCategory || !reasonComment)) {
+      setMutationError('Kategori dan catatan wajib diisi untuk meminta revisi atau menolak pendaftaran.');
       return;
     }
 
@@ -148,11 +152,14 @@ export default function AdminRegistrationDetailPage({ api = registrationApi }: A
     setMutationError(null);
 
     try {
-      const input = requiresReason ? { status, reason } : { status };
+      const input = requiresReason
+        ? { status, reasonCategory: reviewReasonCategory as ReviewReasonCategory, reasonComment }
+        : { status };
       await api.admin.reviewRegistration(registrationId, input);
       const refreshedRegistration = await loadRegistration();
       setRegistration(refreshedRegistration);
-      setReviewReason('');
+      setReviewReasonCategory('');
+      setReviewReasonComment('');
     } catch {
       setMutationError('Keputusan gagal disimpan. Silakan coba lagi.');
     } finally {
@@ -168,6 +175,7 @@ export default function AdminRegistrationDetailPage({ api = registrationApi }: A
   const documents = Array.isArray(registration?.documents) ? registration.documents : [];
   const ticketStatus = registration?.ticket?.status ?? registration?.ticketStatus;
   const paymentStatus = registration?.invoice?.paymentStatus ?? registration?.paymentStatus;
+  const canReview = Boolean(user && reviewerRoles.has(user.role));
 
   return (
     <AdminShell onSignOut={signOut}>
@@ -274,9 +282,12 @@ export default function AdminRegistrationDetailPage({ api = registrationApi }: A
                 <p className="admin-eyebrow">REVIEW ADMINISTRASI</p>
                 <h2 id="admin-review-title">Keputusan pendaftaran</h2>
                 <p>Status saat ini: <strong>{statusLabels[registration.status]}</strong></p>
-                {registration.reviewReason && <p>Alasan terakhir: {registration.reviewReason}</p>}
+                {registration.reviewReasonCategory && (
+                  <p>Kategori alasan: <strong>{REVIEW_REASON_CATEGORY_LABELS[registration.reviewReasonCategory]}</strong></p>
+                )}
+                {registration.reviewReasonComment && <p>Catatan alasan: {registration.reviewReasonComment}</p>}
 
-                {registration.status === 'SUBMITTED' && (
+                {canReview && registration.status === 'SUBMITTED' && (
                   <button
                     className="admin-action"
                     disabled={mutationLoading}
@@ -287,14 +298,28 @@ export default function AdminRegistrationDetailPage({ api = registrationApi }: A
                   </button>
                 )}
 
-                {registration.status === 'UNDER_REVIEW' && (
+                {canReview && registration.status === 'UNDER_REVIEW' && (
                   <>
-                    <label htmlFor="admin-review-reason">Alasan keputusan</label>
+                    <label htmlFor="admin-review-category">Kategori alasan</label>
+                    <select
+                      id="admin-review-category"
+                      required
+                      disabled={mutationLoading}
+                      value={reviewReasonCategory}
+                      onChange={(event) => setReviewReasonCategory(event.target.value as ReviewReasonCategory | '')}
+                    >
+                      <option value="">Pilih kategori</option>
+                      {Object.entries(REVIEW_REASON_CATEGORY_LABELS).map(([category, label]) => (
+                        <option key={category} value={category}>{label}</option>
+                      ))}
+                    </select>
+                    <label htmlFor="admin-review-reason">Catatan alasan</label>
                     <textarea
                       id="admin-review-reason"
+                      required
                       disabled={mutationLoading}
-                      value={reviewReason}
-                      onChange={(event) => setReviewReason(event.target.value)}
+                      value={reviewReasonComment}
+                      onChange={(event) => setReviewReasonComment(event.target.value)}
                       placeholder="Tulis alasan untuk revisi atau penolakan"
                     />
                     <div>

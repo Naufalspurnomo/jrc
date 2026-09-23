@@ -1,7 +1,7 @@
 import { Logger } from '@nestjs/common';
 import { OutboxStatus } from '@prisma/client';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { EmailOutboxService, encryptEmailBody } from '../src/email-outbox';
+import { EmailOutboxService, encryptEmailBody, encryptRichEmail } from '../src/email-outbox';
 import { PrismaService } from '../src/prisma.service';
 
 const mailer = vi.hoisted(() => ({
@@ -181,6 +181,36 @@ describe('EmailOutboxService processing', () => {
 
 
 describe('EmailOutboxService transports', () => {
+  it('rejects malformed decoded attachment CIDs before SMTP delivery', async () => {
+    configureSmtp();
+    const body = encryptEmailBody(JSON.stringify({ version: 1, text: 'x', attachments: [{ filename: 'x.png', contentType: 'image/png', cid: 'bad cid<script>', content: 'eA==' }] }));
+    const { service } = harness([record({ body })]);
+    await service.processOnce();
+    expect(mailer.sendMail).not.toHaveBeenCalled();
+  });
+
+  it('rejects excessive decoded attachments before SMTP delivery', async () => {
+    configureSmtp();
+    const attachment = { filename: 'x.png', contentType: 'image/png', content: 'eA==' };
+    const body = encryptEmailBody(JSON.stringify({ version: 1, text: 'x', attachments: Array.from({ length: 5 }, () => attachment) }));
+    const { service } = harness([record({ body })]);
+    await service.processOnce();
+    expect(mailer.sendMail).not.toHaveBeenCalled();
+  });
+
+  it('decrypts and delivers bounded rich messages with an in-memory attachment', async () => {
+    configureSmtp();
+    mailer.sendMail.mockResolvedValue({ messageId: 'test-id' });
+    const body = encryptRichEmail({ text: 'Receipt', html: '<b>Receipt</b>', attachments: [{ filename: 'ticket.png', contentType: 'image/png', cid: 'ticket-qr', content: Buffer.from('png') }] });
+    expect(body).not.toContain('Receipt');
+    const { service } = harness([record({ body })]);
+    await service.processOnce();
+    expect(mailer.sendMail).toHaveBeenCalledWith(expect.objectContaining({ text: 'Receipt', html: '<b>Receipt</b>', attachments: [{ filename: 'ticket.png', contentType: 'image/png', cid: 'ticket-qr', content: Buffer.from('png') }] }));
+  });
+
+  it('rejects oversized rich attachments', () => {
+    expect(() => encryptRichEmail({ text: 'x', attachments: [{ filename: 'x.png', contentType: 'image/png', content: Buffer.alloc(1024 * 1024 + 1) }] })).toThrow('too large');
+  });
   it('configures hardened SMTP and sends only plain text', async () => {
     configureSmtp();
     mailer.sendMail.mockResolvedValue({ messageId: 'test-id' });

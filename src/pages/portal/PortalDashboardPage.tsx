@@ -5,6 +5,7 @@ import { PortalShell } from '../../components/portal/PortalShell';
 import { StatusBadge } from '../../components/portal/StatusBadge';
 import { useAuth } from '../../features/auth/AuthProvider';
 import {
+  REVIEW_REASON_CATEGORY_LABELS,
   registrationApi,
   type RegistrationApi,
   type RegistrationRecord,
@@ -160,6 +161,15 @@ export default function PortalDashboardPage({ api = registrationApi }: PortalDas
                   <p>
                     Kompetisi: <strong>{registration.competition?.name ?? registration.competitionId}</strong>
                   </p>
+
+                  {(registration.reviewReasonCategory || registration.reviewReasonComment) && (
+                    <div>
+                      {registration.reviewReasonCategory && (
+                        <strong>{REVIEW_REASON_CATEGORY_LABELS[registration.reviewReasonCategory]}</strong>
+                      )}
+                      {registration.reviewReasonComment && <p>{registration.reviewReasonComment}</p>}
+                    </div>
+                  )}
 
                   {paymentStatus && <PaymentStatusNotice status={paymentStatus} />}
 

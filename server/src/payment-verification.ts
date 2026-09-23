@@ -47,6 +47,7 @@ import {
 } from './common/ticket-token';
 import { assertPaymentTransition } from './domain/payment-state';
 import { PrismaService } from './prisma.service';
+import { encryptEmailBody, encryptRichEmail } from './email-outbox';
 
 const DEFAULT_MAX_UPLOAD_BYTES = 10 * 1024 * 1024;
 const STORAGE_KEY_PATTERN = /^[a-f0-9]{64}$/;
@@ -137,10 +138,59 @@ function buildVerificationUrl(token: string, eventId: string): string {
       'PUBLIC_VERIFICATION_URL must not contain credentials',
     );
   }
+  if (process.env.NODE_ENV === 'production' && url.protocol !== 'https:') {
+    throw new InternalServerErrorException(
+      'PUBLIC_VERIFICATION_URL must use HTTPS in production',
+    );
+  }
 
   url.searchParams.set('token', token);
   url.searchParams.set('eventId', eventId);
   return url.toString();
+}
+
+export function buildPortalReceiptUrl(registrationId: string): string {
+  const configured = process.env.PUBLIC_FRONTEND_URL?.trim();
+  if (!configured && process.env.NODE_ENV === 'production') {
+    throw new InternalServerErrorException('PUBLIC_FRONTEND_URL is required in production');
+  }
+  let base: URL;
+  try {
+    base = new URL(configured || 'http://localhost:5173');
+  } catch {
+    throw new InternalServerErrorException('PUBLIC_FRONTEND_URL must be a valid URL');
+  }
+  if (!['http:', 'https:'].includes(base.protocol) || base.username || base.password) {
+    throw new InternalServerErrorException('PUBLIC_FRONTEND_URL is unsafe');
+  }
+  if (process.env.NODE_ENV === 'production' && base.protocol !== 'https:') {
+    throw new InternalServerErrorException('PUBLIC_FRONTEND_URL must use HTTPS in production');
+  }
+  return new URL(
+    `/portal/pendaftaran/${encodeURIComponent(registrationId)}/pembayaran`,
+    base,
+  ).toString();
+}
+
+function escapeHtml(value: string): string {
+  return value.replace(/[&<>"']/g, (character) => {
+    switch (character) {
+      case '&':
+        return '&amp;';
+      case '<':
+        return '&lt;';
+      case '>':
+        return '&gt;';
+      case '"':
+        return '&quot;';
+      default:
+        return '&#39;';
+    }
+  });
+}
+
+export function renderRichTextEmail(text: string): { text: string; html: string } {
+  return { text, html: `<p>${escapeHtml(text).replaceAll('\n', '<br>')}</p>` };
 }
 
 function safeOriginalName(originalName: string): string {
@@ -339,6 +389,11 @@ export class PaymentVerificationService {
         const current = await transaction.invoice.findFirst({
           where: { id: invoiceId, registration: { ownerId } },
           select: {
+            id: true,
+            invoiceNumber: true,
+            amount: true,
+            currency: true,
+            registration: { select: { owner: { select: { email: true, displayName: true } } } },
             paymentStatus: true,
             deadline: true,
             proofStorageKey: true,
@@ -382,6 +437,20 @@ export class PaymentVerificationService {
             'Invoice changed before the payment proof was saved',
           );
         }
+
+        await transaction.emailOutbox.create({
+          data: {
+            to: current.registration.owner.email,
+            subject: `Bukti pembayaran ${current.invoiceNumber} diterima`,
+            body: encryptEmailBody([
+              `Halo ${current.registration.owner.displayName},`,
+              `Invoice: ${current.invoiceNumber}`,
+              `Jumlah: ${current.currency} ${current.amount}`,
+              `Berkas: ${stored.originalName}`,
+              'Status: PENDING_VERIFICATION. Pembayaran tetap menunggu rekonsiliasi Finance dan belum PAID.',
+            ].join('\n')),
+          },
+        });
 
         await transaction.auditLog.create({
           data: {
@@ -450,6 +519,10 @@ export class PaymentVerificationService {
       const current = await transaction.invoice.findUnique({
         where: { id: invoiceId },
         select: {
+          invoiceNumber: true,
+          amount: true,
+          currency: true,
+          deadline: true,
           paymentStatus: true,
           verificationReason: true,
           verifiedAt: true,
@@ -461,7 +534,7 @@ export class PaymentVerificationService {
               registrationNumber: true,
               teamName: true,
               owner: { select: { email: true, displayName: true } },
-              competition: { select: { name: true } },
+              competition: { select: { name: true, eventId: true } },
             },
           },
         },
@@ -541,28 +614,31 @@ export class PaymentVerificationService {
       });
 
       const paid = dto.status === PaymentStatus.PAID;
-      await transaction.emailOutbox.create({
-        data: {
-          to: current.registration.owner.email,
-          subject: paid
-            ? `Pembayaran ${current.registration.registrationNumber} terverifikasi`
-            : `Bukti pembayaran ${current.registration.registrationNumber} ditolak`,
-          body: paid
-            ? [
-                `Halo ${current.registration.owner.displayName},`,
-                '',
-                `Pembayaran tim ${current.registration.teamName} untuk ${current.registration.competition.name} telah diverifikasi.`,
-                'Tiket Anda telah diterbitkan dan tersedia di portal peserta.',
-              ].join('\n')
-            : [
-                `Halo ${current.registration.owner.displayName},`,
-                '',
-                `Bukti pembayaran tim ${current.registration.teamName} ditolak.`,
-                `Alasan: ${reason}`,
-                'Silakan unggah bukti pembayaran baru melalui portal peserta.',
-              ].join('\n'),
-        },
-      });
+      let body: string;
+      if (paid) {
+        const token = deriveTicketToken(ticketId!, secret!);
+        const verificationUrl = buildVerificationUrl(token, current.registration.competition.eventId);
+        const portalReceiptUrl = buildPortalReceiptUrl(current.registration.id);
+        const qr = await QRCode.toBuffer(verificationUrl, { errorCorrectionLevel: 'M', margin: 2, type: 'png' });
+        const text = [
+          `Halo ${current.registration.owner.displayName},`,
+          'KONFIRMASI RESMI PEMBAYARAN: PAID',
+          `Referensi kuitansi: ${current.invoiceNumber}`,
+          `Tim: ${current.registration.teamName}`,
+          `Kompetisi: ${current.registration.competition.name}`,
+          `Jumlah: ${current.currency} ${current.amount}`,
+          `Waktu pembayaran: ${verifiedAt.toISOString()}`,
+          `Referensi rekonsiliasi: ${reason}`,
+          `Kuitansi pembayaran di portal terautentikasi: ${portalReceiptUrl}`,
+          'QR terlampir adalah kredensial tiket. Jaga kerahasiaannya.',
+          `Verifikasi tiket: ${verificationUrl}`,
+        ].join('\n');
+        const rendered = renderRichTextEmail(text);
+        body = encryptRichEmail({ ...rendered, html: `${rendered.html}<img src="cid:ticket-qr" alt="QR tiket">`, attachments: [{ filename: 'ticket-qr.png', contentType: 'image/png', cid: 'ticket-qr', content: qr }] });
+      } else {
+        body = encryptEmailBody([`Halo ${current.registration.owner.displayName},`, `Bukti pembayaran tim ${current.registration.teamName} ditolak.`, `Alasan: ${reason}`, 'Silakan unggah bukti pembayaran baru melalui portal peserta.'].join('\n'));
+      }
+      await transaction.emailOutbox.create({ data: { to: current.registration.owner.email, subject: paid ? `Pembayaran ${current.registration.registrationNumber} terverifikasi` : `Bukti pembayaran ${current.registration.registrationNumber} ditolak`, body } });
 
       const invoice = await transaction.invoice.findUnique({
         where: { id: invoiceId },

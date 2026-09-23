@@ -11,6 +11,7 @@ const VALID_PRODUCTION_ENV = {
   STORAGE_PATH: '/srv/jrc/private',
   PUBLIC_VERIFICATION_URL: 'https://jrc.example.test/ticket/verify',
   PUBLIC_EMAIL_VERIFICATION_URL: 'https://jrc.example.test/portal/verifikasi-email',
+  PUBLIC_FRONTEND_URL: 'https://jrc.example.test',
   DATABASE_URL: 'postgresql://jrc@example.test:5432/jrc',
 };
 
@@ -141,4 +142,14 @@ describe('RuntimeConfigValidator', () => {
       /PUBLIC_VERIFICATION_URL/,
     );
   });
+
+  it.each(['', 'not-a-url', 'http://jrc.example.test', 'https://user:password@jrc.example.test'])(
+    'rejects unsafe PUBLIC_FRONTEND_URL value %j',
+    (value) => {
+      process.env.PUBLIC_FRONTEND_URL = value;
+      expect(() => new RuntimeConfigValidator().onModuleInit()).toThrowError(
+        /PUBLIC_FRONTEND_URL/,
+      );
+    },
+  );
 });

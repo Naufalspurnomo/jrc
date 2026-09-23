@@ -4,12 +4,14 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { PortalShell } from '../../components/portal/PortalShell';
 import { useAuth } from '../../features/auth/AuthProvider';
 import {
+  REVIEW_REASON_CATEGORY_LABELS,
   registrationApi,
   type CompetitionRecord,
   type RegistrationApi,
   type RegistrationDocumentRecord,
   type RegistrationInput,
   type RegistrationState,
+  type ReviewReasonCategory,
   type TeamMemberRecord,
 } from '../../features/registration/api';
 
@@ -67,7 +69,8 @@ export default function PortalRegistrationPage({ api = registrationApi }: Portal
   const [members, setMembers] = useState<MemberDraft[]>([]);
   const [status, setStatus] = useState<RegistrationState>('DRAFT');
   const [documents, setDocuments] = useState<RegistrationDocumentRecord[]>([]);
-  const [reviewReason, setReviewReason] = useState('');
+  const [reviewReasonCategory, setReviewReasonCategory] = useState<ReviewReasonCategory | null>(null);
+  const [reviewReasonComment, setReviewReasonComment] = useState('');
   const [documentCategory, setDocumentCategory] = useState('STUDENT_CARD');
   const [documentFile, setDocumentFile] = useState<File | null>(null);
   const [loading, setLoading] = useState(true);
@@ -107,7 +110,8 @@ export default function PortalRegistrationPage({ api = registrationApi }: Portal
           setPhone(existingRegistration.phone ?? '');
           setStatus(existingRegistration.status);
           setDocuments(existingRegistration.documents ?? []);
-          setReviewReason(existingRegistration.reviewReason ?? '');
+          setReviewReasonCategory(existingRegistration.reviewReasonCategory ?? null);
+          setReviewReasonComment(existingRegistration.reviewReasonComment ?? '');
 
           const existingMembers = existingRegistration.members ?? [];
           const leaderIndex = Math.max(0, existingMembers.findIndex((member) => member.role === 'LEADER'));
@@ -291,7 +295,8 @@ export default function PortalRegistrationPage({ api = registrationApi }: Portal
       const refreshedRegistration = await api.registrations.get(registrationId);
       setDocuments(refreshedRegistration.documents ?? []);
       setStatus(refreshedRegistration.status);
-      setReviewReason(refreshedRegistration.reviewReason ?? '');
+      setReviewReasonCategory(refreshedRegistration.reviewReasonCategory ?? null);
+      setReviewReasonComment(refreshedRegistration.reviewReasonComment ?? '');
       setDocumentFile(null);
       setMessage('Dokumen berhasil diunggah.');
     } catch {
@@ -553,10 +558,11 @@ export default function PortalRegistrationPage({ api = registrationApi }: Portal
 
             <section className="portal-document-panel" aria-labelledby="registration-next-steps">
               <h2 id="registration-next-steps">Dokumen dan pengiriman</h2>
-              {reviewReason && (
+              {(reviewReasonCategory || reviewReasonComment) && (
                 <div>
                   <strong>Catatan peninjauan</strong>
-                  <p>{reviewReason}</p>
+                  {reviewReasonCategory && <p>{REVIEW_REASON_CATEGORY_LABELS[reviewReasonCategory]}</p>}
+                  {reviewReasonComment && <p>{reviewReasonComment}</p>}
                 </div>
               )}
               <p>Dokumen dapat dilengkapi setelah draft tersimpan.</p>

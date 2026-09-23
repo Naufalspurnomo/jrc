@@ -41,6 +41,9 @@ export class TicketGateDto {
 const ticketSelect = {
   id: true,
   status: true,
+  checkedInAt: true,
+  checkedInById: true,
+  checkedInBy: { select: { displayName: true } },
   registration: {
     select: {
       registrationNumber: true,
@@ -102,6 +105,8 @@ type GateTicketIdentity = {
   eventId: string;
   eventName: string;
   members: Array<{ name: string; studentId: string | null }>;
+  checkedInAt: string | null;
+  checkedInBy: { id: string; displayName: string } | null;
 };
 
 export type PublicTicketVerification = PublicTicketIdentity | ResultOnly;
@@ -146,6 +151,10 @@ function gateIdentity(ticket: TicketRecord): Omit<GateTicketIdentity, 'result'> 
       name: member.name,
       studentId: member.studentId,
     })),
+    checkedInAt: ticket.checkedInAt?.toISOString() ?? null,
+    checkedInBy: ticket.checkedInById
+      ? { id: ticket.checkedInById, displayName: ticket.checkedInBy?.displayName ?? 'Unknown operator' }
+      : null,
   };
 }
 
@@ -207,7 +216,13 @@ export class TicketGateService {
         },
       });
       if (updated.count !== 1) {
-        return { result: 'ALREADY_CHECKED_IN', ...gateIdentity(ticket) };
+        const checkedInTicket = await transaction.ticket.findUnique({
+          where: { id: ticket.id },
+          select: ticketSelect,
+        });
+        return checkedInTicket
+          ? { result: 'ALREADY_CHECKED_IN', ...gateIdentity(checkedInTicket) }
+          : { result: 'UNKNOWN' };
       }
 
       await transaction.auditLog.create({
@@ -227,7 +242,13 @@ export class TicketGateService {
         },
       });
 
-      return { result: 'CHECKED_IN', ...gateIdentity(ticket) };
+      const checkedInTicket = await transaction.ticket.findUnique({
+        where: { id: ticket.id },
+        select: ticketSelect,
+      });
+      return checkedInTicket
+        ? { result: 'CHECKED_IN', ...gateIdentity(checkedInTicket) }
+        : { result: 'UNKNOWN' };
     });
   }
 
