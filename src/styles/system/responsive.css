@@ -1,5 +1,5 @@
-/* Native scroll choreography for touch and compact viewports. */
-@media (max-width: 64rem), (hover: none), (pointer: coarse) {
+/* Native scroll choreography when desktop motion is unavailable. */
+@media (max-width: 64rem), (hover: none), (pointer: coarse), (pointer: none) {
   [data-native-reveal='pending'] {
     opacity: 0;
     transform: translate3d(0, 1.4rem, 0);
@@ -37,7 +37,7 @@
     transform: translate3d(1rem, 1.25rem, 0);
   }
 
-  @media (pointer: coarse) {
+  @media (pointer: coarse), (pointer: none) {
     .history-editorial__entry[data-native-reveal='pending'],
     .history-editorial__entry--flip[data-native-reveal='pending'],
     .history-editorial__entry[data-native-reveal='visible'] {

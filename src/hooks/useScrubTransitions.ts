@@ -1,6 +1,6 @@
 import { gsap } from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -107,11 +107,30 @@ function createParallax(
  * and no competing one-shot reveal systems.
  */
 export function useScrubTransitions({ disabled = false }: ScrubOptions = {}) {
+  const [staticMotion, setStaticMotion] = useState(() => (
+    window.matchMedia('(max-width: 64rem)').matches
+    || !window.matchMedia('(hover: hover)').matches
+    || !window.matchMedia('(pointer: fine)').matches
+  ));
+  useEffect(() => {
+    const media = window.matchMedia('(max-width: 64rem)');
+    const hoverMedia = window.matchMedia('(hover: hover)');
+    const pointerMedia = window.matchMedia('(pointer: fine)');
+    const sync = () => setStaticMotion(media.matches || !hoverMedia.matches || !pointerMedia.matches);
+    media.addEventListener('change', sync);
+    hoverMedia.addEventListener('change', sync);
+    pointerMedia.addEventListener('change', sync);
+    return () => {
+      media.removeEventListener('change', sync);
+      hoverMedia.removeEventListener('change', sync);
+      pointerMedia.removeEventListener('change', sync);
+    };
+  }, []);
   useEffect(() => {
     if (disabled) return undefined;
     const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    const compactPointer = window.matchMedia('(max-width: 64rem), (hover: none), (pointer: coarse)').matches;
-    if (reducedMotion || compactPointer) return undefined;
+
+    if (reducedMotion || staticMotion) return undefined;
 
     const root = document.documentElement;
     root.dataset.motionSystem = 'ceremonial';
@@ -296,7 +315,7 @@ export function useScrubTransitions({ disabled = false }: ScrubOptions = {}) {
       delete root.dataset.motionSystem;
       delete root.dataset.scrollDirection;
     };
-  }, [disabled]);
+  }, [disabled, staticMotion]);
 }
 
 export default useScrubTransitions;

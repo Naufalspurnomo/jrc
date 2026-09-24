@@ -122,8 +122,8 @@
   }
 }
 
-/* Touch and compact screens use native scrolling with direction-aware reveals. */
-@media (max-width: 64rem), (hover: none), (pointer: coarse) {
+/* Compact screens use native scrolling with direction-aware reveals. */
+@media (max-width: 64rem), (hover: none), (pointer: coarse), (pointer: none) {
   .hero-section__declaration {
     max-width: min(92vw, 25rem);
     gap: clamp(.38rem, 2vw, .65rem);
@@ -144,12 +144,14 @@
   [data-native-reveal='visible'] {
     opacity: 1;
     transform: translate3d(0, 0, 0) scale(1);
+    will-change: auto;
   }
 
   [data-native-reveal='pending'] {
     opacity: .06;
     transform: translate3d(0, 1.35rem, 0);
     transition-delay: 0ms;
+    will-change: transform, opacity;
   }
 
   [data-native-reveal='pending'][data-native-edge='above'] {

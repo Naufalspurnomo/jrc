@@ -1,4 +1,4 @@
-import { useState, type PropsWithChildren } from 'react';
+import { useEffect, useRef, useState, type PropsWithChildren } from 'react';
 
 import { useCinematicMotion } from '../../hooks/useCinematicMotion';
 import { HERO_ASSETS } from './assets';
@@ -22,11 +22,42 @@ export function HeroExperience({ children, className = '', forceStatic = false, 
   });
   const [videoReady, setVideoReady] = useState(false);
   const [videoFailed, setVideoFailed] = useState(false);
+  const videoRef = useRef<HTMLVideoElement>(null);
   const compactViewport = window.matchMedia('(max-width: 640px)').matches;
   const backgroundSource = compactViewport ? HERO_ASSETS.backgroundMobile : HERO_ASSETS.background;
   const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   const saveData = (navigator as NavigatorWithConnection).connection?.saveData === true;
   const renderVideo = !forceStatic && !reducedMotion && !saveData && !videoFailed && startVideo;
+
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!video) return;
+    const root = rootRef.current;
+    const setVideoVisible = (visible: boolean) => {
+      if (visible) {
+        void video.play().catch(() => undefined);
+      } else {
+        video.pause();
+      }
+    };
+    const observer = root && 'IntersectionObserver' in window
+      ? new IntersectionObserver(
+          ([entry]) => setVideoVisible(entry.isIntersecting),
+          { rootMargin: '120px 0px', threshold: 0.01 },
+        )
+      : null;
+
+    if (observer && root) {
+      observer.observe(root);
+    } else {
+      setVideoVisible(true);
+    }
+
+    return () => {
+      observer?.disconnect();
+      video.pause();
+    };
+  }, [renderVideo, rootRef]);
 
   return (
     <div ref={rootRef} className={`scene-hero hero-scene ${className}`.trim()} data-scene-active={sceneActive ? 'true' : 'false'}>
@@ -43,6 +74,7 @@ export function HeroExperience({ children, className = '', forceStatic = false, 
           </picture>
           {renderVideo ? (
             <video
+              ref={videoRef}
               className="hero-scene__foreground-video"
               src={HERO_ASSETS.foregroundVideo}
               muted

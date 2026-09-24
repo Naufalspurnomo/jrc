@@ -14,17 +14,36 @@ import { ResponsiveMotionController } from '../components/motion/ResponsiveMotio
 
 const DesktopMotionController = lazy(() => import('../components/motion/DesktopMotionController'));
 
-function DesktopMotionLoader({ startupReady }: { startupReady: boolean }) {
+function DesktopMotionLoader({ startupReady, narrativeReady }: { startupReady: boolean; narrativeReady: boolean }) {
   const [isReady, setIsReady] = useState(false);
 
   useEffect(() => {
-    const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    const compactLayout = window.innerWidth < 768 || navigator.maxTouchPoints > 0;
-    if (!startupReady || reducedMotion || compactLayout) return undefined;
-
-    const frame = window.requestAnimationFrame(() => setIsReady(true));
-    return () => window.cancelAnimationFrame(frame);
-  }, [startupReady]);
+    const reducedMedia = window.matchMedia('(prefers-reduced-motion: reduce)');
+    const compactMedia = window.matchMedia('(max-width: 64rem)');
+    const hoverMedia = window.matchMedia('(hover: hover)');
+    const pointerMedia = window.matchMedia('(pointer: fine)');
+    let frame = 0;
+    const sync = () => {
+      window.cancelAnimationFrame(frame);
+      if (!startupReady || !narrativeReady || reducedMedia.matches || compactMedia.matches || !hoverMedia.matches || !pointerMedia.matches) {
+        setIsReady(false);
+        return;
+      }
+      frame = window.requestAnimationFrame(() => setIsReady(true));
+    };
+    sync();
+    reducedMedia.addEventListener('change', sync);
+    compactMedia.addEventListener('change', sync);
+    hoverMedia.addEventListener('change', sync);
+    pointerMedia.addEventListener('change', sync);
+    return () => {
+      window.cancelAnimationFrame(frame);
+      reducedMedia.removeEventListener('change', sync);
+      compactMedia.removeEventListener('change', sync);
+      hoverMedia.removeEventListener('change', sync);
+      pointerMedia.removeEventListener('change', sync);
+    };
+  }, [narrativeReady, startupReady]);
 
   if (!isReady) return null;
 
@@ -57,8 +76,8 @@ export default function HomePage({ startupReady = true }: { startupReady?: boole
 
   return (
     <div className="site-page site-page--home">
-      {startupReady ? <ResponsiveMotionController /> : null}
-      <DesktopMotionLoader startupReady={startupReady} />
+      {startupReady && narrativeReady ? <ResponsiveMotionController /> : null}
+      <DesktopMotionLoader startupReady={startupReady} narrativeReady={narrativeReady} />
       <a className="site-skip-link skip-link" href="#main-content">
         Lewati ke konten utama
       </a>

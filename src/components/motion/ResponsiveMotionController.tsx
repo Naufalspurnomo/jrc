@@ -9,15 +9,31 @@ const MOTION_GROUPS = [
   { selector: '.footer-section__signature, .footer-section__manifesto, .footer-section__nav, .footer-section__legal', motion: 'quiet' },
 ] as const;
 
-/** Native, bidirectional scene transitions for touch and compact viewports. */
+/** Native, bidirectional scene transitions for compact viewports. */
 export function ResponsiveMotionController() {
   useEffect(() => {
-    const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    const compactMotion = window.matchMedia('(max-width: 64rem), (hover: none), (pointer: coarse)').matches;
-    if (reducedMotion || !compactMotion || !('IntersectionObserver' in window)) return undefined;
-
-    const targets: HTMLElement[] = [];
-    MOTION_GROUPS.forEach(({ selector, motion }) => {
+    const reducedMedia = window.matchMedia('(prefers-reduced-motion: reduce)');
+    const compactMedia = window.matchMedia('(max-width: 64rem)');
+    const hoverMedia = window.matchMedia('(hover: hover)');
+    const pointerMedia = window.matchMedia('(pointer: fine)');
+    let observer: IntersectionObserver | null = null;
+    let targets: HTMLElement[] = [];
+    const clear = () => {
+      observer?.disconnect();
+      observer = null;
+      targets.forEach((target) => {
+        delete target.dataset.nativeReveal;
+        delete target.dataset.nativeMotion;
+        delete target.dataset.nativeEdge;
+        target.style.removeProperty('--native-reveal-order');
+      });
+      targets = [];
+    };
+    const sync = () => {
+      clear();
+      const desktopMotion = !compactMedia.matches && hoverMedia.matches && pointerMedia.matches;
+      if (reducedMedia.matches || desktopMotion || !('IntersectionObserver' in window)) return;
+      MOTION_GROUPS.forEach(({ selector, motion }) => {
       document.querySelectorAll<HTMLElement>(selector).forEach((target, index) => {
         if (targets.includes(target)) return;
         target.dataset.nativeReveal = 'pending';
@@ -28,7 +44,7 @@ export function ResponsiveMotionController() {
       });
     });
 
-    const observer = new IntersectionObserver(
+      observer = new IntersectionObserver(
       (entries) => {
         entries.forEach((entry) => {
           const target = entry.target as HTMLElement;
@@ -46,15 +62,19 @@ export function ResponsiveMotionController() {
       { rootMargin: '-7% 0px -7% 0px', threshold: [0, 0.12, 0.55] },
     );
 
-    targets.forEach((target) => observer.observe(target));
+      targets.forEach((target) => observer?.observe(target));
+    };
+    sync();
+    reducedMedia.addEventListener('change', sync);
+    compactMedia.addEventListener('change', sync);
+    hoverMedia.addEventListener('change', sync);
+    pointerMedia.addEventListener('change', sync);
     return () => {
-      observer.disconnect();
-      targets.forEach((target) => {
-        delete target.dataset.nativeReveal;
-        delete target.dataset.nativeMotion;
-        delete target.dataset.nativeEdge;
-        target.style.removeProperty('--native-reveal-order');
-      });
+      reducedMedia.removeEventListener('change', sync);
+      compactMedia.removeEventListener('change', sync);
+      hoverMedia.removeEventListener('change', sync);
+      pointerMedia.removeEventListener('change', sync);
+      clear();
     };
   }, []);
 
