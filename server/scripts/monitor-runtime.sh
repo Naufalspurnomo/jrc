@@ -109,7 +109,7 @@ hsts=$(header_value Strict-Transport-Security "$headers") || alert_and_exit 'pub
 csp=$(header_value Content-Security-Policy "$headers") || alert_and_exit 'public root missing or duplicated Content-Security-Policy header'
 [[ "$csp" == *"default-src 'self'"* && "$csp" == *"object-src 'none'"* && "$csp" == *"frame-ancestors 'none'"* ]] || alert_and_exit 'public root has unsafe Content-Security-Policy header'
 permissions=$(header_value Permissions-Policy "$headers") || alert_and_exit 'public root missing or duplicated Permissions-Policy header'
-[[ "$permissions" == *'camera=()'* && "$permissions" == *'microphone=()'* && "$permissions" == *'geolocation=()'* ]] || alert_and_exit 'public root has unsafe Permissions-Policy header'
+[[ "$permissions" =~ ^camera=\((self)?\),[[:space:]]*microphone=\(\),[[:space:]]*geolocation=\(\)$ ]] || alert_and_exit 'public root has unsafe Permissions-Policy header'
 [[ "$(header_value X-Content-Type-Options "$headers")" == nosniff ]] || alert_and_exit 'public root has unsafe X-Content-Type-Options header'
 [[ "$(header_value X-Frame-Options "$headers")" == DENY ]] || alert_and_exit 'public root has unsafe X-Frame-Options header'
 [[ "$(header_value Referrer-Policy "$headers")" == no-referrer ]] || alert_and_exit 'public root has unsafe Referrer-Policy header'
@@ -117,7 +117,8 @@ permissions=$(header_value Permissions-Policy "$headers") || alert_and_exit 'pub
 redirect_headers="$work/redirect.headers"
 redirect_status=$(curl --silent --show-error --max-time "$probe_timeout" --connect-timeout "$connect_timeout" --retry "$retries" -D "$redirect_headers" -o /dev/null -w '%{http_code}' "$http_origin") || alert_and_exit 'HTTP redirect request failed'
 [[ "$redirect_status" =~ ^30[1278]$ ]] || alert_and_exit "HTTP origin returned HTTP $redirect_status"
-[[ "$(header_value Location "$redirect_headers")" == "$url" ]] || alert_and_exit 'HTTP origin redirect target mismatch'
+redirect_location=$(header_value Location "$redirect_headers") || alert_and_exit 'HTTP origin missing or duplicated Location header'
+[[ "$redirect_location" == "$url" || "$redirect_location" == "$url/" ]] || alert_and_exit 'HTTP origin redirect target mismatch'
 
 request 'live health' "$url/api/health/live" 'application/json'
 live=$(tr -d ' \t\r\n' <"$work/live health.body")

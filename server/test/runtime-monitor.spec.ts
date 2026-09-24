@@ -54,6 +54,8 @@ describe('runtime monitor', () => {
   it('requires expected release SHA', () => fails({JRC_EXPECTED_RELEASE_SHA:''}));
   it.each(['https://bad_host','https://-bad.test','https://bad-.test','https://example..test','https://example.test:0','https://example.test:65536','https://user@example.test','https://example.test/path','https://example.test?q=x','https://example.test#x'])('rejects invalid public origin %s', value => fails({JRC_PUBLIC_URL:value}));
   it('supports separate HTTP origin with custom HTTPS port', () => { const r=run({JRC_PUBLIC_URL:'https://example.test:8443',JRC_HTTP_ORIGIN:'http://example.test:8080',FAKE_REDIRECT:'https://example.test:8443'}); expect(r.status).toBe(0); });
+  it('accepts the equivalent root-slash redirect only', () => { expect(run({FAKE_REDIRECT:'https://example.test/'}).status).toBe(0); fails({FAKE_REDIRECT:'https://example.test/path'}); });
+  it('allows same-origin camera while denying microphone and geolocation', () => { const r=run({FAKE_ROOT_HEADERS:"Strict-Transport-Security: max-age=31536000; includeSubDomains\nContent-Security-Policy: default-src 'self'; object-src 'none'; frame-ancestors 'none'\nPermissions-Policy: camera=(self), microphone=(), geolocation=()\nX-Content-Type-Options: nosniff\nX-Frame-Options: DENY\nReferrer-Policy: no-referrer"}); expect(r.status).toBe(0); });
   it.each(['http://example.test:0','https://example.test','http://bad_host'])('rejects invalid HTTP origin %s', value => fails({JRC_HTTP_ORIGIN:value}));
   it.each(['0','999999999999999999999'])('rejects unsafe probe timeout %s', value => fails({JRC_PROBE_TIMEOUT_SECONDS:value}));
   it.each(['0','999999999999999999999'])('rejects unsafe TLS warning %s', value => fails({JRC_TLS_WARNING_SECONDS:value}));
