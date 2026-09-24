@@ -5,6 +5,8 @@ import { AdminShell } from '../../components/portal/AdminShell';
 import { PaymentStatusNotice } from '../../components/portal/PaymentStatusNotice';
 import { useAuth } from '../../features/auth';
 import {
+  API_PATHS,
+  apiUrl,
   registrationApi,
   type PaymentReviewInput,
   type PaymentState,
@@ -297,7 +299,7 @@ export default function AdminFinancePage({ api = registrationApi }: AdminFinance
                       <section aria-label="Bukti pembayaran">
                         <h4>{invoice.proof.originalName}</h4>
                         <p>{invoice.proof.mimeType} · {formatFileSize(invoice.proof.size)}</p>
-                        <a href={`/api/admin/finance/invoices/${encodeURIComponent(invoice.id)}/proof`}>
+                        <a href={apiUrl(API_PATHS.admin.finance.invoices.proof(invoice.id))}>
                           Buka bukti pembayaran
                         </a>
                       </section>

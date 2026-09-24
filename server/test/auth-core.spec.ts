@@ -1,7 +1,7 @@
 import { Role } from '@prisma/client';
 import type { Request } from 'express';
 import { describe, expect, it, vi } from 'vitest';
-import { AuthService, hashToken } from '../src/auth';
+import { AuthService, hashToken, sessionCookieOptions } from '../src/auth';
 import {
   constantTimeHashEquals,
   createSessionSecrets,
@@ -12,6 +12,28 @@ import { serializeUser } from '../src/auth/user.serializer';
 import { roleAllows } from '../src/auth/roles.guard';
 import { serializeCompetition } from '../src/competitions/competition.serializer';
 import type { PrismaService } from '../src/prisma.service';
+
+describe('session cookie policy', () => {
+  it('defaults to lax and requires secure for none', () => {
+    const previousSameSite = process.env.COOKIE_SAME_SITE;
+    const previousSecure = process.env.COOKIE_SECURE;
+    delete process.env.COOKIE_SAME_SITE;
+    process.env.COOKIE_SECURE = 'false';
+
+    try {
+      expect(sessionCookieOptions()).toMatchObject({ sameSite: 'lax', secure: false });
+      process.env.COOKIE_SAME_SITE = 'none';
+      expect(() => sessionCookieOptions()).toThrow(/requires COOKIE_SECURE=true/);
+      process.env.COOKIE_SECURE = 'true';
+      expect(sessionCookieOptions()).toMatchObject({ sameSite: 'none', secure: true });
+    } finally {
+      if (previousSameSite === undefined) delete process.env.COOKIE_SAME_SITE;
+      else process.env.COOKIE_SAME_SITE = previousSameSite;
+      if (previousSecure === undefined) delete process.env.COOKIE_SECURE;
+      else process.env.COOKIE_SECURE = previousSecure;
+    }
+  });
+});
 
 describe('optional session probe', () => {
   it('returns null without a session cookie and skips the database', async () => {

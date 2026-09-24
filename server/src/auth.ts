@@ -160,10 +160,21 @@ function secureCookies(): boolean {
   );
 }
 
-function sessionCookieOptions(maxAge?: number): CookieOptions {
+function cookieSameSite(): 'strict' | 'lax' | 'none' {
+  const value = (process.env.COOKIE_SAME_SITE ?? 'lax').trim().toLowerCase();
+  if (value !== 'strict' && value !== 'lax' && value !== 'none') {
+    throw new BadRequestException('COOKIE_SAME_SITE must be strict, lax, or none');
+  }
+  if (value === 'none' && !secureCookies()) {
+    throw new BadRequestException('COOKIE_SAME_SITE=none requires COOKIE_SECURE=true');
+  }
+  return value;
+}
+
+export function sessionCookieOptions(maxAge?: number): CookieOptions {
   return {
     httpOnly: true,
-    sameSite: 'lax',
+    sameSite: cookieSameSite(),
     secure: secureCookies(),
     path: '/',
     ...(maxAge === undefined ? {} : { maxAge }),

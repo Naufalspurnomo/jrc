@@ -60,6 +60,10 @@ export class RuntimeConfigValidator implements OnModuleInit {
     if (!TRUTHY_VALUES.has(cookieSecure)) {
       invalidVariables.push('COOKIE_SECURE');
     }
+    const cookieSameSite = (process.env.COOKIE_SAME_SITE ?? 'lax').trim().toLowerCase();
+    if (!['strict', 'lax', 'none'].includes(cookieSameSite)) {
+      invalidVariables.push('COOKIE_SAME_SITE');
+    }
     if (!hasSafeCorsOrigins(process.env.CORS_ORIGINS)) {
       invalidVariables.push('CORS_ORIGINS');
     }

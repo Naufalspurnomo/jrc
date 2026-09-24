@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 
-import { ApiClient, API_PATHS, createRegistrationApi } from '../api';
+import { ApiClient, API_PATHS, apiUrl, createRegistrationApi } from '../api';
 
 describe('ApiClient', () => {
   it('loads a CSRF token and sends credentials on mutating requests', async () => {
@@ -45,6 +45,11 @@ describe('ApiClient', () => {
     const headers = new Headers(fetcher.mock.calls[1]?.[1]?.headers);
     expect(headers.has('Content-Type')).toBe(false);
     expect(headers.get('X-CSRF-Token')).toBe('csrf-123');
+  });
+
+  it('builds cross-origin API URLs without changing relative defaults', () => {
+    expect(apiUrl('/api/health', '')).toBe('/api/health');
+    expect(apiUrl('/api/health', 'https://api.example.test/')).toBe('https://api.example.test/api/health');
   });
 
   it('uses the dedicated authenticated finance queue and proof paths', async () => {

@@ -47,6 +47,12 @@ export const API_PATHS = {
   },
 } as const;
 
+export function apiUrl(path: string, origin = import.meta.env.VITE_API_ORIGIN ?? ''): string {
+  const normalizedOrigin = origin.trim().replace(/\/+$/, '');
+  if (!normalizedOrigin) return path;
+  return `${normalizedOrigin}/${path.replace(/^\/+/, '')}`;
+}
+
 type Fetcher = (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>;
 type RequestBody = FormData | unknown;
 
@@ -122,7 +128,7 @@ export class ApiClient {
   private async loadCsrfToken(): Promise<string> {
     if (this.csrfToken) return this.csrfToken;
     if (!this.csrfRequest) {
-      this.csrfRequest = this.fetcher(API_PATHS.auth.csrf, {
+      this.csrfRequest = this.fetcher(apiUrl(API_PATHS.auth.csrf), {
         method: 'GET',
         credentials: 'include',
       }).then(async (response) => {
@@ -169,7 +175,7 @@ export class ApiClient {
       }
     }
 
-    const response = await this.fetcher(path, {
+    const response = await this.fetcher(apiUrl(path), {
       ...requestInit,
       body,
       credentials: 'include',
