@@ -1,6 +1,6 @@
 services:
   jrc-db:
-    image: postgres:17-bookworm
+    image: "${JRC_DATABASE_IMAGE:-postgres@sha256:051f7b7b3abdd564d5d1bd1e8c4b9c1b6e77087d1dd22020ede611c096a272e0}"
     restart: unless-stopped
     environment:
       POSTGRES_DB: "${POSTGRES_DB:?POSTGRES_DB is required}"
@@ -20,10 +20,13 @@ services:
       - jrc-private
 
   jrc-api:
+    image: "${JRC_API_IMAGE:?JRC_API_IMAGE is required}"
     build:
       context: ./server
       dockerfile: Dockerfile
       target: production
+      args:
+        RELEASE_SHA: "${RELEASE_SHA:?RELEASE_SHA is required}"
     restart: unless-stopped
     env_file:
       - path: ./server/.env
@@ -54,10 +57,13 @@ services:
       - jrc-private
 
   jrc-migrate:
+    image: "${JRC_MIGRATION_IMAGE:?JRC_MIGRATION_IMAGE is required}"
     build:
       context: ./server
       dockerfile: Dockerfile
       target: migration
+      args:
+        RELEASE_SHA: "${RELEASE_SHA:?RELEASE_SHA is required}"
     restart: "no"
     env_file:
       - path: ./server/.env
@@ -67,10 +73,14 @@ services:
     depends_on:
       jrc-db:
         condition: service_healthy
+    read_only: true
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,nodev,size=64m
     cap_drop:
       - ALL
     security_opt:
       - no-new-privileges:true
+    pids_limit: 128
     networks:
       - jrc-private
 

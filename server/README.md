@@ -71,6 +71,9 @@ Do not point E2E tests at development or production data.
 From `/root/jrc`:
 
 ```bash
+export RELEASE_SHA="$(git rev-parse HEAD)"
+export JRC_API_IMAGE=jrc-api:local
+export JRC_MIGRATION_IMAGE=jrc-migration:local
 docker compose --env-file server/.env pull jrc-db
 docker compose --env-file server/.env build jrc-migrate jrc-api
 docker compose --env-file server/.env run --rm jrc-migrate npx tsx prisma/seed.ts  # first deployment or seed update
@@ -181,20 +184,17 @@ Provide through approved secret/configuration management:
 - Retention, backup encryption, restore RTO/RPO, log retention, and monitoring destinations
 - Scanner device/browser list and camera-permission ownership
 
-## Verified evidence
+## SHA-bound release evidence
 
-Current acceptance evidence:
+For every candidate, set `RELEASE_SHA` to the exact full Git SHA (never `unknown`), run the current frontend and backend unit/E2E suites plus lint, typecheck, and build, and archive their unedited outputs with the SHA, UTC timestamp, tool versions, and exit statuses. Do not copy historical test counts into acceptance evidence: discovery and totals may change.
 
-- Frontend unit tests: **60 passed**.
-- Backend unit run: **91 passed**, with **7 E2E tests skipped** by design.
-- Backend E2E run: **7 passed** separately.
-- Browser participant/admin workflow, revision, rejection, proof re-upload, ticket, and duplicate check-in: verified on an isolated database.
-- Runtime presentation scan: 13 pages across public, participant, reviewer, finance, and gate identities with no console, page, or unexpected network errors.
-- Mobile presentation scan: 15 authenticated pages at 320, 360, and 375 pixels with no document overflow or clipped controls.
-- Scanner camera lifecycle: verified with a browser fake-media stream; the actual presentation phone still requires the HTTPS physical-camera check in `PRESENTATION-QA.md`.
-- Three migrations, including populated-database catalog alignment: verified.
-- Backup and restore database/storage round trip: verified.
-- Runtime dependency audit and container health: verified.
-- Real SMTP delivery remains an activation check requiring the presentation account credentials.
+Record immutable API, migration, and database image references (repository plus digest), then inspect both application images and prove their `org.opencontainers.image.revision` label equals `RELEASE_SHA`. Archive Compose's fully resolved configuration after secret-safe review. Link browser workflow, migration, backup/restore, container-health, and physical-camera evidence to the same SHA and image digests.
 
-Re-run and archive equivalent evidence for every production release; these counts describe the currently verified revision, not a permanent guarantee.
+Inspect image configuration directly; Compose service labels are not provenance evidence:
+
+```bash
+docker image inspect "$JRC_API_IMAGE" --format '{{ index .Config.Labels "org.opencontainers.image.revision" }}'
+docker image inspect "$JRC_MIGRATION_IMAGE" --format '{{ index .Config.Labels "org.opencontainers.image.revision" }}'
+```
+
+External SMTP acceptance requires a fresh send to an external mailbox, message-header/body readback, and outbox-state correlation using production-approved credentials. Archive redacted evidence; never archive credentials, session material, recipient personal data, or bearer links.
