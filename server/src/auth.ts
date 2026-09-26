@@ -180,7 +180,7 @@ function sessionTtlMs(): number {
     return Math.floor(parsedSeconds * 1_000);
   }
 
-  const parsedDays = Number(process.env.SESSION_TTL_DAYS ?? '7');
+  const parsedDays = Number(process.env.SESSION_TTL_DAYS ?? '30');
   if (!Number.isFinite(parsedDays) || parsedDays <= 0) {
     throw new BadRequestException('SESSION_TTL_DAYS must be positive');
   }
@@ -244,20 +244,45 @@ export class AuthService {
 
   async probeSession(
     request: Request,
-  ): Promise<{ user: AuthPrincipal | null }> {
+  ): Promise<{
+    user: AuthPrincipal | null;
+    renewedSession?: { token: string; maxAge: number };
+  }> {
     const token = extractSessionToken(request);
     if (!token) return { user: null };
 
+    const now = new Date();
     const session = await this.prisma.session.findFirst({
       where: {
         tokenHash: hashToken(token),
         revokedAt: null,
-        expiresAt: { gt: new Date() },
+        expiresAt: { gt: now },
         user: { active: true },
       },
       include: { user: true },
     });
-    return { user: session ? sanitizeUser(session.user) : null };
+    if (!session) return { user: null };
+
+    const ttl = sessionTtlMs();
+    if (session.expiresAt.getTime() - now.getTime() >= ttl / 2) {
+      return { user: sanitizeUser(session.user) };
+    }
+
+    const renewed = await this.prisma.session.updateMany({
+      where: {
+        id: session.id,
+        revokedAt: null,
+        expiresAt: { gt: now },
+        user: { active: true },
+      },
+      data: { expiresAt: new Date(now.getTime() + ttl) },
+    });
+    return {
+      user: sanitizeUser(session.user),
+      ...(renewed.count === 1
+        ? { renewedSession: { token, maxAge: ttl } }
+        : {}),
+    };
   }
 
   async register(dto: RegisterDto): Promise<IssuedAuth> {
@@ -646,8 +671,19 @@ export class AuthController {
 
   @Public()
   @Get('me')
-  async me(@Req() request: Request): Promise<{ user: AuthPrincipal | null }> {
-    return this.auth.probeSession(request);
+  async me(
+    @Req() request: Request,
+    @Res({ passthrough: true }) response: Response,
+  ): Promise<{ user: AuthPrincipal | null }> {
+    const { user, renewedSession } = await this.auth.probeSession(request);
+    if (renewedSession) {
+      response.cookie(
+        sessionCookieName(),
+        renewedSession.token,
+        sessionCookieOptions(renewedSession.maxAge),
+      );
+    }
+    return { user };
   }
 
   @Public()
