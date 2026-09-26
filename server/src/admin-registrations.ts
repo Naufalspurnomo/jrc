@@ -11,6 +11,7 @@ import {
   Query,
   Req,
   Res,
+  StreamableFile,
 } from '@nestjs/common';
 import { Prisma, RegistrationStatus, Role } from '@prisma/client';
 import { Transform, TransformFnParams, Type } from 'class-transformer';
@@ -813,26 +814,26 @@ export class AdminRegistrationsController {
   async exportXlsx(
     @Query() query: AdminRegistrationFiltersDto,
     @Res({ passthrough: true }) response: Response,
-  ): Promise<Buffer> {
+  ): Promise<StreamableFile> {
     response.setHeader('Content-Type', XLSX_MIME);
     response.setHeader(
       'Content-Disposition',
       `attachment; filename="registrations-jrc-xiv.xlsx"; filename*=UTF-8''registrations-jrc-xiv.xlsx`,
     );
-    return this.registrations.exportXlsx(query);
+    return new StreamableFile(await this.registrations.exportXlsx(query));
   }
 
   @Get('attendance.xlsx')
   async exportAttendanceXlsx(
     @Query() query: AdminRegistrationFiltersDto,
     @Res({ passthrough: true }) response: Response,
-  ): Promise<Buffer> {
+  ): Promise<StreamableFile> {
     response.setHeader('Content-Type', XLSX_MIME);
     response.setHeader(
       'Content-Disposition',
       `attachment; filename="attendance-jrc-xiv.xlsx"; filename*=UTF-8''attendance-jrc-xiv.xlsx`,
     );
-    return this.registrations.exportAttendanceXlsx(query);
+    return new StreamableFile(await this.registrations.exportAttendanceXlsx(query));
   }
 
   @Get(':id')

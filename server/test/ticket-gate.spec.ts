@@ -69,8 +69,34 @@ describe('TicketGateService attendance and kit handover', () => {
     const prisma = { $transaction: vi.fn((fn: (tx: typeof transaction) => Promise<unknown>) => fn(transaction)) };
     const result = await new TicketGateService(prisma as unknown as PrismaService).redeem(
       'operator-2', { token, eventId: 'event', memberIds: [memberId] }, { requestId: 'request', ipAddress: null });
-    expect(result).toMatchObject({ result: 'CHECKED_IN', checkedInAt: checkedInAt.toISOString(), checkedInBy: { id: 'operator-1' } });
+    expect(result).toMatchObject({ result: 'ALREADY_CHECKED_IN', checkedInAt: checkedInAt.toISOString(), checkedInBy: { id: 'operator-1' } });
     expect(transaction.ticket.updateMany).not.toHaveBeenCalled();
+  });
+
+  it('returns already checked in when a concurrent request wins the ticket transition', async () => {
+    const activeTicket = { ...ticket, status: TicketStatus.ACTIVE, checkedInAt: null,
+      checkedInById: null, checkedInBy: null };
+    const transaction = {
+      ticket: { findUnique: vi.fn().mockResolvedValueOnce(activeTicket).mockResolvedValueOnce(ticket),
+        updateMany: vi.fn().mockResolvedValue({ count: 0 }) },
+      teamMember: { updateMany: vi.fn().mockResolvedValue({ count: 0 }) },
+      auditLog: { create: vi.fn().mockResolvedValue({}) },
+    };
+    const prisma = { $transaction: vi.fn((fn: (tx: typeof transaction) => Promise<unknown>) => fn(transaction)) };
+
+    const result = await new TicketGateService(prisma as unknown as PrismaService).redeem(
+      'operator-2', { token, eventId: 'event', memberIds: [memberId] },
+      { requestId: 'request', ipAddress: null },
+    );
+
+    expect(result).toMatchObject({
+      result: 'ALREADY_CHECKED_IN',
+      checkedInAt: checkedInAt.toISOString(),
+      checkedInBy: { id: 'operator-1' },
+    });
+    expect(transaction.auditLog.create).not.toHaveBeenCalledWith(expect.objectContaining({
+      data: expect.objectContaining({ action: 'TICKET_CHECKED_IN' }),
+    }));
   });
 
   it('audits only members won by conditional attendance updates', async () => {

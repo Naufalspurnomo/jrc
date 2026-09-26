@@ -229,6 +229,12 @@ suite('registration system e2e', () => {
       email: null,
       phone: null,
     });
+    await state(participantA, csrfA)(
+      'post',
+      `/api/registrations/${registrationId}/members`,
+    )
+      .send({ name: 'Coach', role: 'SUPERVISOR' })
+      .expect(201);
 
     await state(participantA, csrfA)(
       'post',
@@ -261,6 +267,7 @@ suite('registration system e2e', () => {
     expect(participantRegistration.body.members).toEqual([
       expect.objectContaining({ role: 'LEADER', email: 'alice@example.test' }),
       expect.objectContaining({ role: 'MEMBER', email: null, phone: null }),
+      expect.objectContaining({ role: 'SUPERVISOR', name: 'Coach' }),
     ]);
 
     await state(participantA, csrfA)(
@@ -270,20 +277,51 @@ suite('registration system e2e', () => {
       .expect(400)
       .expect(({ body }: Response) =>
         expect(body.message).toBe(
-          'At least one document is required before submission',
+          'All five required document categories must be uploaded before submission',
         ),
       );
 
-    await state(participantA, csrfA)(
-      'post',
-      `/api/registrations/${registrationId}/documents`,
-    )
-      .field('category', 'STUDENT_CARD')
-      .attach('file', Buffer.from('%PDF-test'), {
-        filename: 'student-card.pdf',
-        contentType: 'application/pdf',
-      })
-      .expect(201);
+    for (const category of [
+      'RECOMMENDATION_LETTER',
+      'IDENTITY_CARD',
+      'REGISTRATION_FORM',
+      'TEAM_PHOTO',
+      'TWIBBON_PROOF',
+    ]) {
+      await state(participantA, csrfA)(
+        'post',
+        `/api/registrations/${registrationId}/documents`,
+      )
+        .field('category', category)
+        .attach('file', Buffer.from('%PDF-test'), {
+          filename: `${category.toLowerCase()}.pdf`,
+          contentType: 'application/pdf',
+        })
+        .expect(201);
+    }
+
+    const portraitPng = Buffer.from(
+      '89504e470d0a1a0a0000000d494844520000000300000004080200000000000000',
+      'hex',
+    );
+    for (const [subjectName, subjectRole] of [
+      ['Alice', 'PARTICIPANT'],
+      ['Bob', 'PARTICIPANT'],
+      ['Coach', 'SUPERVISOR'],
+    ] as const) {
+      await state(participantA, csrfA)(
+        'post',
+        `/api/registrations/${registrationId}/documents`,
+      )
+        .field('category', 'MEMBER_PHOTO')
+        .field('subjectName', subjectName)
+        .field('subjectRole', subjectRole)
+        .attach('file', portraitPng, {
+          filename: `${subjectName.toLowerCase()}.png`,
+          contentType: 'image/png',
+        })
+        .expect(201);
+    }
 
     await state(participantA, csrfA)(
       'post',
@@ -371,9 +409,12 @@ suite('registration system e2e', () => {
 
   it('atomically permits exactly one concurrent redemption', async () => {
     const token = (await participantA.get(`/api/registrations/${registrationId}/ticket`).expect(200)).body.token as string;
+    const memberIds = (
+      await participantA.get(`/api/registrations/${registrationId}`).expect(200)
+    ).body.members.map((member: { id: string }) => member.id);
     const [first, second] = await Promise.all([
-      state(gate, csrfGate)('post', '/api/gate/redeem').send({ token, eventId }),
-      state(gate, csrfGate)('post', '/api/gate/redeem').send({ token, eventId }),
+      state(gate, csrfGate)('post', '/api/gate/redeem').send({ token, eventId, memberIds }),
+      state(gate, csrfGate)('post', '/api/gate/redeem').send({ token, eventId, memberIds }),
     ]);
     expect([first.status, second.status]).toEqual([201, 201]);
     expect([first.body.result, second.body.result].sort()).toEqual(['ALREADY_CHECKED_IN', 'CHECKED_IN']);
@@ -387,7 +428,15 @@ suite('registration system e2e', () => {
   });
 
   it('records audit history and exports a native XLSX workbook', async () => {
-    const xlsx = await reviewer.get('/api/admin/registrations/export.xlsx').expect(200);
+    const xlsx = await reviewer
+      .get('/api/admin/registrations/export.xlsx')
+      .buffer(true)
+      .parse((response, callback) => {
+        const chunks: Buffer[] = [];
+        response.on('data', (chunk: Buffer) => chunks.push(chunk));
+        response.on('end', () => callback(null, Buffer.concat(chunks)));
+      })
+      .expect(200);
     expect(xlsx.headers['content-type']).toContain(
       'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
     );

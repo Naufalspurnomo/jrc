@@ -66,6 +66,9 @@
     "seed": "tsx prisma/seed.ts"
   },
   "overrides": {
-    "multer": "$multer"
+    "multer": "$multer",
+    "exceljs": {
+      "uuid": "11.1.1"
+    }
   }
 }

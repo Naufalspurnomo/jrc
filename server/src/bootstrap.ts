@@ -50,7 +50,10 @@ export function configureApp(app: INestApplication): void {
         callback(null, true);
         return;
       }
-      callback(new Error('Origin is not allowed by CORS'), false);
+      // A disallowed browser origin is not an application failure. Omitting
+      // CORS response headers makes the browser enforce the allowlist without
+      // turning an otherwise valid request into a noisy HTTP 500 response.
+      callback(null, false);
     },
   });
 }

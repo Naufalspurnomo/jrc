@@ -289,6 +289,8 @@ export class TicketGateService {
         });
       }
 
+      let responseResult: 'CHECKED_IN' | 'ALREADY_CHECKED_IN' =
+        'ALREADY_CHECKED_IN';
       if (result === 'VALID') {
         const updated = await transaction.ticket.updateMany({
           where: { id: ticket.id, status: TicketStatus.ACTIVE },
@@ -299,6 +301,7 @@ export class TicketGateService {
           },
         });
         if (updated.count === 1) {
+          responseResult = 'CHECKED_IN';
           await transaction.auditLog.create({
             data: {
               actorId: operatorId,
@@ -323,7 +326,7 @@ export class TicketGateService {
         select: ticketSelect,
       });
       return current
-        ? { result: 'CHECKED_IN', ...gateIdentity(current) }
+        ? { result: responseResult, ...gateIdentity(current) }
         : { result: 'UNKNOWN' };
     });
   }
