@@ -32,7 +32,8 @@ import {
 import { createHash, randomBytes, timingSafeEqual } from 'node:crypto';
 import { CookieOptions, Request, Response } from 'express';
 import { PrismaService } from './prisma.service';
-import { encryptEmailBody } from './email-outbox';
+import { encryptRichEmail } from './email-outbox';
+import { renderTransactionalEmail } from './email-template';
 
 export const SESSION_COOKIE_NAME = 'jrc_session';
 export const CSRF_HEADER_NAME = 'x-csrf-token';
@@ -390,14 +391,12 @@ export class AuthService {
       data: {
         to: user.email,
         subject: 'Verifikasi email akun JRC XIV',
-        body: encryptEmailBody([
-          `Halo ${user.displayName},`,
-          '',
-          'Konfirmasikan alamat email akun JRC XIV Anda dengan membuka tautan berikut:',
-          link,
-          '',
-          'Tautan berlaku 24 jam. Jika Anda tidak merasa mendaftar, abaikan email ini.',
-        ].join('\n')),
+        body: encryptRichEmail(renderTransactionalEmail({
+          title: 'Verifikasi email Anda', greetingName: user.displayName,
+          intro: 'Konfirmasikan alamat email akun JRC XIV Anda untuk melanjutkan proses pendaftaran.',
+          paragraphs: ['Tautan berlaku selama 24 jam. Jika Anda tidak merasa mendaftar, abaikan email ini.'],
+          cta: { label: 'Verifikasi email', url: link },
+        })),
       },
     });
   }
@@ -446,14 +445,12 @@ export class AuthService {
           data: {
             to: user.email,
             subject: 'Verifikasi email akun JRC XIV',
-            body: encryptEmailBody([
-              `Halo ${user.displayName},`,
-              '',
-              'Konfirmasikan alamat email akun JRC XIV Anda dengan membuka tautan berikut:',
-              buildVerificationLink(token),
-              '',
-              'Tautan berlaku 24 jam. Jika Anda tidak merasa mendaftar, abaikan email ini.',
-            ].join('\n')),
+            body: encryptRichEmail(renderTransactionalEmail({
+              title: 'Verifikasi email Anda', greetingName: user.displayName,
+              intro: 'Gunakan tautan verifikasi baru berikut untuk mengaktifkan akun JRC XIV Anda.',
+              paragraphs: ['Tautan berlaku selama 24 jam. Jika Anda tidak meminta email ini, abaikan saja.'],
+              cta: { label: 'Verifikasi email', url: buildVerificationLink(token) },
+            })),
           },
         });
       });

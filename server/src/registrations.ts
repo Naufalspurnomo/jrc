@@ -44,7 +44,8 @@ import {
   canEditRegistration,
 } from './domain/registration-state';
 import { PrismaService } from './prisma.service';
-import { encryptEmailBody } from './email-outbox';
+import { encryptRichEmail } from './email-outbox';
+import { buildRegistrationPortalUrl, renderTransactionalEmail } from './email-template';
 
 const MAX_PARTICIPANTS = 3;
 const REGISTRATION_NUMBER_ATTEMPTS = 5;
@@ -698,12 +699,12 @@ export class RegistrationsService {
         data: {
           to: current.owner.email,
           subject: `Pendaftaran ${current.registrationNumber} telah dikirim`,
-          body: encryptEmailBody([
-            `Halo ${current.owner.displayName},`,
-            '',
-            `Pendaftaran ${current.registrationNumber} untuk tim ${current.teamName} pada kompetisi ${current.competition.name} telah diterima.`,
-            'Status: SUBMITTED. Pendaftaran sedang menunggu peninjauan panitia.',
-          ].join('\n')),
+          body: encryptRichEmail(renderTransactionalEmail({
+            title: 'Pendaftaran berhasil dikirim', greetingName: current.owner.displayName,
+            intro: 'Data pendaftaran telah diterima dan sedang menunggu peninjauan panitia.', status: 'MENUNGGU PENINJAUAN',
+            details: [{ label: 'Nomor pendaftaran', value: current.registrationNumber }, { label: 'Tim', value: current.teamName }, { label: 'Kompetisi', value: current.competition.name }],
+            cta: { label: 'Lihat pendaftaran', url: buildRegistrationPortalUrl(id) },
+          })),
         },
       });
 

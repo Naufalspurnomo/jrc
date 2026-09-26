@@ -65,6 +65,7 @@ RUN apt-get update \
 COPY --from=runtime-dependencies --chown=node:node /app/package.json ./
 COPY --from=runtime-dependencies --chown=node:node /app/node_modules ./node_modules
 COPY --from=build --chown=node:node /app/dist ./dist
+COPY --from=build --chown=node:node /app/assets ./assets
 
 USER node
 

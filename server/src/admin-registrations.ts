@@ -38,7 +38,8 @@ import { csvRow } from './common/csv';
 import { assertRegistrationTransition } from './domain/registration-state';
 import { ManualPaymentProvider } from './payments/manual-payment.provider';
 import { PrismaService } from './prisma.service';
-import { encryptEmailBody } from './email-outbox';
+import { encryptRichEmail } from './email-outbox';
+import { buildRegistrationPortalUrl, renderTransactionalEmail } from './email-template';
 
 const trim = ({ value }: TransformFnParams): unknown =>
   typeof value === 'string' ? value.trim() : value;
@@ -587,21 +588,12 @@ export class AdminRegistrationsService {
           data: {
             to: current.owner.email,
             subject: `Invoice pendaftaran ${current.registrationNumber}`,
-            body: encryptEmailBody([
-              `Halo ${current.owner.displayName},`,
-              '',
-              `Pendaftaran tim ${current.teamName} untuk ${current.competition.name} telah disetujui.`,
-              `Nomor invoice: ${createdInvoice.invoiceNumber}`,
-              `Jumlah: ${current.competition.currency} ${current.competition.fee}`,
-              `Batas pembayaran: ${createdInvoice.deadline.toISOString()}`,
-              `Referensi transfer: ${current.registrationNumber}`,
-              '',
-              `Bank: ${String(order.instructions.bankName)}`,
-              `Nama rekening: ${String(order.instructions.bankAccountName)}`,
-              `Nomor rekening: ${String(order.instructions.bankAccountNumber)}`,
-              ...(order.instructions.qrisImageUrl ? [`QRIS: ${String(order.instructions.qrisImageUrl)}`] : []),
-              'Status tetap pending until Finance reconciliation.',
-            ].join('\n')),
+            body: encryptRichEmail(renderTransactionalEmail({
+              title: 'Pendaftaran disetujui', greetingName: current.owner.displayName,
+              intro: 'Pendaftaran Anda telah disetujui. Selesaikan pembayaran sesuai informasi invoice berikut.', status: 'MENUNGGU PEMBAYARAN',
+              details: [{ label: 'Tim', value: current.teamName }, { label: 'Kompetisi', value: current.competition.name }, { label: 'Nomor invoice', value: createdInvoice.invoiceNumber }, { label: 'Jumlah', value: `${current.competition.currency} ${current.competition.fee}` }, { label: 'Batas pembayaran', value: createdInvoice.deadline.toISOString() }, { label: 'Referensi transfer', value: current.registrationNumber }, { label: 'Bank', value: String(order.instructions.bankName) }, { label: 'Nama rekening', value: String(order.instructions.bankAccountName) }, { label: 'Nomor rekening', value: String(order.instructions.bankAccountNumber) }, ...(order.instructions.qrisImageUrl ? [{ label: 'QRIS', value: String(order.instructions.qrisImageUrl) }] : [])],
+              paragraphs: ['Pembayaran baru dinyatakan lunas setelah rekonsiliasi oleh tim Finance.'], cta: { label: 'Buka portal pembayaran', url: buildRegistrationPortalUrl(id) },
+            })),
           },
         });
       } else if (
@@ -616,17 +608,13 @@ export class AdminRegistrationsService {
           data: {
             to: current.owner.email,
             subject: `Status pendaftaran ${current.registrationNumber}`,
-            body: encryptEmailBody([
-              `Halo ${current.owner.displayName},`,
-              '',
-              `Pendaftaran tim ${current.teamName} ${result}.`,
-              `Kategori alasan: ${reasonCategory}`,
-              `Alasan: ${reasonComment}`,
-              '',
-              dto.status === RegistrationStatus.REVISION_REQUESTED
-                ? 'Silakan perbarui pendaftaran melalui portal peserta lalu kirim kembali.'
-                : 'Silakan hubungi panitia jika memerlukan informasi lebih lanjut.',
-            ].join('\n')),
+            body: encryptRichEmail(renderTransactionalEmail({
+              title: dto.status === RegistrationStatus.REVISION_REQUESTED ? 'Pendaftaran memerlukan revisi' : 'Pendaftaran ditolak', greetingName: current.owner.displayName,
+              intro: `Pendaftaran tim ${current.teamName} ${result}.`, status: dto.status === RegistrationStatus.REVISION_REQUESTED ? 'PERLU REVISI' : 'DITOLAK',
+              details: [{ label: 'Nomor pendaftaran', value: current.registrationNumber }, { label: 'Kategori alasan', value: reasonCategory ?? '' }, { label: 'Alasan', value: reasonComment ?? '' }],
+              paragraphs: [dto.status === RegistrationStatus.REVISION_REQUESTED ? 'Perbarui data pendaftaran melalui portal peserta, lalu kirim kembali.' : 'Hubungi panitia jika Anda memerlukan informasi lebih lanjut.'],
+              ...(dto.status === RegistrationStatus.REVISION_REQUESTED ? { cta: { label: 'Perbarui pendaftaran', url: buildRegistrationPortalUrl(id) } } : {}),
+            })),
           },
         });
       }

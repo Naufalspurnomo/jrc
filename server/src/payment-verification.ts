@@ -47,7 +47,8 @@ import {
 import { assertPaymentTransition } from './domain/payment-state';
 import { PrismaService } from './prisma.service';
 import { PrivateStorageService } from './private-storage';
-import { encryptEmailBody, encryptRichEmail } from './email-outbox';
+import { encryptRichEmail } from './email-outbox';
+import { renderTransactionalEmail } from './email-template';
 
 const DEFAULT_MAX_UPLOAD_BYTES = 10 * 1024 * 1024;
 const STORAGE_KEY_PATTERN = /^[a-f0-9]{64}$/;
@@ -165,25 +166,15 @@ export function buildPortalReceiptUrl(registrationId: string): string {
   ).toString();
 }
 
-function escapeHtml(value: string): string {
-  return value.replace(/[&<>"']/g, (character) => {
-    switch (character) {
-      case '&':
-        return '&amp;';
-      case '<':
-        return '&lt;';
-      case '>':
-        return '&gt;';
-      case '"':
-        return '&quot;';
-      default:
-        return '&#39;';
-    }
-  });
-}
-
 export function renderRichTextEmail(text: string): { text: string; html: string } {
-  return { text, html: `<p>${escapeHtml(text).replaceAll('\n', '<br>')}</p>` };
+  const escaped = text.replace(/[&<>"']/g, (character) => ({
+    '&': '&amp;',
+    '<': '&lt;',
+    '>': '&gt;',
+    '"': '&quot;',
+    "'": '&#39;',
+  })[character] ?? character);
+  return { text, html: `<p>${escaped.replaceAll('\n', '<br>')}</p>` };
 }
 
 function safeOriginalName(originalName: string): string {
@@ -438,13 +429,12 @@ export class PaymentVerificationService {
           data: {
             to: current.registration.owner.email,
             subject: `Bukti pembayaran ${current.invoiceNumber} diterima`,
-            body: encryptEmailBody([
-              `Halo ${current.registration.owner.displayName},`,
-              `Invoice: ${current.invoiceNumber}`,
-              `Jumlah: ${current.currency} ${current.amount}`,
-              `Berkas: ${stored.originalName}`,
-              'Status: PENDING_VERIFICATION. Pembayaran tetap menunggu rekonsiliasi Finance dan belum PAID.',
-            ].join('\n')),
+            body: encryptRichEmail(renderTransactionalEmail({
+              title: 'Bukti pembayaran diterima', greetingName: current.registration.owner.displayName,
+              intro: 'Bukti pembayaran Anda telah diterima dan akan diperiksa oleh tim Finance.', status: 'MENUNGGU VERIFIKASI',
+              details: [{ label: 'Invoice', value: current.invoiceNumber }, { label: 'Jumlah', value: `${current.currency} ${current.amount}` }, { label: 'Berkas', value: stored.originalName }],
+              paragraphs: ['Pembayaran belum dinyatakan lunas sampai proses rekonsiliasi selesai.'],
+            })),
           },
         });
 
@@ -616,23 +606,23 @@ export class PaymentVerificationService {
         const verificationUrl = buildVerificationUrl(token, current.registration.competition.eventId);
         const portalReceiptUrl = buildPortalReceiptUrl(current.registration.id);
         const qr = await QRCode.toBuffer(verificationUrl, { errorCorrectionLevel: 'M', margin: 2, type: 'png' });
-        const text = [
-          `Halo ${current.registration.owner.displayName},`,
-          'KONFIRMASI RESMI PEMBAYARAN: PAID',
-          `Referensi kuitansi: ${current.invoiceNumber}`,
-          `Tim: ${current.registration.teamName}`,
-          `Kompetisi: ${current.registration.competition.name}`,
-          `Jumlah: ${current.currency} ${current.amount}`,
-          `Waktu pembayaran: ${verifiedAt.toISOString()}`,
-          `Referensi rekonsiliasi: ${reason}`,
-          `Kuitansi pembayaran di portal terautentikasi: ${portalReceiptUrl}`,
-          'QR terlampir adalah kredensial tiket. Jaga kerahasiaannya.',
-          `Verifikasi tiket: ${verificationUrl}`,
-        ].join('\n');
-        const rendered = renderRichTextEmail(text);
-        body = encryptRichEmail({ ...rendered, html: `${rendered.html}<img src="cid:ticket-qr" alt="QR tiket">`, attachments: [{ filename: 'ticket-qr.png', contentType: 'image/png', cid: 'ticket-qr', content: qr }] });
+        body = encryptRichEmail(renderTransactionalEmail({
+          title: 'Pembayaran terverifikasi', greetingName: current.registration.owner.displayName,
+          intro: 'Pembayaran Anda telah terverifikasi. Tiket resmi JRC XIV kini aktif.', status: 'LUNAS · TIKET AKTIF',
+          details: [{ label: 'Referensi kuitansi', value: current.invoiceNumber }, { label: 'Tim', value: current.registration.teamName }, { label: 'Kompetisi', value: current.registration.competition.name }, { label: 'Jumlah', value: `${current.currency} ${current.amount}` }, { label: 'Waktu pembayaran', value: verifiedAt.toISOString() }, { label: 'Referensi rekonsiliasi', value: reason }],
+          paragraphs: ['QR berikut adalah kredensial tiket. Jaga kerahasiaannya dan tunjukkan saat check-in.'],
+          contentText: `Verifikasi tiket: ${verificationUrl}`,
+          ticketQrPng: qr,
+          cta: { label: 'Buka kuitansi di portal', url: portalReceiptUrl },
+        }));
       } else {
-        body = encryptEmailBody([`Halo ${current.registration.owner.displayName},`, `Bukti pembayaran tim ${current.registration.teamName} ditolak.`, `Alasan: ${reason}`, 'Silakan unggah bukti pembayaran baru melalui portal peserta.'].join('\n'));
+        body = encryptRichEmail(renderTransactionalEmail({
+          title: 'Bukti pembayaran ditolak', greetingName: current.registration.owner.displayName,
+          intro: `Bukti pembayaran tim ${current.registration.teamName} belum dapat diterima.`, status: 'DITOLAK',
+          details: [{ label: 'Nomor pendaftaran', value: current.registration.registrationNumber }, { label: 'Alasan', value: reason }],
+          paragraphs: ['Unggah bukti pembayaran baru melalui portal peserta.'],
+          cta: { label: 'Unggah bukti baru', url: buildPortalReceiptUrl(current.registration.id) },
+        }));
       }
       await transaction.emailOutbox.create({ data: { to: current.registration.owner.email, subject: paid ? `Pembayaran ${current.registration.registrationNumber} terverifikasi` : `Bukti pembayaran ${current.registration.registrationNumber} ditolak`, body } });
 
