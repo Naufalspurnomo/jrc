@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useState, type ComponentProps } from 'react';
 import { Link } from 'react-router-dom';
 
+import { ConfirmationDialog } from '../../components/feedback/ConfirmationDialog';
+import { useToast } from '../../components/feedback/ToastProvider';
 import { AdminShell } from '../../components/portal/AdminShell';
 import { StatusBadge } from '../../components/portal/StatusBadge';
 import { useAuth } from '../../features/auth';
@@ -39,6 +41,9 @@ const statusLabels: Record<RegistrationState, string> = {
 };
 
 const registrationStates = Object.keys(statusLabels) as RegistrationState[];
+const deletableStates = new Set<RegistrationState>([
+  'DRAFT', 'SUBMITTED', 'UNDER_REVIEW', 'REVISION_REQUESTED', 'REJECTED', 'CANCELLED',
+]);
 
 function normalized(value: string | null | undefined): string {
   return value?.toLocaleLowerCase('id-ID') ?? '';
@@ -66,6 +71,7 @@ async function downloadXlsx(blob: Blob, filename: string): Promise<void> {
 
 export default function AdminDashboardPage({ api = registrationApi }: AdminDashboardPageProps) {
   const { loading: authLoading, user } = useAuth();
+  const { showToast } = useToast();
   const [registrations, setRegistrations] = useState<RegistrationRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState(false);
@@ -74,6 +80,9 @@ export default function AdminDashboardPage({ api = registrationApi }: AdminDashb
   const [query, setQuery] = useState('');
   const [status, setStatus] = useState<StatusFilter>('ALL');
   const [requestVersion, setRequestVersion] = useState(0);
+  const [deleteTarget, setDeleteTarget] = useState<RegistrationRecord | null>(null);
+  const [deleteConfirmation, setDeleteConfirmation] = useState('');
+  const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
     if (authLoading || !user) return undefined;
@@ -118,12 +127,41 @@ export default function AdminDashboardPage({ api = registrationApi }: AdminDashb
     try {
       const blob = await (attendance ? api.admin.exportAttendance() : api.admin.exportRegistrations());
       await downloadXlsx(blob, attendance ? 'presensi-jrc-xiv.xlsx' : 'pendaftaran-jrc-xiv.xlsx');
+      showToast(attendance ? 'Ekspor presensi berhasil diunduh.' : 'Ekspor pendaftaran berhasil diunduh.', 'success');
     } catch {
       setExportError(attendance
         ? 'Ekspor XLSX presensi gagal. Coba lagi beberapa saat lagi.'
         : 'Ekspor XLSX pendaftaran gagal. Coba lagi beberapa saat lagi.');
+      showToast('Ekspor gagal. Silakan coba lagi.', 'error');
     } finally {
       setExporting(false);
+    }
+  };
+
+  const closeDeleteDialog = () => {
+    if (deleting) return;
+    setDeleteTarget(null);
+    setDeleteConfirmation('');
+  };
+
+  const deleteRegistration = async () => {
+    if (!deleteTarget || deleting) return;
+    setDeleting(true);
+    try {
+      const outcome = await api.admin.deleteRegistration(deleteTarget.id);
+      setRegistrations((current) => current.filter(({ id }) => id !== deleteTarget.id));
+      setDeleteTarget(null);
+      setDeleteConfirmation('');
+      showToast(
+        outcome.cleanupWarnings.length
+          ? 'Pendaftaran dihapus. Sebagian berkas privat perlu dibersihkan manual.'
+          : 'Pendaftaran berhasil dihapus.',
+        outcome.cleanupWarnings.length ? 'info' : 'success',
+      );
+    } catch {
+      showToast('Pendaftaran gagal dihapus. Data tetap tersimpan.', 'error');
+    } finally {
+      setDeleting(false);
     }
   };
 
@@ -243,12 +281,19 @@ export default function AdminDashboardPage({ api = registrationApi }: AdminDashb
                         </td>
                         <td>{formatDate(registration.updatedAt)}</td>
                         <td>
-                          <Link
-                            aria-label={`Tinjau ${registration.teamName || registration.registrationNumber}`}
-                            to={`/admin/pendaftaran/${encodeURIComponent(registration.id)}`}
-                          >
-                            Tinjau →
-                          </Link>
+                          <div className="admin-row-actions">
+                            <Link
+                              aria-label={`Tinjau ${registration.teamName || registration.registrationNumber}`}
+                              to={`/admin/pendaftaran/${encodeURIComponent(registration.id)}`}
+                            >
+                              Tinjau →
+                            </Link>
+                            {user?.role === 'SUPER_ADMIN' && deletableStates.has(registration.status) && !registration.invoice && !registration.ticketStatus && (
+                              <button className="admin-delete-link" type="button" onClick={() => { setDeleteTarget(registration); setDeleteConfirmation(''); }}>
+                                Hapus
+                              </button>
+                            )}
+                          </div>
                         </td>
                       </tr>
                     ))}
@@ -259,6 +304,17 @@ export default function AdminDashboardPage({ api = registrationApi }: AdminDashb
           </section>
         )}
       </main>
+      <ConfirmationDialog
+        open={Boolean(deleteTarget)}
+        title="Hapus pendaftaran permanen?"
+        description={<p>Data tim, anggota, dan dokumen akan dihapus. Tindakan ini tidak dapat dibatalkan.</p>}
+        confirmationLabel={deleteTarget?.registrationNumber || deleteTarget?.teamName || ''}
+        confirmationValue={deleteConfirmation}
+        pending={deleting}
+        onConfirmationChange={setDeleteConfirmation}
+        onCancel={closeDeleteDialog}
+        onConfirm={() => void deleteRegistration()}
+      />
     </AdminShell>
   );
 }

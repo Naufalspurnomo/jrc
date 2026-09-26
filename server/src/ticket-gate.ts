@@ -239,6 +239,9 @@ export class TicketGateService {
       }
 
       const memberIds = [...new Set(dto.memberIds)];
+      if (memberIds.length !== dto.memberIds.length) {
+        throw new BadRequestException('Duplicate member IDs are not allowed');
+      }
       const registrationMemberIds = new Set(
         ticket.registration.members.map((member) => member.id),
       );

@@ -19,6 +19,12 @@ const oneEvent: CompetitionRecord[] = [
   { id: 'competition-2', name: 'Transporter', eventId: 'jrc-xiv', eventName: 'JRC XIV', active: true },
   { id: 'old', name: 'Old', eventId: 'jrc-xiii', eventName: 'JRC XIII', active: false },
 ];
+const VALID_TOKEN = 'A'.repeat(43);
+const OTHER_VALID_TOKEN = 'B'.repeat(43);
+
+function verificationUrl(token = VALID_TOKEN, eventId = 'jrc-xiv') {
+  return `${window.location.origin}/ticket/verify?token=${token}&eventId=${eventId}`;
+}
 
 function deferred<T>() {
   let resolve!: (value: T) => void;
@@ -54,7 +60,7 @@ function renderPage(api = createApi()) {
   return { api, ...render(<MemoryRouter><AuthProvider api={api}><AdminScannerPage api={api} /></AuthProvider></MemoryRouter>) };
 }
 
-async function enterTokenAndInspect(user: ReturnType<typeof userEvent.setup>, token = 'opaque-token') {
+async function enterTokenAndInspect(user: ReturnType<typeof userEvent.setup>, token = VALID_TOKEN) {
   await user.type(screen.getByLabelText('Kode QR atau token'), token);
   await user.click(screen.getByRole('button', { name: 'Periksa tiket' }));
 }
@@ -83,7 +89,7 @@ describe('AdminScannerPage', () => {
     expect(screen.getByRole('alert')).toHaveTextContent('Pilih acara aktif');
     await user.selectOptions(select, 'jrc-xv');
     await user.click(screen.getByRole('button', { name: 'Periksa tiket' }));
-    await waitFor(() => expect(api.gate.inspect).toHaveBeenCalledWith({ eventId: 'jrc-xv', token: 'opaque-token' }));
+    await waitFor(() => expect(api.gate.inspect).toHaveBeenCalledWith({ eventId: 'jrc-xv', token: VALID_TOKEN }));
   });
 
   it('fails closed with WRONG_EVENT when a verification URL conflicts with explicit selection', async () => {
@@ -93,7 +99,7 @@ describe('AdminScannerPage', () => {
       { id: 'other', name: 'Other', eventId: 'jrc-xv', eventName: 'JRC XV', active: true },
     ]));
     await user.selectOptions(await screen.findByRole('combobox', { name: 'Acara aktif' }), 'jrc-xiv');
-    await enterTokenAndInspect(user, 'https://tickets.test/verify?token=abc&eventId=jrc-xv');
+    await enterTokenAndInspect(user, verificationUrl(VALID_TOKEN, 'jrc-xv'));
     expect(api.gate.inspect).not.toHaveBeenCalled();
     expect(screen.getByRole('status')).toHaveTextContent('Acara tidak sesuai');
     expect(screen.getByRole('combobox', { name: 'Acara aktif' })).toHaveValue('jrc-xiv');
@@ -105,13 +111,13 @@ describe('AdminScannerPage', () => {
       ...oneEvent,
       { id: 'other', name: 'Other', eventId: 'jrc-xv', eventName: 'JRC XV', active: true },
     ]));
-    await enterTokenAndInspect(user, 'https://tickets.test/verify?token=abc&eventId=jrc-xv');
-    await waitFor(() => expect(api.gate.inspect).toHaveBeenCalledWith({ eventId: 'jrc-xv', token: 'abc' }));
+    await enterTokenAndInspect(user, verificationUrl(VALID_TOKEN, 'jrc-xv'));
+    await waitFor(() => expect(api.gate.inspect).toHaveBeenCalledWith({ eventId: 'jrc-xv', token: VALID_TOKEN }));
     expect(screen.getByRole('combobox', { name: 'Acara aktif' })).toHaveValue('jrc-xv');
 
     await user.clear(screen.getByLabelText('Kode QR atau token'));
     await user.selectOptions(screen.getByRole('combobox', { name: 'Acara aktif' }), '');
-    await enterTokenAndInspect(user, 'https://tickets.test/verify?token=xyz&eventId=forged');
+    await enterTokenAndInspect(user, verificationUrl(OTHER_VALID_TOKEN, 'forged'));
     expect(api.gate.inspect).toHaveBeenCalledTimes(1);
     expect(screen.getByRole('status')).toHaveTextContent('Acara tidak sesuai');
   });
@@ -134,7 +140,7 @@ describe('AdminScannerPage', () => {
     await user.click(screen.getByRole('checkbox', { name: /Ayu/ }));
     fireEvent.click(confirm);
     fireEvent.click(confirm);
-    expect(api.gate.redeem).toHaveBeenCalledWith({ eventId: 'jrc-xiv', token: 'opaque-token', memberIds: ['leader'] });
+    expect(api.gate.redeem).toHaveBeenCalledWith({ eventId: 'jrc-xiv', token: VALID_TOKEN, memberIds: ['leader'] });
     expect(confirm).toBeDisabled();
     await act(async () => pending.resolve({ result: 'CHECKED_IN' }));
     expect(await screen.findByText('Check-in berhasil')).toBeInTheDocument();
@@ -197,13 +203,13 @@ describe('AdminScannerPage', () => {
     await enterTokenAndInspect(user);
     await user.click(await screen.findByRole('checkbox', { name: /Bima/ }));
     await user.click(screen.getByRole('button', { name: 'Konfirmasi kehadiran' }));
-    expect(api.gate.redeem).toHaveBeenCalledWith({ token: 'opaque-token', eventId: 'jrc-xiv', memberIds: ['member'] });
+    expect(api.gate.redeem).toHaveBeenCalledWith({ token: VALID_TOKEN, eventId: 'jrc-xiv', memberIds: ['member'] });
 
     vi.mocked(api.gate.inspect).mockResolvedValue({ result: 'ALREADY_CHECKED_IN', checkedInAt: '2026-09-23T18:00:00.000Z', members: [] });
     await user.click(screen.getByRole('button', { name: 'Periksa tiket' }));
     await user.click(await screen.findByRole('button', { name: 'Serahkan JRC Kit' }));
     expect(window.confirm).toHaveBeenCalled();
-    expect(api.gate.handoverKit).toHaveBeenCalledWith({ token: 'opaque-token', eventId: 'jrc-xiv' });
+    expect(api.gate.handoverKit).toHaveBeenCalledWith({ token: VALID_TOKEN, eventId: 'jrc-xiv' });
     expect(await screen.findByText('JRC Kit sudah diserahkan')).toBeInTheDocument();
   });
 
@@ -217,6 +223,78 @@ describe('AdminScannerPage', () => {
     expect(screen.getAllByText(/koneksi/).length).toBeGreaterThan(0);
   });
 
+  it.each([
+    ['random text', 'not a ticket'],
+    ['embedded token', `prefix-${VALID_TOKEN}`],
+    ['token with surrounding whitespace', ` ${VALID_TOKEN} `],
+    ['foreign origin', `https://evil.test/ticket/verify?token=${VALID_TOKEN}&eventId=jrc-xiv`],
+    ['lookalike path', `${window.location.origin}/ticket/verify/extra?token=${VALID_TOKEN}&eventId=jrc-xiv`],
+    ['missing eventId', `${window.location.origin}/ticket/verify?token=${VALID_TOKEN}`],
+    ['blank eventId', `${window.location.origin}/ticket/verify?token=${VALID_TOKEN}&eventId=%20`],
+    ['duplicate token', `${window.location.origin}/ticket/verify?token=${VALID_TOKEN}&token=${OTHER_VALID_TOKEN}&eventId=jrc-xiv`],
+    ['duplicate eventId', `${window.location.origin}/ticket/verify?token=${VALID_TOKEN}&eventId=jrc-xiv&eventId=jrc-xiv`],
+    ['unknown field', `${window.location.origin}/ticket/verify?token=${VALID_TOKEN}&eventId=jrc-xiv&extra=1`],
+    ['URL credentials', `${window.location.protocol}//user:pass@${window.location.host}/ticket/verify?token=${VALID_TOKEN}&eventId=jrc-xiv`],
+    ['URL hash', `${window.location.origin}/ticket/verify?token=${VALID_TOKEN}&eventId=jrc-xiv#fragment`],
+    ['overlong eventId', `${window.location.origin}/ticket/verify?token=${VALID_TOKEN}&eventId=${'x'.repeat(201)}`],
+    ['javascript URL', `javascript:?token=${VALID_TOKEN}&eventId=jrc-xiv`],
+    ['data URL', `data:text/plain,?token=${VALID_TOKEN}&eventId=jrc-xiv`],
+    ['malformed URL', `https://[invalid]/ticket/verify?token=${VALID_TOKEN}&eventId=jrc-xiv`],
+  ])('rejects invalid manual input: %s', async (_case, input) => {
+    const user = userEvent.setup();
+    const { api } = renderPage();
+    await screen.findByRole('combobox', { name: 'Acara aktif' });
+    await enterTokenAndInspect(user, input);
+    expect(api.gate.inspect).not.toHaveBeenCalled();
+    expect(screen.getByRole('alert')).toHaveTextContent('Kode QR atau token tidak valid');
+  });
+
+  it('clears prior verification state after invalid input', async () => {
+    const user = userEvent.setup();
+    const { api } = renderPage();
+    await screen.findByRole('combobox', { name: 'Acara aktif' });
+    await enterTokenAndInspect(user);
+    expect(await screen.findByText('Valid')).toBeInTheDocument();
+    await user.clear(screen.getByLabelText('Kode QR atau token'));
+    await enterTokenAndInspect(user, 'random QR content');
+    expect(api.gate.inspect).toHaveBeenCalledTimes(1);
+    expect(screen.queryByText('Valid')).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Konfirmasi kehadiran' })).not.toBeInTheDocument();
+  });
+
+  it.each([
+    ['random QR', 'random QR content'],
+    ['foreign URL', `https://evil.test/ticket/verify?token=${VALID_TOKEN}&eventId=jrc-xiv`],
+    ['duplicate fields', `${window.location.origin}/ticket/verify?token=${VALID_TOKEN}&token=${OTHER_VALID_TOKEN}&eventId=jrc-xiv`],
+  ])('stops the camera and rejects %s without inspection', async (_case, input) => {
+    let callback!: (result: { getText(): string } | undefined) => void;
+    const controlsStop = vi.fn();
+    zxingMocks.decodeFromVideoDevice.mockImplementation(async (_id, _video, cb) => { callback = cb; return { stop: controlsStop }; });
+    const user = userEvent.setup();
+    const { api } = renderPage();
+    await screen.findByRole('combobox', { name: 'Acara aktif' });
+    await user.click(screen.getByRole('button', { name: 'Aktifkan kamera' }));
+    await waitFor(() => expect(zxingMocks.decodeFromVideoDevice).toHaveBeenCalledTimes(1));
+    act(() => callback({ getText: () => input }));
+    expect(api.gate.inspect).not.toHaveBeenCalled();
+    expect(await screen.findByRole('alert')).toHaveTextContent('Kode QR atau token tidak valid');
+    expect(controlsStop).toHaveBeenCalledTimes(1);
+  });
+
+  it('accepts an exact same-origin verification URL from the camera', async () => {
+    let callback!: (result: { getText(): string } | undefined) => void;
+    const controlsStop = vi.fn();
+    zxingMocks.decodeFromVideoDevice.mockImplementation(async (_id, _video, cb) => { callback = cb; return { stop: controlsStop }; });
+    const user = userEvent.setup();
+    const { api } = renderPage();
+    await screen.findByRole('combobox', { name: 'Acara aktif' });
+    await user.click(screen.getByRole('button', { name: 'Aktifkan kamera' }));
+    await waitFor(() => expect(zxingMocks.decodeFromVideoDevice).toHaveBeenCalledTimes(1));
+    act(() => callback({ getText: () => verificationUrl() }));
+    await waitFor(() => expect(api.gate.inspect).toHaveBeenCalledWith({ token: VALID_TOKEN, eventId: 'jrc-xiv' }));
+    expect(controlsStop).toHaveBeenCalledTimes(1);
+  });
+
   it('locks a camera session after the first decode and makes one inspect request', async () => {
     let callback!: (result: { getText(): string } | undefined) => void;
     const controlsStop = vi.fn();
@@ -227,8 +305,8 @@ describe('AdminScannerPage', () => {
     await user.click(screen.getByRole('button', { name: 'Aktifkan kamera' }));
     await waitFor(() => expect(zxingMocks.decodeFromVideoDevice).toHaveBeenCalledTimes(1));
     act(() => {
-      callback({ getText: () => 'camera-token' });
-      callback({ getText: () => 'camera-token' });
+      callback({ getText: () => VALID_TOKEN });
+      callback({ getText: () => VALID_TOKEN });
     });
     await waitFor(() => expect(api.gate.inspect).toHaveBeenCalledTimes(1));
     expect(controlsStop).toHaveBeenCalledTimes(1);

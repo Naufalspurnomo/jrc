@@ -1,7 +1,9 @@
 import { PaymentStatus, TeamMemberRole, TicketStatus } from '@prisma/client';
+import { readFileSync } from 'node:fs';
 import { describe, expect, it, vi } from 'vitest';
 import { GateController, TicketGateService } from '../src/ticket-gate';
 import { ROLES_KEY } from '../src/auth';
+import { hashTicketToken } from '../src/common/ticket-token';
 import { PrismaService } from '../src/prisma.service';
 
 const token = 'A'.repeat(43);
@@ -28,6 +30,69 @@ describe('GateController authorization', () => {
       'GATE_STAFF',
       'SUPER_ADMIN',
     ]);
+  });
+});
+
+describe('TicketGateService adversarial verification', () => {
+  it.each([
+    ['', 'empty'],
+    ['A'.repeat(42), 'short'],
+    ['A'.repeat(44), 'long'],
+    [`${'A'.repeat(42)}+`, 'non-base64url alphabet'],
+  ])('rejects %s token before hashing or querying (%s)', async (candidate) => {
+    const findUnique = vi.fn();
+    const service = new TicketGateService({ ticket: { findUnique } } as unknown as PrismaService);
+
+    await expect(service.verify({ token: candidate, eventId: 'event' })).resolves.toEqual({ result: 'UNKNOWN' });
+    expect(findUnique).not.toHaveBeenCalled();
+  });
+
+  it('hashes and queries an unknown valid-shape token without exposing it', async () => {
+    const findUnique = vi.fn().mockResolvedValue(null);
+    const service = new TicketGateService({ ticket: { findUnique } } as unknown as PrismaService);
+
+    await expect(service.verify({ token, eventId: 'event' })).resolves.toEqual({ result: 'UNKNOWN' });
+    expect(findUnique).toHaveBeenCalledWith(expect.objectContaining({
+      where: { tokenHash: hashTicketToken(token) },
+    }));
+    expect(JSON.stringify(findUnique.mock.calls)).not.toContain(`"token":"${token}"`);
+  });
+
+  it.each([
+    ['wrong event', { ...ticket, status: TicketStatus.ACTIVE }, 'other-event', 'WRONG_EVENT'],
+    ['revoked', { ...ticket, status: TicketStatus.REVOKED }, 'event', 'REVOKED'],
+    ['inactive', { ...ticket, status: TicketStatus.INACTIVE }, 'event', 'NOT_PAID'],
+    ['unpaid', { ...ticket, status: TicketStatus.ACTIVE, registration: { ...ticket.registration,
+      invoice: { paymentStatus: PaymentStatus.UNPAID } } }, 'event', 'NOT_PAID'],
+  ])('classifies %s tickets without identity disclosure', async (_label, record, eventId, result) => {
+    const service = new TicketGateService({ ticket: { findUnique: vi.fn().mockResolvedValue(record) } } as unknown as PrismaService);
+    await expect(service.verify({ token, eventId })).resolves.toEqual({ result });
+  });
+
+  it('returns limited public identity for a valid paid ticket', async () => {
+    const active = { ...ticket, status: TicketStatus.ACTIVE, checkedInAt: null,
+      checkedInById: null, checkedInBy: null };
+    const service = new TicketGateService({ ticket: { findUnique: vi.fn().mockResolvedValue(active) } } as unknown as PrismaService);
+
+    const result = await service.verify({ token, eventId: 'event' });
+    expect(result).toEqual({
+      result: 'VALID', teamName: 'Team', institution: 'PENS', competitionName: 'Sumo',
+      registrationNumber: 'JRC-1', eventId: 'event', eventName: 'JRC',
+    });
+    expect(result).not.toHaveProperty('members');
+    expect(result).not.toHaveProperty('checkedInAt');
+    expect(result).not.toHaveProperty('kitHandedOverAt');
+    expect(JSON.stringify(result)).not.toContain(token);
+  });
+});
+
+describe('Ticket schema constraints', () => {
+  it('enforces one ticket per registration and globally unique token hashes', () => {
+    const schema = readFileSync('prisma/schema.prisma', 'utf8');
+    const ticketModel = schema.match(/model Ticket \{[\s\S]*?\n\}/)?.[0];
+    expect(ticketModel).toBeDefined();
+    expect(ticketModel).toMatch(/registrationId\s+String\s+@unique/);
+    expect(ticketModel).toMatch(/tokenHash\s+String\s+@unique/);
   });
 });
 
@@ -150,6 +215,15 @@ describe('TicketGateService attendance and kit handover', () => {
     await expect(new TicketGateService(prisma as unknown as PrismaService).redeem(
       'operator-1', { token, eventId: 'event', memberIds: ['693bc9a7-f93f-4811-ae75-15f274a489af'] },
       { requestId: 'request', ipAddress: null })).rejects.toThrow('Selected members do not belong');
+  });
+
+  it('rejects duplicate member IDs instead of silently collapsing the attendance confirmation', async () => {
+    const transaction = { ticket: { findUnique: vi.fn().mockResolvedValue(ticket) } };
+    const prisma = { $transaction: vi.fn((fn: (tx: typeof transaction) => Promise<unknown>) => fn(transaction)) };
+
+    await expect(new TicketGateService(prisma as unknown as PrismaService).redeem(
+      'operator-1', { token, eventId: 'event', memberIds: [memberId, memberId] },
+      { requestId: 'request', ipAddress: null })).rejects.toThrow('Duplicate member IDs');
   });
 
   it('hands over the kit exactly once and returns the original handover on repeat', async () => {

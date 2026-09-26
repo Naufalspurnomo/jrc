@@ -459,6 +459,11 @@ export interface PaymentReviewInput {
   reason: string;
 }
 
+export interface RegistrationDeletionOutcome {
+  deleted: true;
+  cleanupWarnings: string[];
+}
+
 export interface RegistrationApi {
   auth: {
     me(): Promise<AuthProbe>;
@@ -499,6 +504,7 @@ export interface RegistrationApi {
   admin: {
     listRegistrations(): Promise<RegistrationRecord[]>;
     getRegistration(registrationId: string): Promise<RegistrationRecord>;
+    deleteRegistration(registrationId: string): Promise<RegistrationDeletionOutcome>;
     reviewRegistration(registrationId: string, input: ReviewInput): Promise<RegistrationRecord>;
     exportRegistrations(): Promise<Blob>;
     exportAttendance(): Promise<Blob>;
@@ -597,6 +603,10 @@ export function createRegistrationApi(client = new ApiClient()): RegistrationApi
     admin: {
       listRegistrations: () => client.request<RegistrationRecord[]>(API_PATHS.admin.registrations.root),
       getRegistration: (registrationId) => client.request<RegistrationRecord>(API_PATHS.admin.registrations.byId(registrationId)),
+      deleteRegistration: (registrationId) => client.request<RegistrationDeletionOutcome>(
+        API_PATHS.admin.registrations.byId(registrationId),
+        { method: 'DELETE' },
+      ),
       reviewRegistration: (registrationId, input) => client.request<RegistrationRecord>(
         API_PATHS.admin.registrations.review(registrationId),
         { method: 'POST', body: input },

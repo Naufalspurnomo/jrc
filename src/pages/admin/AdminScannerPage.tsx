@@ -1,6 +1,7 @@
 import { BrowserQRCodeReader, type IScannerControls } from '@zxing/browser';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
+import { useToast } from '../../components/feedback/ToastProvider';
 import { AdminShell } from '../../components/portal/AdminShell';
 import {
   registrationApi,
@@ -24,15 +25,37 @@ type GateVerification = TicketVerification & {
 };
 type ParsedScan = { token: string; eventId: string };
 
+const TICKET_TOKEN_PATTERN = /^[A-Za-z0-9_-]{43}$/;
+const VERIFICATION_PATH = '/ticket/verify';
+
 function parseScan(value: string): ParsedScan | null {
-  const text = value.trim();
-  if (!text) return null;
+  if (value !== value.trim()) return null;
+  const text = value;
+  if (TICKET_TOKEN_PATTERN.test(text)) return { token: text, eventId: '' };
+
+  let url: URL;
   try {
-    const url = new URL(text, window.location.origin);
-    const token = url.searchParams.get('token')?.trim();
-    if (token) return { token, eventId: url.searchParams.get('eventId')?.trim() ?? '' };
-  } catch { /* Opaque tokens remain valid manual input. */ }
-  return { token: text, eventId: '' };
+    url = new URL(text);
+  } catch {
+    return null;
+  }
+
+  if (
+    url.origin !== window.location.origin
+    || url.pathname !== VERIFICATION_PATH
+    || url.username
+    || url.password
+    || url.hash
+  ) return null;
+
+  const keys = [...url.searchParams.keys()];
+  if (keys.length !== 2 || keys.filter((key) => key === 'token').length !== 1 || keys.filter((key) => key === 'eventId').length !== 1) return null;
+
+  const token = url.searchParams.get('token') ?? '';
+  const eventId = url.searchParams.get('eventId') ?? '';
+  if (!TICKET_TOKEN_PATTERN.test(token) || !eventId.trim() || eventId.length > 200) return null;
+
+  return { token, eventId };
 }
 
 function stopVideoTracks(video: HTMLVideoElement | null): void {
@@ -61,6 +84,7 @@ const ROLE_LABELS: Record<GateMember['role'], string> = {
 };
 
 export default function AdminScannerPage({ api = registrationApi }: AdminScannerPageProps) {
+  const { showToast } = useToast();
   const [events, setEvents] = useState<Array<{ id: string; name: string }>>([]);
   const [eventId, setEventId] = useState('');
   const [eventsLoading, setEventsLoading] = useState(true);
@@ -130,8 +154,10 @@ export default function AdminScannerPage({ api = registrationApi }: AdminScanner
   const resolveRequest = useCallback((value: string): TicketRequest | null => {
     const parsed = parseScan(value);
     if (!parsed) {
-      setRequestError('Kode tiket wajib diisi.');
+      setRequestError('Kode QR atau token tidak valid. Gunakan token tiket asli atau URL verifikasi resmi.');
       setVerification(null);
+      setInspectedRequest(null);
+      setSelectedMemberIds([]);
       return null;
     }
     if (parsed.eventId) {
@@ -189,11 +215,13 @@ export default function AdminScannerPage({ api = registrationApi }: AdminScanner
       if (!mountedRef.current) return;
       setVerification(result);
       setSelectedMemberIds([]);
+      showToast('Kehadiran berhasil dikonfirmasi.', 'success');
     } catch {
       if (!mountedRef.current) return;
       setVerification(null);
       setInspectedRequest(null);
       setRequestError('Check-in gagal dikonfirmasi. Tiket belum ditukarkan; periksa koneksi lalu coba lagi.');
+      showToast('Konfirmasi kehadiran gagal.', 'error');
     } finally {
       requestLockedRef.current = false;
       if (mountedRef.current) setRequesting(false);
@@ -211,11 +239,13 @@ export default function AdminScannerPage({ api = registrationApi }: AdminScanner
       if (!mountedRef.current) return;
       setVerification(result);
       setSelectedMemberIds([]);
+      showToast('Penyerahan JRC Kit berhasil dicatat.', 'success');
     } catch {
       if (!mountedRef.current) return;
       setVerification(null);
       setInspectedRequest(null);
       setRequestError('Penyerahan JRC Kit gagal. Kit belum tercatat; periksa koneksi lalu coba lagi.');
+      showToast('Penyerahan JRC Kit gagal dicatat.', 'error');
     } finally {
       requestLockedRef.current = false;
       if (mountedRef.current) setRequesting(false);

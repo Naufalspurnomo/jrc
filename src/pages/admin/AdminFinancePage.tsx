@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { Navigate } from 'react-router-dom';
 
+import { useToast } from '../../components/feedback/ToastProvider';
 import { AdminShell } from '../../components/portal/AdminShell';
 import { PaymentStatusNotice } from '../../components/portal/PaymentStatusNotice';
 import { useAuth } from '../../features/auth';
@@ -146,6 +147,7 @@ function formatFileSize(bytes: number): string {
 
 export default function AdminFinancePage({ api = registrationApi }: AdminFinancePageProps) {
   const { loading: authLoading, logout, user } = useAuth();
+  const { showToast } = useToast();
   const [invoices, setInvoices] = useState<SafeFinanceInvoice[]>([]);
   const [loading, setLoading] = useState(false);
   const [loadError, setLoadError] = useState(false);
@@ -205,11 +207,13 @@ export default function AdminFinancePage({ api = registrationApi }: AdminFinance
         delete next[invoiceId];
         return next;
       });
+      showToast(status === 'PAID' ? 'Pembayaran berhasil diverifikasi.' : 'Bukti pembayaran ditolak.', 'success');
     } catch {
       setDecisionErrors((current) => ({
         ...current,
         [invoiceId]: 'Keputusan pembayaran gagal disimpan. Coba lagi.',
       }));
+      showToast('Keputusan pembayaran gagal disimpan.', 'error');
     } finally {
       setSavingIds((current) => {
         const next = new Set(current);

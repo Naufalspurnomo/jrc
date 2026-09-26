@@ -1,6 +1,7 @@
 import { useEffect, useState, type FormEvent } from 'react';
 import { Link, useParams } from 'react-router-dom';
 
+import { useToast } from '../../components/feedback/ToastProvider';
 import { PaymentStatusNotice } from '../../components/portal/PaymentStatusNotice';
 import { PortalShell } from '../../components/portal/PortalShell';
 import {
@@ -40,6 +41,7 @@ function formatDateTime(value: string): string {
 }
 
 export default function PortalPaymentPage({ api = registrationApi }: PortalPaymentPageProps) {
+  const { showToast } = useToast();
   const { registrationId } = useParams<{ registrationId: string }>();
   const [registration, setRegistration] = useState<RegistrationRecord | null>(null);
   const [invoice, setInvoice] = useState<InvoiceRecord | null>(null);
@@ -102,8 +104,10 @@ export default function PortalPaymentPage({ api = registrationApi }: PortalPayme
       const updatedInvoice = await api.invoices.uploadProof(invoice.id, formData);
       setInvoice(updatedInvoice);
       setProof(null);
+      showToast('Bukti pembayaran berhasil diunggah.', 'success');
     } catch {
       setUploadError('Bukti pembayaran gagal diunggah. Silakan coba lagi.');
+      showToast('Bukti pembayaran gagal diunggah.', 'error');
     } finally {
       setUploading(false);
     }

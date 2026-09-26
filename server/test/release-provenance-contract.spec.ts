@@ -107,14 +107,23 @@ describe('release artifact provenance contract', () => {
     expect(dockerfile).toContain('HEALTHCHECK');
   });
 
-  it('uses a minimal migration runtime without build toolchain, source, or dev runner', () => {
+  it('uses a minimal migration runtime with compiled seed and explicit commands', () => {
     expect(dockerfile).toMatch(/FROM node:22-bookworm-slim AS migration/);
-    const migration = dockerfile.match(/FROM node:22-bookworm-slim AS migration[\s\S]*?(?=\nFROM .* AS production)/)?.[0] ?? '';
+    const migration = dockerfile.match(/FROM node:22-bookworm-slim AS migration[\s\S]*?(?=\nFROM .* AS runtime-dependencies)/)?.[0] ?? '';
     expect(migration).not.toMatch(/apt-get install[^\n]*(?:python3|make|g\+\+)/);
     expect(migration).not.toContain('COPY . .');
     expect(migration).not.toContain('/app/src');
     expect(migration).not.toContain('tsx');
     expect(migration).toContain('prisma migrate deploy');
+    expect(migration).toContain('node dist/prisma/seed.js');
+    expect(migration).toContain('COPY --from=build --chown=node:node /app/dist/prisma ./dist/prisma');
+  });
+
+  it('keeps Prisma tooling and compiled seed out of the API runtime', () => {
+    const production = dockerfile.match(/FROM node:22-bookworm-slim AS production[\s\S]*$/)?.[0] ?? '';
+    expect(production).not.toContain('/app/prisma');
+    expect(production).not.toContain('/app/dist/prisma');
+    expect(dockerfile).toContain('rm -rf node_modules/prisma node_modules/@prisma/config node_modules/deepmerge-ts');
   });
 
   it('documents explicit local values, image Config.Label inspection, and fresh acceptance only', () => {

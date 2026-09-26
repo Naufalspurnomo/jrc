@@ -87,6 +87,31 @@ describe('ApiClient', () => {
     );
   });
 
+  it('deletes an admin registration with CSRF protection', async () => {
+    const fetcher = vi.fn<typeof fetch>()
+      .mockResolvedValueOnce(new Response(JSON.stringify({ csrfToken: 'csrf-123' }), {
+        headers: { 'Content-Type': 'application/json' },
+      }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ deleted: true, cleanupWarnings: [] }), {
+        headers: { 'Content-Type': 'application/json' },
+      }));
+    const api = createRegistrationApi(new ApiClient(fetcher));
+
+    await expect(api.admin.deleteRegistration('registration/1')).resolves.toEqual({
+      deleted: true,
+      cleanupWarnings: [],
+    });
+    expect(fetcher).toHaveBeenNthCalledWith(
+      2,
+      '/api/admin/registrations/registration%2F1',
+      expect.objectContaining({
+        credentials: 'include',
+        method: 'DELETE',
+        headers: expect.objectContaining({ 'X-CSRF-Token': 'csrf-123' }),
+      }),
+    );
+  });
+
   it('downloads authenticated admin XLSX exports as binary blobs', async () => {
     const mime = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
     const fetcher = vi.fn<typeof fetch>().mockImplementation(async () => new Response(new Uint8Array([80, 75, 3, 4]), {

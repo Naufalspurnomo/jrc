@@ -2,6 +2,7 @@ import {
   BadRequestException,
   Body,
   Controller,
+  Delete,
   Get,
   Injectable,
   NotFoundException,
@@ -39,6 +40,7 @@ import {
 import { assertRegistrationTransition } from './domain/registration-state';
 import { ManualPaymentProvider } from './payments/manual-payment.provider';
 import { PrismaService } from './prisma.service';
+import { PrivateStorageService } from './private-storage';
 import { encryptRichEmail } from './email-outbox';
 import { buildRegistrationPortalUrl, renderTransactionalEmail } from './email-template';
 
@@ -50,6 +52,15 @@ const REVIEW_STATUSES = [
   RegistrationStatus.APPROVED,
   RegistrationStatus.REVISION_REQUESTED,
   RegistrationStatus.REJECTED,
+] as const;
+
+const DELETABLE_STATUSES = [
+  RegistrationStatus.DRAFT,
+  RegistrationStatus.SUBMITTED,
+  RegistrationStatus.UNDER_REVIEW,
+  RegistrationStatus.REVISION_REQUESTED,
+  RegistrationStatus.REJECTED,
+  RegistrationStatus.CANCELLED,
 ] as const;
 
 type ReviewStatus = (typeof REVIEW_STATUSES)[number];
@@ -488,7 +499,76 @@ export class AdminRegistrationsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly manualPayment: ManualPaymentProvider,
+    private readonly storage: PrivateStorageService = new PrivateStorageService(),
   ) {}
+
+  async delete(
+    actorId: string,
+    id: string,
+    audit: AuditContext,
+  ): Promise<{ deleted: true; cleanupWarnings: string[] }> {
+    const storageKeys = await this.prisma.$transaction(async (transaction) => {
+      const current = await transaction.registration.findUnique({
+        where: { id },
+        select: {
+          id: true,
+          registrationNumber: true,
+          teamName: true,
+          status: true,
+          owner: { select: { id: true, email: true, displayName: true } },
+          documents: { select: { storageKey: true } },
+          invoice: { select: { id: true } },
+          ticket: { select: { id: true } },
+        },
+      });
+      if (!current) throw new NotFoundException('Registration not found');
+      if (
+        !DELETABLE_STATUSES.includes(current.status as (typeof DELETABLE_STATUSES)[number]) ||
+        current.invoice ||
+        current.ticket
+      ) {
+        throw new BadRequestException('Registration is protected and cannot be deleted');
+      }
+
+      const deleted = await transaction.registration.deleteMany({
+        where: { id, status: current.status, invoice: null, ticket: null },
+      });
+      if (deleted.count !== 1) {
+        throw new BadRequestException('Registration changed before deletion was completed');
+      }
+
+      const documentStorageKeys = current.documents.map(({ storageKey }) => storageKey);
+      await transaction.auditLog.create({
+        data: {
+          actorId,
+          action: 'REGISTRATION_DELETED',
+          entityType: 'Registration',
+          entityId: id,
+          before: {
+            registrationNumber: current.registrationNumber,
+            teamName: current.teamName,
+            status: current.status,
+            owner: current.owner,
+            documentStorageKeys,
+          },
+          reason: 'Super Admin removed an eligible registration',
+          requestId: audit.requestId,
+          ipAddress: audit.ipAddress,
+        },
+      });
+      return documentStorageKeys;
+    }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
+
+    const cleanupWarnings: string[] = [];
+    for (const storageKey of storageKeys) {
+      try {
+        await this.storage.delete(storageKey);
+      } catch {
+        cleanupWarnings.push('Satu berkas privat gagal dibersihkan.');
+      }
+    }
+    return { deleted: true, cleanupWarnings };
+  }
 
   async list(
     query: AdminRegistrationListDto,
@@ -852,6 +932,19 @@ export class AdminRegistrationsController {
     @Req() request: AuthenticatedRequest,
   ): Promise<SerializedAdminRegistration> {
     return this.registrations.review(user.id, id, dto, {
+      requestId: request.requestId ?? randomUUID(),
+      ipAddress: request.ip || request.socket.remoteAddress || null,
+    });
+  }
+
+  @Roles(Role.SUPER_ADMIN)
+  @Delete(':id')
+  deleteRegistration(
+    @CurrentUser() user: AuthPrincipal,
+    @Param('id', new ParseUUIDPipe()) id: string,
+    @Req() request: AuthenticatedRequest,
+  ): Promise<{ deleted: true; cleanupWarnings: string[] }> {
+    return this.registrations.delete(user.id, id, {
       requestId: request.requestId ?? randomUUID(),
       ipAddress: request.ip || request.socket.remoteAddress || null,
     });

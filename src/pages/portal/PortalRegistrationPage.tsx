@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 
+import { useToast } from '../../components/feedback/ToastProvider';
 import { PortalShell } from '../../components/portal/PortalShell';
 import { competitions as competitionCatalog } from '../../content/jrc';
 import { useAuth } from '../../features/auth/AuthProvider';
@@ -85,6 +86,7 @@ function autosaveLabel(state: AutosaveState, savedAt: Date | null): string {
 export default function PortalRegistrationPage({ api = registrationApi }: PortalRegistrationPageProps) {
   const navigate = useNavigate();
   const { user, loading: authLoading } = useAuth();
+  const { showToast } = useToast();
   // While the session probe is in flight the user object is still null, so
   // treating that as "email not verified" would send a participant who *is*
   // verified to the verification page. Wait for the probe to settle.
@@ -435,8 +437,10 @@ export default function PortalRegistrationPage({ api = registrationApi }: Portal
     try {
       await api.registrations.removeMember(registrationId, member.id);
       setMembers((current) => current.filter((candidate) => candidate.id !== member.id));
+      showToast('Anggota berhasil dihapus.', 'success');
     } catch {
       setError('Anggota gagal dihapus. Silakan coba lagi.');
+      showToast('Anggota gagal dihapus.', 'error');
     } finally {
       setRemovingMemberIds((current) => current.filter((memberId) => memberId !== member.id));
     }
@@ -584,8 +588,10 @@ export default function PortalRegistrationPage({ api = registrationApi }: Portal
       setSelectedPhotoPerson('');
       if (documentInputRef.current) documentInputRef.current.value = '';
       setMessage('Dokumen berhasil diunggah.');
+      showToast('Dokumen berhasil diunggah.', 'success');
     } catch (uploadError) {
       setError(describeDocumentUploadError(uploadError, documentFile, MAX_UPLOAD_BYTES));
+      showToast('Dokumen gagal diunggah.', 'error');
     } finally {
       setUploading(false);
     }
@@ -600,8 +606,10 @@ export default function PortalRegistrationPage({ api = registrationApi }: Portal
       await api.registrations.removeDocument(registrationId, document.id);
       setDocuments((current) => current.filter((candidate) => candidate.id !== document.id));
       setMessage('Dokumen dihapus.');
+      showToast('Dokumen berhasil dihapus.', 'success');
     } catch {
       setError('Dokumen gagal dihapus. Silakan coba lagi.');
+      showToast('Dokumen gagal dihapus.', 'error');
     } finally {
       setRemovingDocumentIds((current) => current.filter((id) => id !== document.id));
     }
@@ -668,6 +676,7 @@ export default function PortalRegistrationPage({ api = registrationApi }: Portal
     try {
       await flushAutosave();
       await api.registrations.submit(registrationId);
+      showToast('Pendaftaran berhasil dikirim.', 'success');
       navigate('/portal');
     } catch (submitError) {
       if (submitError instanceof ApiError && submitError.status === 403) {

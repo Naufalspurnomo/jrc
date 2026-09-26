@@ -12,7 +12,9 @@ RUN npm ci
 COPY . .
 RUN npx prisma generate \
     && npm run build \
-    && test -f dist/src/main.js
+    && npx tsc --project tsconfig.seed.json \
+    && test -f dist/src/main.js \
+    && test -f dist/prisma/seed.js
 
 FROM build AS migration-dependencies
 
@@ -34,11 +36,12 @@ RUN apt-get update \
 COPY --from=migration-dependencies --chown=node:node /app/package.json ./
 COPY --from=migration-dependencies --chown=node:node /app/node_modules ./node_modules
 COPY --from=build --chown=node:node /app/prisma ./prisma
+COPY --from=build --chown=node:node /app/dist/prisma ./dist/prisma
 
 USER node
 
-ENTRYPOINT ["tini", "--"]
-CMD ["sh", "-c", "exec npx prisma migrate deploy"]
+ENTRYPOINT ["tini", "--", "sh", "-c", "case \"${1:-migrate}\" in migrate) exec npx --no-install prisma migrate deploy ;; seed) exec node dist/prisma/seed.js ;; *) echo 'Usage: migrate | seed' >&2; exit 64 ;; esac", "jrc-migration"]
+CMD ["migrate"]
 
 FROM build AS runtime-dependencies
 
@@ -64,7 +67,7 @@ RUN apt-get update \
 
 COPY --from=runtime-dependencies --chown=node:node /app/package.json ./
 COPY --from=runtime-dependencies --chown=node:node /app/node_modules ./node_modules
-COPY --from=build --chown=node:node /app/dist ./dist
+COPY --from=build --chown=node:node /app/dist/src ./dist/src
 COPY --from=build --chown=node:node /app/assets ./assets
 
 USER node

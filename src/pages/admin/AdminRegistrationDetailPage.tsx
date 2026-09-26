@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState, type ComponentProps } from 'react';
 import { Link, Navigate, useParams } from 'react-router-dom';
 
+import { useToast } from '../../components/feedback/ToastProvider';
 import { AdminShell } from '../../components/portal/AdminShell';
 import { StatusBadge } from '../../components/portal/StatusBadge';
 import { useAuth } from '../../features/auth';
@@ -94,6 +95,7 @@ function formatAmount(amount: number | undefined, currency: string | undefined):
 export default function AdminRegistrationDetailPage({ api = registrationApi }: AdminRegistrationDetailPageProps) {
   const { registrationId } = useParams<{ registrationId: string }>();
   const { loading: authLoading, logout, user } = useAuth();
+  const { showToast } = useToast();
   const [registration, setRegistration] = useState<AdminRegistrationRecord | null>(null);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState(false);
@@ -163,8 +165,10 @@ export default function AdminRegistrationDetailPage({ api = registrationApi }: A
       setRegistration(refreshedRegistration);
       setReviewReasonCategory('');
       setReviewReasonComment('');
+      showToast('Keputusan review berhasil disimpan.', 'success');
     } catch {
       setMutationError('Keputusan gagal disimpan. Silakan coba lagi.');
+      showToast('Keputusan review gagal disimpan.', 'error');
     } finally {
       setMutationLoading(false);
     }

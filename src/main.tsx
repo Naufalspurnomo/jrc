@@ -4,6 +4,7 @@ import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 
 import App from './app/App';
+import { ToastProvider } from './components/feedback/ToastProvider';
 import { AuthProvider } from './features/auth';
 import './styles/base/app.css';
 import './styles/sections/showcase.css';
@@ -29,7 +30,9 @@ if (!root) throw new Error('Elemen aplikasi JRC tidak ditemukan.');
 createRoot(root).render(
   <StrictMode>
     <AuthProvider>
-      <App />
+      <ToastProvider>
+        <App />
+      </ToastProvider>
     </AuthProvider>
   </StrictMode>,
 );
