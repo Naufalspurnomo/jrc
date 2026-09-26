@@ -179,7 +179,7 @@
 .admin-kit-status { display: grid; gap: 4px; margin-top: 16px; padding: 14px 16px; border-left: 4px solid var(--admin-success); background: #f2f7f1; }
 .admin-kit-status small { color: var(--admin-muted); }
 
-.global-toast-viewport { position: fixed; z-index: 1000; top: max(20px,env(safe-area-inset-top)); right: max(20px,env(safe-area-inset-right)); display: grid; width: min(24rem,calc(100vw - max(32px,env(safe-area-inset-left)) - max(20px,env(safe-area-inset-right)))); gap: 10px; pointer-events: none; }
+.global-toast-viewport { position: fixed; z-index: 1000; top: max(76px,calc(env(safe-area-inset-top) + 76px)); right: max(20px,env(safe-area-inset-right)); display: grid; width: min(24rem,calc(100vw - max(32px,env(safe-area-inset-left)) - max(20px,env(safe-area-inset-right)))); gap: 10px; pointer-events: none; }
 .global-toast { display: grid; grid-template-columns: minmax(0,1fr) auto; align-items: center; gap: 16px; padding: 14px 14px 14px 16px; border: 1px solid #624f30; border-left: 4px solid #d2ad60; border-radius: 8px; background: #282321; color: #f8f3ea; box-shadow: 0 14px 36px rgba(21,15,13,.28); font: 650 .82rem/1.45 var(--font-sans); pointer-events: auto; animation: toast-in .2s ease-out; }
 .global-toast--success { border-left-color: #6ab589; }
 .global-toast--error { border-left-color: #e07171; }
