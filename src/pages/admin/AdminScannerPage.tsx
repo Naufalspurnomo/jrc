@@ -5,6 +5,7 @@ import { AdminShell } from '../../components/portal/AdminShell';
 import {
   registrationApi,
   type CompetitionRecord,
+  type GateMember,
   type RegistrationApi,
   type TicketRequest,
   type TicketVerification,
@@ -12,7 +13,6 @@ import {
 import { getScannerResultPresentation } from '../../features/registration/scanner';
 
 interface AdminScannerPageProps { api?: RegistrationApi }
-type GateMember = { name: string; studentId?: string | null };
 type CheckInOperator = string | { displayName?: string; name?: string } | null;
 type GateVerification = TicketVerification & {
   members?: GateMember[];
@@ -20,6 +20,7 @@ type GateVerification = TicketVerification & {
   checkedInBy?: CheckInOperator;
   operator?: CheckInOperator;
   checkedInByName?: string | null;
+  kitHandedOverBy?: CheckInOperator;
 };
 type ParsedScan = { token: string; eventId: string };
 
@@ -47,6 +48,18 @@ function operatorName(value: CheckInOperator | undefined): string {
   return value?.displayName ?? value?.name ?? '';
 }
 
+function formatDate(value?: string | null): string {
+  if (!value) return '';
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? value : new Intl.DateTimeFormat('id-ID', { dateStyle: 'medium', timeStyle: 'short' }).format(date);
+}
+
+const ROLE_LABELS: Record<GateMember['role'], string> = {
+  LEADER: 'Ketua',
+  MEMBER: 'Anggota',
+  SUPERVISOR: 'Pembimbing',
+};
+
 export default function AdminScannerPage({ api = registrationApi }: AdminScannerPageProps) {
   const [events, setEvents] = useState<Array<{ id: string; name: string }>>([]);
   const [eventId, setEventId] = useState('');
@@ -57,6 +70,7 @@ export default function AdminScannerPage({ api = registrationApi }: AdminScanner
   const [inspectedRequest, setInspectedRequest] = useState<TicketRequest | null>(null);
   const [requesting, setRequesting] = useState(false);
   const [requestError, setRequestError] = useState('');
+  const [selectedMemberIds, setSelectedMemberIds] = useState<string[]>([]);
   const [cameraActive, setCameraActive] = useState(false);
   const [cameraError, setCameraError] = useState('');
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -147,7 +161,8 @@ export default function AdminScannerPage({ api = registrationApi }: AdminScanner
       const result = await api.gate.inspect(request) as GateVerification;
       if (!mountedRef.current) return;
       setVerification(result);
-      setInspectedRequest(result.result === 'VALID' ? request : null);
+      setSelectedMemberIds([]);
+      setInspectedRequest(['VALID', 'ALREADY_CHECKED_IN', 'CHECKED_IN'].includes(result.result) ? request : null);
     } catch {
       if (!mountedRef.current) return;
       setVerification(null);
@@ -165,20 +180,42 @@ export default function AdminScannerPage({ api = registrationApi }: AdminScanner
   }, [inspect, resolveRequest]);
 
   const redeem = async () => {
-    if (requestLockedRef.current || !inspectedRequest || verification?.result !== 'VALID') return;
+    if (requestLockedRef.current || !inspectedRequest || selectedMemberIds.length === 0) return;
     requestLockedRef.current = true;
     setRequesting(true);
     setRequestError('');
     try {
-      const result = await api.gate.redeem(inspectedRequest) as GateVerification;
+      const result = await api.gate.redeem({ ...inspectedRequest, memberIds: selectedMemberIds }) as GateVerification;
       if (!mountedRef.current) return;
       setVerification(result);
-      setInspectedRequest(null);
+      setSelectedMemberIds([]);
     } catch {
       if (!mountedRef.current) return;
       setVerification(null);
       setInspectedRequest(null);
       setRequestError('Check-in gagal dikonfirmasi. Tiket belum ditukarkan; periksa koneksi lalu coba lagi.');
+    } finally {
+      requestLockedRef.current = false;
+      if (mountedRef.current) setRequesting(false);
+    }
+  };
+
+  const handoverKit = async () => {
+    if (requestLockedRef.current || !inspectedRequest || verification?.kitHandedOverAt) return;
+    if (!window.confirm('Pastikan JRC Kit sudah diterima oleh tim. Lanjutkan penyerahan?')) return;
+    requestLockedRef.current = true;
+    setRequesting(true);
+    setRequestError('');
+    try {
+      const result = await api.gate.handoverKit(inspectedRequest) as GateVerification;
+      if (!mountedRef.current) return;
+      setVerification(result);
+      setSelectedMemberIds([]);
+    } catch {
+      if (!mountedRef.current) return;
+      setVerification(null);
+      setInspectedRequest(null);
+      setRequestError('Penyerahan JRC Kit gagal. Kit belum tercatat; periksa koneksi lalu coba lagi.');
     } finally {
       requestLockedRef.current = false;
       if (mountedRef.current) setRequesting(false);
@@ -219,11 +256,9 @@ export default function AdminScannerPage({ api = registrationApi }: AdminScanner
   const checkedInBy = verification
     ? verification.checkedInByName || operatorName(verification.checkedInBy) || operatorName(verification.operator)
     : '';
-  const checkedInAt = useMemo(() => {
-    if (!verification?.checkedInAt) return '';
-    const date = new Date(verification.checkedInAt);
-    return Number.isNaN(date.getTime()) ? verification.checkedInAt : new Intl.DateTimeFormat('id-ID', { dateStyle: 'medium', timeStyle: 'short' }).format(date);
-  }, [verification?.checkedInAt]);
+  const checkedInAt = useMemo(() => formatDate(verification?.checkedInAt), [verification?.checkedInAt]);
+  const kitHandedOverAt = formatDate(verification?.kitHandedOverAt);
+  const kitHandedOverBy = operatorName(verification?.kitHandedOverBy);
 
   return <AdminShell><main className="admin-main admin-scanner">
     <header className="admin-page-heading"><div><p className="admin-eyebrow">GERBANG ACARA</p><h1>Pemindai tiket</h1>
@@ -264,8 +299,20 @@ export default function AdminScannerPage({ api = registrationApi }: AdminScanner
         {checkedInAt && <div><dt>Waktu check-in awal</dt><dd>{checkedInAt}</dd></div>}
         {checkedInBy && <div><dt>Petugas check-in awal</dt><dd>{checkedInBy}</dd></div>}
       </dl>
-      {members.length > 0 && <div className="admin-member-list" aria-label="Anggota tim">{members.map((member, index) => <article key={`${member.name}-${member.studentId ?? index}`}><strong>{member.name}</strong>{member.studentId && <small>{member.studentId}</small>}</article>)}</div>}
-      {verification.result === 'VALID' && inspectedRequest && <button className="admin-action admin-action--primary" type="button" disabled={requesting} onClick={() => void redeem()}>{requesting ? 'Mengonfirmasi…' : 'Konfirmasi check-in'}</button>}
+      {members.length > 0 && <div className="admin-member-list admin-attendance-list" aria-label="Anggota tim">{members.map((member) => {
+        const attended = Boolean(member.attendedAt);
+        const selected = attended || selectedMemberIds.includes(member.id);
+        return <label key={member.id} className="admin-attendance-member">
+          <input type="checkbox" checked={selected} disabled={attended || requesting} onChange={(event) => setSelectedMemberIds((current) => event.target.checked ? [...current, member.id] : current.filter((id) => id !== member.id))} />
+          <span><strong>{member.name}</strong><small>{ROLE_LABELS[member.role]}{member.studentId ? ` · ${member.studentId}` : ''}</small></span>
+          <span className={`admin-attendance-status${attended ? ' is-attended' : ''}`}><b>{attended ? 'Hadir' : 'Belum hadir'}</b>{attended && <small>{formatDate(member.attendedAt)}{member.attendedBy?.displayName ? ` · ${member.attendedBy.displayName}` : ''}</small>}</span>
+        </label>;
+      })}</div>}
+      {inspectedRequest && <div className="admin-detail-actions">
+        {members.some((member) => !member.attendedAt) && <button className="admin-action admin-action--primary" type="button" disabled={requesting || selectedMemberIds.length === 0} onClick={() => void redeem()}>{requesting ? 'Mengonfirmasi…' : 'Konfirmasi kehadiran'}</button>}
+        {verification.checkedInAt && !verification.kitHandedOverAt && <button className="admin-action" type="button" disabled={requesting} onClick={() => void handoverKit()}>Serahkan JRC Kit</button>}
+      </div>}
+      {kitHandedOverAt && <div className="admin-kit-status"><strong>JRC Kit sudah diserahkan</strong><small>{kitHandedOverAt}{kitHandedOverBy ? ` · ${kitHandedOverBy}` : ''}</small></div>}
     </section>}
   </main></AdminShell>;
 }

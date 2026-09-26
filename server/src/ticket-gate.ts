@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   Body,
   Controller,
   HttpCode,
@@ -9,7 +10,14 @@ import {
 } from '@nestjs/common';
 import { PaymentStatus, Prisma, Role, TicketStatus } from '@prisma/client';
 import { Transform, TransformFnParams } from 'class-transformer';
-import { IsString, MaxLength } from 'class-validator';
+import {
+  ArrayMaxSize,
+  ArrayMinSize,
+  IsArray,
+  IsString,
+  IsUUID,
+  MaxLength,
+} from 'class-validator';
 import { randomUUID } from 'node:crypto';
 import {
   AuthPrincipal,
@@ -38,34 +46,43 @@ export class TicketGateDto {
   eventId!: string;
 }
 
+export class TicketRedeemDto extends TicketGateDto {
+  @IsArray()
+  @ArrayMinSize(1)
+  @ArrayMaxSize(4)
+  @IsUUID('4', { each: true })
+  memberIds!: string[];
+}
+
 const ticketSelect = {
   id: true,
   status: true,
   checkedInAt: true,
   checkedInById: true,
   checkedInBy: { select: { displayName: true } },
+  kitHandedOverAt: true,
+  kitHandedOverById: true,
+  kitHandedOverBy: { select: { displayName: true } },
   registration: {
     select: {
+      id: true,
       registrationNumber: true,
       teamName: true,
       institution: true,
       competition: {
-        select: {
-          name: true,
-          eventId: true,
-          eventName: true,
-        },
+        select: { name: true, eventId: true, eventName: true },
       },
-      invoice: {
-        select: {
-          paymentStatus: true,
-        },
-      },
+      invoice: { select: { paymentStatus: true } },
       members: {
         orderBy: [{ createdAt: 'asc' as const }, { id: 'asc' as const }],
         select: {
+          id: true,
           name: true,
           studentId: true,
+          role: true,
+          attendedAt: true,
+          attendedById: true,
+          attendedBy: { select: { displayName: true } },
         },
       },
     },
@@ -73,7 +90,6 @@ const ticketSelect = {
 } satisfies Prisma.TicketSelect;
 
 type TicketRecord = Prisma.TicketGetPayload<{ select: typeof ticketSelect }>;
-
 type TicketResult =
   | 'VALID'
   | 'CHECKED_IN'
@@ -82,11 +98,14 @@ type TicketResult =
   | 'UNKNOWN'
   | 'NOT_PAID'
   | 'WRONG_EVENT';
-
-type InspectionResult = Exclude<TicketResult, 'CHECKED_IN'>;
-type ResultOnly = { result: Exclude<InspectionResult, 'VALID'> };
-
-type PublicTicketIdentity = {
+type PublicResultOnly = {
+  result: Exclude<TicketResult, 'VALID' | 'CHECKED_IN'>;
+};
+type GateResultOnly = {
+  result: Exclude<TicketResult, 'VALID' | 'CHECKED_IN' | 'ALREADY_CHECKED_IN'>;
+};
+type OperatorIdentity = { id: string; displayName: string };
+type PublicIdentity = {
   result: 'VALID';
   teamName: string;
   institution: string;
@@ -95,22 +114,24 @@ type PublicTicketIdentity = {
   eventId: string;
   eventName: string;
 };
-
-type GateTicketIdentity = {
+type GateIdentity = Omit<PublicIdentity, 'result'> & {
   result: 'VALID' | 'CHECKED_IN' | 'ALREADY_CHECKED_IN';
-  teamName: string;
-  institution: string;
-  competitionName: string;
-  registrationNumber: string;
-  eventId: string;
-  eventName: string;
-  members: Array<{ name: string; studentId: string | null }>;
+  members: Array<{
+    id: string;
+    name: string;
+    studentId: string | null;
+    role: string;
+    attendedAt: string | null;
+    attendedBy: OperatorIdentity | null;
+  }>;
   checkedInAt: string | null;
-  checkedInBy: { id: string; displayName: string } | null;
+  checkedInBy: OperatorIdentity | null;
+  kitHandedOverAt: string | null;
+  kitHandedOverBy: OperatorIdentity | null;
 };
 
-export type PublicTicketVerification = PublicTicketIdentity | ResultOnly;
-export type GateTicketVerification = GateTicketIdentity | ResultOnly;
+export type PublicTicketVerification = PublicIdentity | PublicResultOnly;
+export type GateTicketVerification = GateIdentity | GateResultOnly;
 
 interface AuditContext {
   requestId: string;
@@ -133,7 +154,7 @@ function classifyTicket(
   return ticket.status === TicketStatus.ACTIVE ? 'VALID' : 'UNKNOWN';
 }
 
-function publicIdentity(ticket: TicketRecord): Omit<PublicTicketIdentity, 'result'> {
+function publicIdentity(ticket: TicketRecord): Omit<PublicIdentity, 'result'> {
   return {
     teamName: ticket.registration.teamName,
     institution: ticket.registration.institution,
@@ -144,17 +165,33 @@ function publicIdentity(ticket: TicketRecord): Omit<PublicTicketIdentity, 'resul
   };
 }
 
-function gateIdentity(ticket: TicketRecord): Omit<GateTicketIdentity, 'result'> {
+function operatorIdentity(
+  id: string | null,
+  operator: { displayName: string } | null,
+): OperatorIdentity | null {
+  return id
+    ? { id, displayName: operator?.displayName ?? 'Unknown operator' }
+    : null;
+}
+
+function gateIdentity(ticket: TicketRecord): Omit<GateIdentity, 'result'> {
   return {
     ...publicIdentity(ticket),
     members: ticket.registration.members.map((member) => ({
+      id: member.id,
       name: member.name,
       studentId: member.studentId,
+      role: member.role,
+      attendedAt: member.attendedAt?.toISOString() ?? null,
+      attendedBy: operatorIdentity(member.attendedById, member.attendedBy),
     })),
     checkedInAt: ticket.checkedInAt?.toISOString() ?? null,
-    checkedInBy: ticket.checkedInById
-      ? { id: ticket.checkedInById, displayName: ticket.checkedInBy?.displayName ?? 'Unknown operator' }
-      : null,
+    checkedInBy: operatorIdentity(ticket.checkedInById, ticket.checkedInBy),
+    kitHandedOverAt: ticket.kitHandedOverAt?.toISOString() ?? null,
+    kitHandedOverBy: operatorIdentity(
+      ticket.kitHandedOverById,
+      ticket.kitHandedOverBy,
+    ),
   };
 }
 
@@ -184,6 +221,115 @@ export class TicketGateService {
 
   async redeem(
     operatorId: string,
+    dto: TicketRedeemDto,
+    audit: AuditContext,
+  ): Promise<GateTicketVerification> {
+    if (!TICKET_TOKEN_PATTERN.test(dto.token)) return { result: 'UNKNOWN' };
+
+    return this.prisma.$transaction(async (transaction) => {
+      const ticket = await transaction.ticket.findUnique({
+        where: { tokenHash: hashTicketToken(dto.token) },
+        select: ticketSelect,
+      });
+      if (!ticket) return { result: 'UNKNOWN' };
+
+      const result = classifyTicket(ticket, dto.eventId);
+      if (result !== 'VALID' && result !== 'ALREADY_CHECKED_IN') {
+        return { result };
+      }
+
+      const memberIds = [...new Set(dto.memberIds)];
+      const registrationMemberIds = new Set(
+        ticket.registration.members.map((member) => member.id),
+      );
+      if (memberIds.some((memberId) => !registrationMemberIds.has(memberId))) {
+        throw new BadRequestException(
+          'Selected members do not belong to this ticket registration',
+        );
+      }
+
+      const recordedAt = new Date();
+      const transitionedMemberIds: string[] = [];
+      for (const memberId of memberIds) {
+        const updated = await transaction.teamMember.updateMany({
+          where: {
+            id: memberId,
+            registrationId: ticket.registration.id,
+            attendedAt: null,
+          },
+          data: { attendedAt: recordedAt, attendedById: operatorId },
+        });
+        if (updated.count === 1) transitionedMemberIds.push(memberId);
+      }
+
+      if (transitionedMemberIds.length > 0) {
+        await transaction.auditLog.create({
+          data: {
+            actorId: operatorId,
+            action: 'MEMBER_ATTENDANCE_RECORDED',
+            entityType: 'Registration',
+            entityId: ticket.registration.id,
+            before: {
+              members: transitionedMemberIds.map((id) => ({
+                id,
+                attendedAt: null,
+                attendedById: null,
+              })),
+            },
+            after: {
+              members: transitionedMemberIds.map((id) => ({
+                id,
+                attendedAt: recordedAt.toISOString(),
+                attendedById: operatorId,
+              })),
+            },
+            requestId: audit.requestId,
+            ipAddress: audit.ipAddress,
+          },
+        });
+      }
+
+      if (result === 'VALID') {
+        const updated = await transaction.ticket.updateMany({
+          where: { id: ticket.id, status: TicketStatus.ACTIVE },
+          data: {
+            status: TicketStatus.CHECKED_IN,
+            checkedInAt: recordedAt,
+            checkedInById: operatorId,
+          },
+        });
+        if (updated.count === 1) {
+          await transaction.auditLog.create({
+            data: {
+              actorId: operatorId,
+              action: 'TICKET_CHECKED_IN',
+              entityType: 'Ticket',
+              entityId: ticket.id,
+              before: { status: TicketStatus.ACTIVE },
+              after: {
+                status: TicketStatus.CHECKED_IN,
+                checkedInAt: recordedAt.toISOString(),
+                checkedInById: operatorId,
+              },
+              requestId: audit.requestId,
+              ipAddress: audit.ipAddress,
+            },
+          });
+        }
+      }
+
+      const current = await transaction.ticket.findUnique({
+        where: { id: ticket.id },
+        select: ticketSelect,
+      });
+      return current
+        ? { result: 'CHECKED_IN', ...gateIdentity(current) }
+        : { result: 'UNKNOWN' };
+    });
+  }
+
+  async handoverKit(
+    operatorId: string,
     dto: TicketGateDto,
     audit: AuditContext,
   ): Promise<GateTicketVerification> {
@@ -197,57 +343,44 @@ export class TicketGateService {
       if (!ticket) return { result: 'UNKNOWN' };
 
       const result = classifyTicket(ticket, dto.eventId);
-      if (result !== 'VALID') {
-        return result === 'ALREADY_CHECKED_IN'
-          ? { result, ...gateIdentity(ticket) }
-          : { result };
-      }
+      if (result === 'VALID') return { result, ...gateIdentity(ticket) };
+      if (result !== 'ALREADY_CHECKED_IN') return { result };
 
-      const checkedInAt = new Date();
-      const updated = await transaction.ticket.updateMany({
-        where: {
-          id: ticket.id,
-          status: TicketStatus.ACTIVE,
-        },
-        data: {
-          status: TicketStatus.CHECKED_IN,
-          checkedInAt,
-          checkedInById: operatorId,
-        },
-      });
-      if (updated.count !== 1) {
-        const checkedInTicket = await transaction.ticket.findUnique({
-          where: { id: ticket.id },
-          select: ticketSelect,
-        });
-        return checkedInTicket
-          ? { result: 'ALREADY_CHECKED_IN', ...gateIdentity(checkedInTicket) }
-          : { result: 'UNKNOWN' };
-      }
-
-      await transaction.auditLog.create({
-        data: {
-          actorId: operatorId,
-          action: 'TICKET_CHECKED_IN',
-          entityType: 'Ticket',
-          entityId: ticket.id,
-          before: { status: TicketStatus.ACTIVE },
-          after: {
+      if (!ticket.kitHandedOverAt) {
+        const handedOverAt = new Date();
+        const updated = await transaction.ticket.updateMany({
+          where: {
+            id: ticket.id,
             status: TicketStatus.CHECKED_IN,
-            checkedInAt: checkedInAt.toISOString(),
-            checkedInById: operatorId,
+            kitHandedOverAt: null,
           },
-          requestId: audit.requestId,
-          ipAddress: audit.ipAddress,
-        },
-      });
+          data: { kitHandedOverAt: handedOverAt, kitHandedOverById: operatorId },
+        });
+        if (updated.count === 1) {
+          await transaction.auditLog.create({
+            data: {
+              actorId: operatorId,
+              action: 'JRC_KIT_HANDED_OVER',
+              entityType: 'Ticket',
+              entityId: ticket.id,
+              before: { kitHandedOverAt: null, kitHandedOverById: null },
+              after: {
+                kitHandedOverAt: handedOverAt.toISOString(),
+                kitHandedOverById: operatorId,
+              },
+              requestId: audit.requestId,
+              ipAddress: audit.ipAddress,
+            },
+          });
+        }
+      }
 
-      const checkedInTicket = await transaction.ticket.findUnique({
+      const current = await transaction.ticket.findUnique({
         where: { id: ticket.id },
         select: ticketSelect,
       });
-      return checkedInTicket
-        ? { result: 'CHECKED_IN', ...gateIdentity(checkedInTicket) }
+      return current
+        ? { result: 'ALREADY_CHECKED_IN', ...gateIdentity(current) }
         : { result: 'UNKNOWN' };
     });
   }
@@ -273,7 +406,7 @@ export class TicketVerificationController {
   }
 }
 
-@Roles(Role.GATE_STAFF)
+@Roles(Role.GATE_STAFF, Role.SUPER_ADMIN)
 @Controller('gate')
 export class GateController {
   constructor(private readonly tickets: TicketGateService) {}
@@ -286,10 +419,22 @@ export class GateController {
   @Post('redeem')
   redeem(
     @CurrentUser() operator: AuthPrincipal,
-    @Body() dto: TicketGateDto,
+    @Body() dto: TicketRedeemDto,
     @Req() request: AuthenticatedRequest,
   ): Promise<GateTicketVerification> {
     return this.tickets.redeem(operator.id, dto, {
+      requestId: request.requestId ?? randomUUID(),
+      ipAddress: request.ip || request.socket.remoteAddress || null,
+    });
+  }
+
+  @Post('kit')
+  kit(
+    @CurrentUser() operator: AuthPrincipal,
+    @Body() dto: TicketGateDto,
+    @Req() request: AuthenticatedRequest,
+  ): Promise<GateTicketVerification> {
+    return this.tickets.handoverKit(operator.id, dto, {
       requestId: request.requestId ?? randomUUID(),
       ipAddress: request.ip || request.socket.remoteAddress || null,
     });

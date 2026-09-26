@@ -480,14 +480,31 @@ export class AdminRegistrationsService {
       select: {
         registrationNumber: true, teamName: true, institution: true,
         competition: { select: { name: true } },
-        members: { where: { role: { in: ['LEADER', 'MEMBER'] } }, orderBy: [{ role: 'asc' }, { createdAt: 'asc' }, { id: 'asc' }], select: { role: true, name: true, studentId: true } },
+        ticket: { select: { kitHandedOverAt: true, kitHandedOverBy: { select: { displayName: true } } } },
+        members: {
+          orderBy: [
+            { role: 'asc' },
+            { createdAt: 'asc' },
+            { id: 'asc' },
+          ],
+          select: {
+            role: true,
+            name: true,
+            studentId: true,
+            attendedAt: true,
+            attendedBy: { select: { displayName: true } },
+          },
+        },
       },
     });
     const rows = registrations.flatMap((registration) => registration.members.map((member) => csvRow([
       registration.registrationNumber, registration.teamName, registration.competition.name,
-      registration.institution, member.role, member.name, member.studentId ?? '', '', '',
+      registration.institution, member.role, member.name, member.studentId ?? '',
+      member.attendedAt ? 'ATTENDED' : 'NOT_ATTENDED', member.attendedAt?.toISOString() ?? '',
+      member.attendedBy?.displayName ?? '', registration.ticket?.kitHandedOverAt ? 'HANDED_OVER' : 'NOT_HANDED_OVER',
+      registration.ticket?.kitHandedOverAt?.toISOString() ?? '', registration.ticket?.kitHandedOverBy?.displayName ?? '',
     ])));
-    return `\uFEFF${[csvRow(['Nomor Pendaftaran', 'Tim', 'Kompetisi', 'Institusi', 'Peran', 'Nama Peserta', 'NIS/NIM', 'Tanda Tangan Kehadiran', 'Cek JRC Kit']), ...rows].join('\r\n')}\r\n`;
+    return `\uFEFF${[csvRow(['Registration Number', 'Team', 'Competition', 'Institution', 'Role', 'Member Name', 'Student ID', 'Attendance Status', 'Attended At', 'Attendance Operator', 'JRC Kit Status', 'Kit Handed Over At', 'Kit Operator']), ...rows].join('\r\n')}\r\n`;
   }
 
   async review(

@@ -38,9 +38,14 @@ function createApi(competitions: CompetitionRecord[] = oneEvent): RegistrationAp
       inspect: vi.fn().mockResolvedValue({
         result: 'VALID', teamName: 'Garuda Robotika', institution: 'PENS',
         competitionName: 'Sumo', registrationNumber: 'JRC14-2026-0001', eventName: 'JRC XIV',
+        members: [
+          { id: 'leader', name: 'Ayu', studentId: 'NRP-1', role: 'LEADER', attendedAt: null, attendedBy: null },
+          { id: 'member', name: 'Bima', studentId: 'NRP-2', role: 'MEMBER', attendedAt: '2026-09-23T18:30:00.000Z', attendedBy: { id: 'gate-1', displayName: 'Sinta Gate' } },
+        ],
         email: 'private@example.test', documents: ['private.pdf'],
       }),
-      redeem: vi.fn().mockResolvedValue({ result: 'CHECKED_IN' }),
+      redeem: vi.fn().mockResolvedValue({ result: 'CHECKED_IN', members: [] }),
+      handoverKit: vi.fn().mockResolvedValue({ result: 'CHECKED_IN', kitHandedOverAt: '2026-09-23T19:00:00.000Z', kitHandedOverBy: { id: 'gate-1', displayName: 'Sinta Gate' } }),
     },
   } as unknown as RegistrationApi;
 }
@@ -124,10 +129,12 @@ describe('AdminScannerPage', () => {
     expect(screen.queryByText('private.pdf')).not.toBeInTheDocument();
     expect(api.gate.redeem).not.toHaveBeenCalled();
 
-    const confirm = screen.getByRole('button', { name: 'Konfirmasi check-in' });
+    const confirm = screen.getByRole('button', { name: 'Konfirmasi kehadiran' });
+    expect(confirm).toBeDisabled();
+    await user.click(screen.getByRole('checkbox', { name: /Ayu/ }));
     fireEvent.click(confirm);
     fireEvent.click(confirm);
-    expect(api.gate.redeem).toHaveBeenCalledTimes(1);
+    expect(api.gate.redeem).toHaveBeenCalledWith({ eventId: 'jrc-xiv', token: 'opaque-token', memberIds: ['leader'] });
     expect(confirm).toBeDisabled();
     await act(async () => pending.resolve({ result: 'CHECKED_IN' }));
     expect(await screen.findByText('Check-in berhasil')).toBeInTheDocument();
@@ -169,10 +176,35 @@ describe('AdminScannerPage', () => {
     await enterTokenAndInspect(user);
     expect(await screen.findByText('Valid')).toBeInTheDocument();
     vi.mocked(api.gate.redeem).mockRejectedValueOnce(new Error('offline'));
-    await user.click(screen.getByRole('button', { name: 'Konfirmasi check-in' }));
+    await user.click(screen.getByRole('checkbox', { name: /Ayu/ }));
+    await user.click(screen.getByRole('button', { name: 'Konfirmasi kehadiran' }));
     expect(await screen.findByRole('alert')).toHaveTextContent('Tiket belum ditukarkan');
     expect(screen.queryByText('Valid')).not.toBeInTheDocument();
     expect(screen.queryByText('Check-in berhasil')).not.toBeInTheDocument();
+  });
+
+  it('allows missing-member attendance after prior check-in and handles kit separately with confirmation', async () => {
+    const user = userEvent.setup();
+    const api = createApi();
+    vi.mocked(api.gate.inspect).mockResolvedValue({
+      result: 'ALREADY_CHECKED_IN', checkedInAt: '2026-09-23T18:00:00.000Z',
+      members: [{ id: 'member', name: 'Bima', role: 'MEMBER', attendedAt: null, attendedBy: null }],
+      kitHandedOverAt: null, kitHandedOverBy: null,
+    });
+    vi.spyOn(window, 'confirm').mockReturnValue(true);
+    renderPage(api);
+    await screen.findByRole('combobox', { name: 'Acara aktif' });
+    await enterTokenAndInspect(user);
+    await user.click(await screen.findByRole('checkbox', { name: /Bima/ }));
+    await user.click(screen.getByRole('button', { name: 'Konfirmasi kehadiran' }));
+    expect(api.gate.redeem).toHaveBeenCalledWith({ token: 'opaque-token', eventId: 'jrc-xiv', memberIds: ['member'] });
+
+    vi.mocked(api.gate.inspect).mockResolvedValue({ result: 'ALREADY_CHECKED_IN', checkedInAt: '2026-09-23T18:00:00.000Z', members: [] });
+    await user.click(screen.getByRole('button', { name: 'Periksa tiket' }));
+    await user.click(await screen.findByRole('button', { name: 'Serahkan JRC Kit' }));
+    expect(window.confirm).toHaveBeenCalled();
+    expect(api.gate.handoverKit).toHaveBeenCalledWith({ token: 'opaque-token', eventId: 'jrc-xiv' });
+    expect(await screen.findByText('JRC Kit sudah diserahkan')).toBeInTheDocument();
   });
 
   it('reports competition loading failure and scanner readiness hints', async () => {

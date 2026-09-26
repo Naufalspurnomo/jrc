@@ -33,6 +33,7 @@ export const API_PATHS = {
   gate: {
     inspect: '/api/gate/inspect',
     redeem: '/api/gate/redeem',
+    kit: '/api/gate/kit',
   },
   admin: {
     registrations: {
@@ -412,6 +413,24 @@ export interface TicketRequest {
   eventId: string;
 }
 
+export interface GateAttendanceRequest extends TicketRequest {
+  memberIds: string[];
+}
+
+export interface GateOperator {
+  id: string;
+  displayName: string;
+}
+
+export interface GateMember {
+  id: string;
+  name: string;
+  studentId?: string | null;
+  role: 'LEADER' | 'MEMBER' | 'SUPERVISOR';
+  attendedAt: string | null;
+  attendedBy: GateOperator | null;
+}
+
 export interface TicketVerification {
   result: TicketResult;
   teamName?: string;
@@ -420,6 +439,11 @@ export interface TicketVerification {
   registrationNumber?: string;
   eventId?: string;
   eventName?: string;
+  members?: GateMember[];
+  checkedInAt?: string | null;
+  checkedInBy?: GateOperator | null;
+  kitHandedOverAt?: string | null;
+  kitHandedOverBy?: GateOperator | null;
 }
 
 export interface ReviewInput {
@@ -467,7 +491,8 @@ export interface RegistrationApi {
   };
   gate: {
     inspect(input: TicketRequest): Promise<TicketVerification>;
-    redeem(input: TicketRequest): Promise<TicketVerification>;
+    redeem(input: GateAttendanceRequest): Promise<TicketVerification>;
+    handoverKit(input: TicketRequest): Promise<TicketVerification>;
   };
   admin: {
     listRegistrations(): Promise<RegistrationRecord[]>;
@@ -565,6 +590,7 @@ export function createRegistrationApi(client = new ApiClient()): RegistrationApi
     gate: {
       inspect: (input) => client.request<TicketVerification>(API_PATHS.gate.inspect, { method: 'POST', body: input }),
       redeem: (input) => client.request<TicketVerification>(API_PATHS.gate.redeem, { method: 'POST', body: input }),
+      handoverKit: (input) => client.request<TicketVerification>(API_PATHS.gate.kit, { method: 'POST', body: input }),
     },
     admin: {
       listRegistrations: () => client.request<RegistrationRecord[]>(API_PATHS.admin.registrations.root),

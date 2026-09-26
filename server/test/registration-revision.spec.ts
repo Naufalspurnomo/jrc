@@ -46,7 +46,7 @@ describe('registration revision rules', () => {
     )).resolves.toMatchObject({ role: TeamMemberRole.SUPERVISOR });
   });
 
-  it('exports one attendance row per participant and excludes supervisors', async () => {
+  it('exports one attendance row for every roster role', async () => {
     const prisma = {
       registration: {
         findMany: vi.fn().mockResolvedValue([{
@@ -54,9 +54,11 @@ describe('registration revision rules', () => {
           teamName: '=Garuda',
           institution: 'PENS',
           competition: { name: 'Sumo' },
+          ticket: { kitHandedOverAt: new Date('2026-09-23T10:02:00.000Z'), kitHandedOverBy: { displayName: 'Kit Operator' } },
           members: [
-            { role: TeamMemberRole.LEADER, name: 'Ari', studentId: 'NRP-1' },
-            { role: TeamMemberRole.MEMBER, name: 'Bima', studentId: 'NRP-2' },
+            { role: TeamMemberRole.LEADER, name: 'Ari', studentId: 'NRP-1', attendedAt: new Date('2026-09-23T10:01:00.000Z'), attendedBy: { displayName: 'Gate Operator' } },
+            { role: TeamMemberRole.MEMBER, name: 'Bima', studentId: 'NRP-2', attendedAt: null, attendedBy: null },
+            { role: TeamMemberRole.SUPERVISOR, name: 'Rina', studentId: null, attendedAt: null, attendedBy: null },
           ],
         }]),
       },
@@ -69,14 +71,12 @@ describe('registration revision rules', () => {
     const csv = await service.exportAttendanceCsv({});
 
     expect(csv).toContain("'=Garuda");
-    expect(csv).toContain('LEADER,Ari,NRP-1,,');
-    expect(csv).toContain('MEMBER,Bima,NRP-2,,');
-    expect(csv).not.toContain('SUPERVISOR');
+    expect(csv).toContain('LEADER,Ari,NRP-1,ATTENDED,2026-09-23T10:01:00.000Z,Gate Operator,HANDED_OVER,2026-09-23T10:02:00.000Z,Kit Operator');
+    expect(csv).toContain('MEMBER,Bima,NRP-2,NOT_ATTENDED,,,HANDED_OVER,2026-09-23T10:02:00.000Z,Kit Operator');
+    expect(csv).toContain('SUPERVISOR,Rina,,NOT_ATTENDED,,,HANDED_OVER,2026-09-23T10:02:00.000Z,Kit Operator');
     expect(prisma.registration.findMany).toHaveBeenCalledWith(expect.objectContaining({
       select: expect.objectContaining({
-        members: expect.objectContaining({
-          where: { role: { in: ['LEADER', 'MEMBER'] } },
-        }),
+        members: expect.not.objectContaining({ where: expect.anything() }),
       }),
     }));
   });
