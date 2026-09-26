@@ -16,7 +16,13 @@ const complete: RegistrationReadinessInput = {
   phone: '081234567890',
   leaderName: 'Ari Wijaya',
   leaderStudentId: '5025211001',
-  documentCount: 1,
+  documentCategories: [
+    'RECOMMENDATION_LETTER',
+    'IDENTITY_CARD',
+    'REGISTRATION_FORM',
+    'TEAM_PHOTO',
+    'TWIBBON_PROOF',
+  ],
 };
 
 describe('registrationGaps', () => {
@@ -30,7 +36,7 @@ describe('registrationGaps', () => {
       emailVerified: false,
       teamName: '   ',
       leaderStudentId: '',
-      documentCount: 0,
+      documentCategories: [],
     });
 
     expect(gaps.map((gap) => gap.key)).toEqual([
@@ -43,6 +49,31 @@ describe('registrationGaps', () => {
       expect(gap.detail.trim().length).toBeGreaterThan(0);
       expect(gap.targetId.trim().length).toBeGreaterThan(0);
     }
+  });
+
+  it('reports exact missing required documents while ignoring formal member photos', () => {
+    const gaps = registrationGaps({
+      ...complete,
+      documentCategories: ['RECOMMENDATION_LETTER', 'TEAM_PHOTO', 'MEMBER_PHOTO'],
+    });
+
+    expect(gaps).toEqual([
+      expect.objectContaining({
+        key: 'documents',
+        missingDocumentCategories: ['IDENTITY_CARD', 'REGISTRATION_FORM', 'TWIBBON_PROOF'],
+      }),
+    ]);
+  });
+
+  it('reports all five required documents when none are uploaded', () => {
+    const [gap] = registrationGaps({ ...complete, documentCategories: ['MEMBER_PHOTO'] });
+    expect(gap.missingDocumentCategories).toEqual([
+      'RECOMMENDATION_LETTER',
+      'IDENTITY_CARD',
+      'REGISTRATION_FORM',
+      'TEAM_PHOTO',
+      'TWIBBON_PROOF',
+    ]);
   });
 
   it('treats whitespace-only values as missing', () => {

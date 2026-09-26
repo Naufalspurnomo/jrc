@@ -129,14 +129,43 @@ describe('PortalRegistrationPage submission', () => {
     expect(submit).toBeEnabled();
     await user.click(submit);
 
-    expect(await screen.findByRole('alert')).toHaveTextContent(
-      'Masih ada 1 hal yang belum lengkap: Dokumen pendukung.',
-    );
+    const alert = await screen.findByRole('alert');
+    expect(alert).toHaveFocus();
+    expect(alert).toHaveAccessibleName('Pendaftaran belum dapat dikirim');
+    expect(alert).toHaveTextContent('Surat rekomendasi');
+    expect(alert).toHaveTextContent('Identitas diri (kartu pelajar/KTM/KTP)');
+    expect(alert).toHaveTextContent('Formulir pendaftaran');
+    expect(alert).toHaveTextContent('Foto tim');
+    expect(alert).toHaveTextContent('Bukti twibbon');
+    expect(screen.getByRole('button', { name: 'Lengkapi dokumen' })).toBeInTheDocument();
+    expect(screen.getByLabelText('Berkas dokumen')).toHaveAttribute('aria-invalid', 'true');
     expect(api.registrations.submit).not.toHaveBeenCalled();
 
     await user.click(screen.getByRole('button', { name: 'Simpan sekarang' }));
     expect(api.registrations.addMember).not.toHaveBeenCalled();
     expect(api.registrations.submit).not.toHaveBeenCalled();
+  });
+
+  it('shows an oversized selected file with the exact limit and remedy', async () => {
+    const user = userEvent.setup();
+    const api = createApi(registration('DRAFT'));
+    renderPage(api);
+
+    const input = await screen.findByLabelText('Berkas dokumen');
+    const file = new File(['x'], 'IMG_6568.jpg.jpeg', { type: 'image/jpeg' });
+    Object.defineProperty(file, 'size', { value: 17.1 * 1024 * 1024 });
+    await user.upload(input, file);
+
+    const alert = await screen.findByRole('alert');
+    expect(alert).toHaveFocus();
+    expect(alert).toHaveAccessibleName('Berkas terlalu besar');
+    expect(alert).toHaveTextContent('IMG_6568.jpg.jpeg');
+    expect(alert).toHaveTextContent('17.1 MB');
+    expect(alert).toHaveTextContent('Ukuran maksimum 10 MB');
+    expect(alert).toHaveTextContent('Kompres berkas atau pilih berkas yang lebih kecil');
+    expect(input).toHaveAttribute('aria-invalid', 'true');
+    expect(screen.getByText('17.1 MB · belum dapat diunggah')).toBeInTheDocument();
+    expect(api.registrations.uploadDocument).not.toHaveBeenCalled();
   });
 
   it('shows structured rejection feedback and makes rejected registrations read-only', async () => {

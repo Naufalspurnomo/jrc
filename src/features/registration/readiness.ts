@@ -25,7 +25,16 @@ export interface RegistrationGap {
   detail: string;
   /** DOM id of the control to focus when the participant taps the gap. */
   targetId: string;
+  missingDocumentCategories?: string[];
 }
+
+export const REQUIRED_DOCUMENT_CATEGORIES = [
+  'RECOMMENDATION_LETTER',
+  'IDENTITY_CARD',
+  'REGISTRATION_FORM',
+  'TEAM_PHOTO',
+  'TWIBBON_PROOF',
+] as const;
 
 export function registrationGaps(input: RegistrationReadinessInput): RegistrationGap[] {
   const gaps: RegistrationGap[] = [];
@@ -84,16 +93,16 @@ export function registrationGaps(input: RegistrationReadinessInput): Registratio
     });
   }
 
-  const required = ['RECOMMENDATION_LETTER', 'IDENTITY_CARD', 'REGISTRATION_FORM', 'TEAM_PHOTO', 'TWIBBON_PROOF'];
-  const missingDocuments = input.documentCategories
-    ? required.some((category) => !input.documentCategories?.includes(category))
-    : input.documentCount === 0;
-  if (missingDocuments) {
+  const missingDocumentCategories = input.documentCategories
+    ? REQUIRED_DOCUMENT_CATEGORIES.filter((category) => !input.documentCategories?.includes(category))
+    : input.documentCount === 0 ? [...REQUIRED_DOCUMENT_CATEGORIES] : [];
+  if (missingDocumentCategories.length > 0) {
     gaps.push({
       key: 'documents',
       label: 'Dokumen pendukung',
       detail: 'Unggah kelima kategori dokumen wajib.',
       targetId: 'field-document-file',
+      missingDocumentCategories,
     });
   }
 

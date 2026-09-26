@@ -580,6 +580,32 @@
   font-weight: 650;
 }
 
+.portal-shell .portal-error-summary {
+  display: grid;
+  grid-template-columns: 3rem minmax(0, 1fr);
+  gap: 1rem;
+  margin-top: 1.5rem;
+  padding: clamp(1.25rem, 3vw, 2rem);
+  border: 3px solid #9d211d;
+  background: #fff0e8;
+  color: #46120f;
+  box-shadow: 0 .8rem 2rem rgb(79 16 12 / 18%);
+}
+.portal-shell .portal-error-summary:focus { outline: 4px solid #e5b84e; outline-offset: 3px; }
+.portal-shell .portal-error-summary > span { display:grid; width:3rem; height:3rem; place-items:center; background:#9d211d; color:#fff; font-size:1.6rem; }
+.portal-shell .portal-error-summary h2 { margin:0 0 .6rem; font-family:var(--font-display); font-size:clamp(1.7rem,4vw,2.5rem); line-height:1; }
+.portal-shell .portal-error-summary p { margin:.4rem 0; line-height:1.55; }
+.portal-shell .portal-error-summary ul { margin:.75rem 0 1rem; padding-left:1.25rem; }
+.portal-shell .portal-document-panel--invalid { border:3px solid #9d211d; box-shadow:0 0 0 .35rem rgb(157 33 29 / 12%); }
+.portal-shell .portal-document-checklist { display:grid; grid-column:1/-1; gap:.55rem; margin:1rem 0; padding:0; list-style:none; }
+.portal-shell .portal-document-checklist li { display:grid; grid-template-columns:2rem minmax(0,1fr) max-content; align-items:center; gap:.75rem; min-height:3.25rem; padding:.65rem .85rem; border:1px solid #876d59; background:#fffaf0; }
+.portal-shell .portal-document-checklist li > span { display:grid; width:1.75rem; height:1.75rem; place-items:center; border-radius:50%; background:#8b211d; color:#fff; font-weight:800; }
+.portal-shell .portal-document-checklist li.is-complete > span { background:#246343; }
+.portal-shell .portal-document-checklist li small { font-weight:800; }
+.portal-shell .portal-document-checklist li.is-missing small { color:#8b211d; }
+.portal-shell .portal-document-checklist li.is-complete small { color:#246343; }
+@media (max-width: 36rem) { .portal-shell .portal-error-summary { grid-template-columns:1fr; } .portal-shell .portal-document-checklist li { grid-template-columns:2rem minmax(0,1fr); } .portal-shell .portal-document-checklist li small { grid-column:2; } }
+
 /* Payment and digital ticket surfaces. */
 .portal-shell .portal-registration > .portal-summary-panel {
   margin-top: 2rem;

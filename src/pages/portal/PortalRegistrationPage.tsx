@@ -20,7 +20,7 @@ import {
   formatBytes,
   isAcceptedDocumentType,
 } from '../../features/registration/documentErrors';
-import { describeGaps, registrationGaps } from '../../features/registration/readiness';
+import { registrationGaps, REQUIRED_DOCUMENT_CATEGORIES } from '../../features/registration/readiness';
 import { useAutosave, type AutosaveState } from '../../hooks/useAutosave';
 
 interface PortalRegistrationPageProps {
@@ -42,11 +42,11 @@ const MAX_UPLOAD_BYTES = 10 * 1024 * 1024;
 const MAX_TEAM_MEMBERS = 3;
 
 const documentCategoryLabels: Record<string, string> = {
-  RECOMMENDATION_LETTER: 'Surat Rekomendasi',
-  IDENTITY_CARD: 'Kartu Identitas',
-  REGISTRATION_FORM: 'Formulir Pendaftaran',
-  TEAM_PHOTO: 'Foto Tim',
-  TWIBBON_PROOF: 'Bukti Twibbon',
+  RECOMMENDATION_LETTER: 'Surat rekomendasi',
+  IDENTITY_CARD: 'Identitas diri (kartu pelajar/KTM/KTP)',
+  REGISTRATION_FORM: 'Formulir pendaftaran',
+  TEAM_PHOTO: 'Foto tim',
+  TWIBBON_PROOF: 'Bukti twibbon',
   MEMBER_PHOTO: 'Foto Anggota',
 };
 
@@ -120,6 +120,8 @@ export default function PortalRegistrationPage({ api = registrationApi }: Portal
   const [dragging, setDragging] = useState(false);
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
+  const [oversizedFile, setOversizedFile] = useState<File | null>(null);
+  const errorSummaryRef = useRef<HTMLElement>(null);
   const [loadError, setLoadError] = useState('');
   const [loadAttempt, setLoadAttempt] = useState(0);
   const [creatingDraft, setCreatingDraft] = useState(false);
@@ -430,8 +432,18 @@ export default function PortalRegistrationPage({ api = registrationApi }: Portal
 
   const acceptDocumentFile = (file: File | null) => {
     setDocumentFile(file);
+    setOversizedFile(null);
     if (file && !isAcceptedDocumentType(file.type)) {
       setError('Format dokumen harus PDF, JPEG, atau PNG.');
+      return;
+    }
+    if (file && file.size > MAX_UPLOAD_BYTES) {
+      setOversizedFile(file);
+      setError('Berkas terlalu besar');
+      requestAnimationFrame(() => {
+        errorSummaryRef.current?.scrollIntoView?.({ behavior: 'smooth', block: 'center' });
+        errorSummaryRef.current?.focus({ preventScroll: true });
+      });
       return;
     }
     setError('');
@@ -451,7 +463,12 @@ export default function PortalRegistrationPage({ api = registrationApi }: Portal
       return;
     }
     if (documentFile.size > MAX_UPLOAD_BYTES) {
-      setError(`Berkas "${documentFile.name}" berukuran ${formatBytes(documentFile.size)}, melebihi batas ${formatBytes(MAX_UPLOAD_BYTES)}.`);
+      setOversizedFile(documentFile);
+      setError('Berkas terlalu besar');
+      requestAnimationFrame(() => {
+        errorSummaryRef.current?.scrollIntoView?.({ behavior: 'smooth', block: 'center' });
+        errorSummaryRef.current?.focus({ preventScroll: true });
+      });
       return;
     }
     if (!editable) {
@@ -549,8 +566,12 @@ export default function PortalRegistrationPage({ api = registrationApi }: Portal
       return;
     }
     if (!ready) {
-      setError(`Masih ada ${gaps.length} hal yang belum lengkap: ${describeGaps(gaps)}.`);
-      focusGap(gaps[0].key);
+      setError('Pendaftaran belum dapat dikirim');
+      setHighlightedGaps(gaps.map((gap) => gap.key));
+      requestAnimationFrame(() => {
+        errorSummaryRef.current?.scrollIntoView?.({ behavior: 'smooth', block: 'center' });
+        errorSummaryRef.current?.focus({ preventScroll: true });
+      });
       return;
     }
 
@@ -836,7 +857,7 @@ export default function PortalRegistrationPage({ api = registrationApi }: Portal
                     </label>
                   </fieldset>
 
-                  <section className="portal-document-panel" aria-labelledby="registration-documents">
+                  <section id="registration-documents-panel" className={`portal-document-panel${isHighlighted('documents') ? ' portal-document-panel--invalid' : ''}`} aria-labelledby="registration-documents">
                     <h2 id="registration-documents">Dokumen pendukung</h2>
                     {(reviewReasonCategory || reviewReasonComment) && (
                       <div className="portal-review-note">
@@ -848,6 +869,16 @@ export default function PortalRegistrationPage({ api = registrationApi }: Portal
                     <p>
                       Unggah lima dokumen wajib. Format PDF, JPEG, atau PNG, maksimal {formatBytes(MAX_UPLOAD_BYTES)} per berkas.
                     </p>
+                    <ul className="portal-document-checklist" aria-label="Kelengkapan dokumen wajib">
+                      {REQUIRED_DOCUMENT_CATEGORIES.map((category) => {
+                        const complete = documents.some((document) => document.category === category);
+                        return <li key={category} className={complete ? 'is-complete' : 'is-missing'}>
+                          <span aria-hidden="true">{complete ? '✓' : '!'}</span>
+                          <strong>{documentCategoryLabels[category]}</strong>
+                          <small>{complete ? 'Lengkap' : 'Belum diunggah'}</small>
+                        </li>;
+                      })}
+                    </ul>
 
                     <label>
                       Kategori dokumen
@@ -908,7 +939,8 @@ export default function PortalRegistrationPage({ api = registrationApi }: Portal
                       <input
                         id="field-document-file"
                         ref={documentInputRef}
-                        className={isHighlighted('documents') && documents.length === 0 ? 'portal-field--attention' : undefined}
+                        className={isHighlighted('documents') || oversizedFile ? 'portal-field--attention' : undefined}
+                        aria-invalid={isHighlighted('documents') || Boolean(oversizedFile) || undefined}
                         accept={documentCategory === 'MEMBER_PHOTO' ? 'image/jpeg,image/png' : DOCUMENT_ACCEPT_ATTRIBUTE}
                         disabled={!editable || uploading}
                         type="file"
@@ -925,7 +957,7 @@ export default function PortalRegistrationPage({ api = registrationApi }: Portal
                         )}
                         <div>
                           <strong>{documentFile.name}</strong>
-                          <small>{formatBytes(documentFile.size)} · siap diunggah</small>
+                          <small>{formatBytes(documentFile.size)} · {oversizedFile ? 'belum dapat diunggah' : 'siap diunggah'}</small>
                         </div>
                         <button
                           className="portal-button portal-button--ghost"
@@ -1065,7 +1097,23 @@ export default function PortalRegistrationPage({ api = registrationApi }: Portal
             )}
 
             {message && <p role="status">{message}</p>}
-            {error && <p role="alert">{error}</p>}
+            {error && (
+              <section ref={errorSummaryRef} className="portal-error-summary" role="alert" tabIndex={-1} aria-label={error}>
+                <span aria-hidden="true">!</span>
+                <div>
+                  <h2>{error}</h2>
+                  {oversizedFile ? (
+                    <><p><strong>{oversizedFile.name}</strong> berukuran {formatBytes(oversizedFile.size)}.</p><p>Ukuran maksimum 10 MB. Kompres berkas atau pilih berkas yang lebih kecil.</p></>
+                  ) : (
+                    <>
+                      <p>Lengkapi bagian berikut sebelum mengirim:</p>
+                      <ul>{gaps.flatMap((gap) => gap.missingDocumentCategories?.map((category) => <li key={category}>{documentCategoryLabels[category]}</li>) ?? [<li key={gap.key}>{gap.label}</li>])}</ul>
+                      {gaps.some((gap) => gap.key === 'documents') && <button className="portal-button portal-button--primary" type="button" onClick={() => { document.getElementById('registration-documents-panel')?.scrollIntoView?.({ behavior: 'smooth', block: 'start' }); documentInputRef.current?.focus(); }}>Lengkapi dokumen</button>}
+                    </>
+                  )}
+                </div>
+              </section>
+            )}
           </>
         )}
       </main>
