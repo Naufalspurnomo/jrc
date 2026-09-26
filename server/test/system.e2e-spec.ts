@@ -386,9 +386,14 @@ suite('registration system e2e', () => {
     });
   });
 
-  it('records audit history and prevents CSV formula execution', async () => {
-    const csv = await reviewer.get('/api/admin/registrations/export.csv').expect(200);
-    expect(csv.text).toContain("'=CMD()");
+  it('records audit history and exports a native XLSX workbook', async () => {
+    const xlsx = await reviewer.get('/api/admin/registrations/export.xlsx').expect(200);
+    expect(xlsx.headers['content-type']).toContain(
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    );
+    expect(xlsx.headers['content-disposition']).toContain('registrations-jrc-xiv.xlsx');
+    expect(Buffer.isBuffer(xlsx.body)).toBe(true);
+    expect(xlsx.body.subarray(0, 2).toString()).toBe('PK');
     const actions = (await prisma.auditLog.findMany({ select: { action: true } })).map((entry) => entry.action);
     expect(actions).toContain('REGISTRATION_APPROVED');
     expect(actions).toContain('PAYMENT_MARKED_PAID');

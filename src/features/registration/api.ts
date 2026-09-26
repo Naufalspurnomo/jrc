@@ -38,8 +38,8 @@ export const API_PATHS = {
   admin: {
     registrations: {
       root: '/api/admin/registrations',
-      exportCsv: '/api/admin/registrations/export.csv',
-      attendanceCsv: '/api/admin/registrations/attendance.csv',
+      exportXlsx: '/api/admin/registrations/export.xlsx',
+      attendanceXlsx: '/api/admin/registrations/attendance.xlsx',
       byId: (registrationId: string) => `/api/admin/registrations/${encodeURIComponent(registrationId)}`,
       review: (registrationId: string) => `/api/admin/registrations/${encodeURIComponent(registrationId)}/review`,
     },
@@ -61,6 +61,7 @@ type RequestBody = FormData | unknown;
 export interface ApiRequestInit extends Omit<RequestInit, 'body'> {
   body?: RequestBody;
   csrf?: boolean;
+  responseType?: 'blob';
 }
 
 interface ApiErrorPayload {
@@ -152,7 +153,7 @@ export class ApiClient {
   }
 
   async request<T = unknown>(path: string, init: ApiRequestInit = {}): Promise<T> {
-    const { body: requestBody, csrf, ...requestInit } = init;
+    const { body: requestBody, csrf, responseType, ...requestInit } = init;
     const method = (init.method ?? 'GET').toUpperCase();
     const headers: Record<string, string> = {};
     new Headers(init.headers).forEach((value, key) => {
@@ -187,6 +188,7 @@ export class ApiClient {
       headers,
       method,
     });
+    if (response.ok && responseType === 'blob') return await response.blob() as T;
     const payload = await parseResponse(response);
     if (!response.ok) throw new ApiError(response.status, payload);
     return payload as T;
@@ -498,8 +500,8 @@ export interface RegistrationApi {
     listRegistrations(): Promise<RegistrationRecord[]>;
     getRegistration(registrationId: string): Promise<RegistrationRecord>;
     reviewRegistration(registrationId: string, input: ReviewInput): Promise<RegistrationRecord>;
-    exportRegistrations(): Promise<string>;
-    exportAttendance(): Promise<string>;
+    exportRegistrations(): Promise<Blob>;
+    exportAttendance(): Promise<Blob>;
     listFinanceInvoices(): Promise<FinanceInvoiceRecord[]>;
     verifyPayment(invoiceId: string, input: PaymentReviewInput): Promise<InvoiceRecord>;
   };
@@ -599,8 +601,8 @@ export function createRegistrationApi(client = new ApiClient()): RegistrationApi
         API_PATHS.admin.registrations.review(registrationId),
         { method: 'POST', body: input },
       ),
-      exportRegistrations: () => client.request<string>(API_PATHS.admin.registrations.exportCsv),
-      exportAttendance: () => client.request<string>(API_PATHS.admin.registrations.attendanceCsv),
+      exportRegistrations: () => client.request<Blob>(API_PATHS.admin.registrations.exportXlsx, { responseType: 'blob' }),
+      exportAttendance: () => client.request<Blob>(API_PATHS.admin.registrations.attendanceXlsx, { responseType: 'blob' }),
       listFinanceInvoices: () => client.request<FinanceInvoiceRecord[]>(API_PATHS.admin.finance.invoices.root),
       verifyPayment: (invoiceId, input) => client.request<InvoiceRecord>(API_PATHS.admin.invoices.verify(invoiceId), {
         method: 'POST',

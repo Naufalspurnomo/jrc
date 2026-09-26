@@ -51,26 +51,11 @@ function formatDate(value: string): string {
     : new Intl.DateTimeFormat('id-ID', { dateStyle: 'medium' }).format(date);
 }
 
-async function downloadCsv(api: RegistrationApi): Promise<void> {
-  const csv = await api.admin.exportRegistrations();
-  const url = URL.createObjectURL(new Blob([`\uFEFF${csv}`], { type: 'text/csv;charset=utf-8' }));
+async function downloadXlsx(blob: Blob, filename: string): Promise<void> {
+  const url = URL.createObjectURL(blob);
   const anchor = document.createElement('a');
   anchor.href = url;
-  anchor.download = 'pendaftaran-jrc-xiv.csv';
-
-  try {
-    anchor.click();
-  } finally {
-    URL.revokeObjectURL(url);
-  }
-}
-
-async function downloadAttendanceCsv(api: RegistrationApi): Promise<void> {
-  const csv = await api.admin.exportAttendance();
-  const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }));
-  const anchor = document.createElement('a');
-  anchor.href = url;
-  anchor.download = 'presensi-jrc-xiv.csv';
+  anchor.download = filename;
 
   try {
     anchor.click();
@@ -131,11 +116,12 @@ export default function AdminDashboardPage({ api = registrationApi }: AdminDashb
     setExporting(true);
     setExportError('');
     try {
-      await (attendance ? downloadAttendanceCsv(api) : downloadCsv(api));
+      const blob = await (attendance ? api.admin.exportAttendance() : api.admin.exportRegistrations());
+      await downloadXlsx(blob, attendance ? 'presensi-jrc-xiv.xlsx' : 'pendaftaran-jrc-xiv.xlsx');
     } catch {
       setExportError(attendance
-        ? 'Ekspor presensi gagal. Coba lagi beberapa saat lagi.'
-        : 'Ekspor CSV gagal. Coba lagi beberapa saat lagi.');
+        ? 'Ekspor XLSX presensi gagal. Coba lagi beberapa saat lagi.'
+        : 'Ekspor XLSX pendaftaran gagal. Coba lagi beberapa saat lagi.');
     } finally {
       setExporting(false);
     }
@@ -157,7 +143,7 @@ export default function AdminDashboardPage({ api = registrationApi }: AdminDashb
               disabled={loading || exporting}
               onClick={() => void exportRecords()}
             >
-              {exporting ? 'Menyiapkan CSV…' : 'Ekspor CSV'}
+              {exporting ? 'Menyiapkan XLSX…' : 'Ekspor XLSX'}
             </button>
             <button
               className="admin-export"
@@ -165,7 +151,7 @@ export default function AdminDashboardPage({ api = registrationApi }: AdminDashb
               disabled={loading || exporting}
               onClick={() => void exportRecords(true)}
             >
-              Ekspor presensi
+              {exporting ? 'Menyiapkan XLSX…' : 'Ekspor presensi XLSX'}
             </button>
           </div>
         </header>

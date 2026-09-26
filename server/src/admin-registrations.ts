@@ -27,6 +27,7 @@ import {
   MinLength,
 } from 'class-validator';
 import { randomUUID } from 'node:crypto';
+import ExcelJS from 'exceljs';
 import { Response } from 'express';
 import {
   AuthPrincipal,
@@ -34,7 +35,6 @@ import {
   CurrentUser,
   Roles,
 } from './auth';
-import { csvRow } from './common/csv';
 import { assertRegistrationTransition } from './domain/registration-state';
 import { ManualPaymentProvider } from './payments/manual-payment.provider';
 import { PrismaService } from './prisma.service';
@@ -399,6 +399,89 @@ const REVIEW_ACTIONS: Record<ReviewStatus, string> = {
   REJECTED: 'REGISTRATION_REJECTED',
 };
 
+const XLSX_MIME =
+  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
+const XLSX_DATE_FORMAT = 'yyyy-mm-dd hh:mm:ss';
+const DANGEROUS_SPREADSHEET_PREFIX = /^[=+\-@\t\r]/;
+
+function safeSpreadsheetString(value: string): string {
+  return DANGEROUS_SPREADSHEET_PREFIX.test(value) ? `'${value}` : value;
+}
+
+function safeSpreadsheetValue(
+  value: string | number | Date | null,
+): string | number | Date | null {
+  return typeof value === 'string' ? safeSpreadsheetString(value) : value;
+}
+
+function createExportWorkbook(
+  sheetName: string,
+  headers: string[],
+  widths: number[],
+): { workbook: ExcelJS.Workbook; worksheet: ExcelJS.Worksheet } {
+  const workbook = new ExcelJS.Workbook();
+  workbook.creator = 'JRC XIV Administration';
+  workbook.lastModifiedBy = 'JRC XIV Administration';
+  workbook.created = new Date();
+  workbook.modified = new Date();
+  workbook.title = `${sheetName} - JRC XIV`;
+  workbook.subject = `JRC XIV ${sheetName.toLowerCase()} export`;
+  workbook.company = 'JRC XIV';
+  workbook.keywords = 'JRC XIV administration export';
+
+  const worksheet = workbook.addWorksheet(sheetName, {
+    properties: { defaultRowHeight: 20 },
+    views: [{ state: 'frozen', ySplit: 1 }],
+  });
+  worksheet.columns = headers.map((header, index) => ({
+    header,
+    key: `column${index + 1}`,
+    width: widths[index],
+    style: { alignment: { vertical: 'middle', wrapText: true } },
+  }));
+  const header = worksheet.getRow(1);
+  header.height = 30;
+  header.font = { bold: true, color: { argb: 'FFFFFFFF' } };
+  header.fill = {
+    type: 'pattern',
+    pattern: 'solid',
+    fgColor: { argb: 'FF67151D' },
+  };
+  header.alignment = { vertical: 'middle', horizontal: 'center', wrapText: true };
+  return { workbook, worksheet };
+}
+
+function finishExportWorksheet(worksheet: ExcelJS.Worksheet): void {
+  const lastRow = Math.max(worksheet.rowCount, 1);
+  const lastColumn = worksheet.columnCount;
+  worksheet.autoFilter = {
+    from: { row: 1, column: 1 },
+    to: { row: lastRow, column: lastColumn },
+  };
+  for (let rowNumber = 1; rowNumber <= lastRow; rowNumber += 1) {
+    const row = worksheet.getRow(rowNumber);
+    if (rowNumber > 1 && rowNumber % 2 === 1) {
+      row.fill = {
+        type: 'pattern',
+        pattern: 'solid',
+        fgColor: { argb: 'FFF8F3F3' },
+      };
+    }
+    row.eachCell({ includeEmpty: true }, (cell) => {
+      cell.border = {
+        top: { style: 'thin', color: { argb: 'FFD9C7C9' } },
+        left: { style: 'thin', color: { argb: 'FFD9C7C9' } },
+        bottom: { style: 'thin', color: { argb: 'FFD9C7C9' } },
+        right: { style: 'thin', color: { argb: 'FFD9C7C9' } },
+      };
+    });
+  }
+}
+
+async function workbookBuffer(workbook: ExcelJS.Workbook): Promise<Buffer> {
+  return Buffer.from(await workbook.xlsx.writeBuffer());
+}
+
 @Injectable()
 export class AdminRegistrationsService {
   constructor(
@@ -430,7 +513,7 @@ export class AdminRegistrationsService {
     return serializeAdminRegistration(registration);
   }
 
-  async exportCsv(filters: AdminRegistrationFiltersDto): Promise<string> {
+  async exportXlsx(filters: AdminRegistrationFiltersDto): Promise<Buffer> {
     const registrations = await this.prisma.registration.findMany({
       where: registrationWhere(filters),
       orderBy: [{ updatedAt: 'desc' }, { id: 'asc' }],
@@ -444,33 +527,33 @@ export class AdminRegistrationsService {
         _count: { select: { members: true } },
       },
     });
-
-    const rows = registrations.map((registration) =>
-      csvRow([
+    const { workbook, worksheet } = createExportWorkbook(
+      'Registrations',
+      [
+        'Registration Number', 'Team', 'Institution', 'Competition', 'Status',
+        'Member Count', 'Updated At',
+      ],
+      [24, 28, 32, 28, 22, 15, 22],
+    );
+    for (const registration of registrations) {
+      const row = worksheet.addRow([
         registration.registrationNumber,
         registration.teamName,
         registration.institution,
         registration.competition.name,
         registration.status,
         registration._count.members,
-        registration.updatedAt.toISOString(),
-      ]),
-    );
-    return `\uFEFF${[
-      csvRow([
-        'Registration Number',
-        'Team',
-        'Institution',
-        'Competition',
-        'Status',
-        'Member Count',
-        'Updated At',
-      ]),
-      ...rows,
-    ].join('\r\n')}\r\n`;
+        registration.updatedAt,
+      ].map((value) => safeSpreadsheetValue(value)));
+      row.getCell(7).numFmt = XLSX_DATE_FORMAT;
+      row.getCell(5).font = { bold: true, color: { argb: 'FF67151D' } };
+      row.getCell(6).alignment = { horizontal: 'center', vertical: 'middle' };
+    }
+    finishExportWorksheet(worksheet);
+    return workbookBuffer(workbook);
   }
 
-  async exportAttendanceCsv(filters: AdminRegistrationFiltersDto): Promise<string> {
+  async exportAttendanceXlsx(filters: AdminRegistrationFiltersDto): Promise<Buffer> {
     const registrations = await this.prisma.registration.findMany({
       where: registrationWhere({
         ...filters,
@@ -497,14 +580,36 @@ export class AdminRegistrationsService {
         },
       },
     });
-    const rows = registrations.flatMap((registration) => registration.members.map((member) => csvRow([
-      registration.registrationNumber, registration.teamName, registration.competition.name,
-      registration.institution, member.role, member.name, member.studentId ?? '',
-      member.attendedAt ? 'ATTENDED' : 'NOT_ATTENDED', member.attendedAt?.toISOString() ?? '',
-      member.attendedBy?.displayName ?? '', registration.ticket?.kitHandedOverAt ? 'HANDED_OVER' : 'NOT_HANDED_OVER',
-      registration.ticket?.kitHandedOverAt?.toISOString() ?? '', registration.ticket?.kitHandedOverBy?.displayName ?? '',
-    ])));
-    return `\uFEFF${[csvRow(['Registration Number', 'Team', 'Competition', 'Institution', 'Role', 'Member Name', 'Student ID', 'Attendance Status', 'Attended At', 'Attendance Operator', 'JRC Kit Status', 'Kit Handed Over At', 'Kit Operator']), ...rows].join('\r\n')}\r\n`;
+    const { workbook, worksheet } = createExportWorkbook(
+      'Attendance',
+      [
+        'Registration Number', 'Team', 'Competition', 'Institution', 'Role',
+        'Member Name', 'Student ID', 'Attendance Status', 'Attended At',
+        'Attendance Operator', 'JRC Kit Status', 'Kit Handed Over At', 'Kit Operator',
+      ],
+      [24, 28, 28, 30, 16, 26, 18, 20, 22, 24, 22, 22, 24],
+    );
+    for (const registration of registrations) {
+      for (const member of registration.members) {
+        const row = worksheet.addRow([
+          registration.registrationNumber, registration.teamName,
+          registration.competition.name, registration.institution, member.role,
+          member.name, member.studentId ?? '',
+          member.attendedAt ? 'ATTENDED' : 'NOT_ATTENDED', member.attendedAt,
+          member.attendedBy?.displayName ?? '',
+          registration.ticket?.kitHandedOverAt ? 'HANDED_OVER' : 'NOT_HANDED_OVER',
+          registration.ticket?.kitHandedOverAt ?? null,
+          registration.ticket?.kitHandedOverBy?.displayName ?? '',
+        ].map((value) => safeSpreadsheetValue(value)));
+        row.getCell(9).numFmt = XLSX_DATE_FORMAT;
+        row.getCell(12).numFmt = XLSX_DATE_FORMAT;
+        for (const column of [5, 8, 11]) {
+          row.getCell(column).font = { bold: true, color: { argb: 'FF67151D' } };
+        }
+      }
+    }
+    finishExportWorksheet(worksheet);
+    return workbookBuffer(workbook);
   }
 
   async review(
@@ -704,27 +809,30 @@ export class AdminRegistrationsController {
     return this.registrations.list(query);
   }
 
-  @Get('export.csv')
-  async exportCsv(
+  @Get('export.xlsx')
+  async exportXlsx(
     @Query() query: AdminRegistrationFiltersDto,
     @Res({ passthrough: true }) response: Response,
-  ): Promise<string> {
-    response.setHeader('Content-Type', 'text/csv; charset=utf-8');
+  ): Promise<Buffer> {
+    response.setHeader('Content-Type', XLSX_MIME);
     response.setHeader(
       'Content-Disposition',
-      `attachment; filename="registrations.csv"; filename*=UTF-8''registrations.csv`,
+      `attachment; filename="registrations-jrc-xiv.xlsx"; filename*=UTF-8''registrations-jrc-xiv.xlsx`,
     );
-    return this.registrations.exportCsv(query);
+    return this.registrations.exportXlsx(query);
   }
 
-  @Get('attendance.csv')
-  async exportAttendanceCsv(
+  @Get('attendance.xlsx')
+  async exportAttendanceXlsx(
     @Query() query: AdminRegistrationFiltersDto,
     @Res({ passthrough: true }) response: Response,
-  ): Promise<string> {
-    response.setHeader('Content-Type', 'text/csv; charset=utf-8');
-    response.setHeader('Content-Disposition', `attachment; filename="attendance.csv"; filename*=UTF-8''attendance.csv`);
-    return this.registrations.exportAttendanceCsv(query);
+  ): Promise<Buffer> {
+    response.setHeader('Content-Type', XLSX_MIME);
+    response.setHeader(
+      'Content-Disposition',
+      `attachment; filename="attendance-jrc-xiv.xlsx"; filename*=UTF-8''attendance-jrc-xiv.xlsx`,
+    );
+    return this.registrations.exportAttendanceXlsx(query);
   }
 
   @Get(':id')

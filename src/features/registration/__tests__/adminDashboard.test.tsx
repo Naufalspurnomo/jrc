@@ -35,6 +35,9 @@ function registration(
 }
 
 function createApi(registrations: RegistrationRecord[]): RegistrationApi {
+  const xlsx = new Blob(['xlsx'], {
+    type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  });
   return {
     auth: {
       me: vi.fn().mockResolvedValue(adminSession),
@@ -44,8 +47,8 @@ function createApi(registrations: RegistrationRecord[]): RegistrationApi {
     },
     admin: {
       listRegistrations: vi.fn().mockResolvedValue(registrations),
-      exportRegistrations: vi.fn().mockResolvedValue('registrationNumber,teamName\nJRC-001,Garuda'),
-      exportAttendance: vi.fn().mockResolvedValue('registrationNumber,attendance\nJRC-001,HADIR'),
+      exportRegistrations: vi.fn().mockResolvedValue(xlsx),
+      exportAttendance: vi.fn().mockResolvedValue(xlsx),
     },
   } as unknown as RegistrationApi;
 }
@@ -65,21 +68,27 @@ describe('AdminDashboardPage', () => {
     vi.restoreAllMocks();
   });
 
-  it('downloads the canonical attendance CSV from the compact header', async () => {
+  it.each([
+    ['Ekspor XLSX', 'exportRegistrations', 'pendaftaran-jrc-xiv.xlsx', 'blob:registrations'],
+    ['Ekspor presensi XLSX', 'exportAttendance', 'presensi-jrc-xiv.xlsx', 'blob:attendance'],
+  ] as const)('downloads %s as an XLSX blob', async (buttonName, method, filename, objectUrl) => {
     const api = createApi([registration('001', 'Garuda Robotika', 'SUBMITTED')]);
     const click = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => undefined);
-    const createObjectURL = vi.spyOn(URL, 'createObjectURL').mockReturnValue('blob:attendance');
+    const createObjectURL = vi.spyOn(URL, 'createObjectURL').mockReturnValue(objectUrl);
     const revokeObjectURL = vi.spyOn(URL, 'revokeObjectURL').mockImplementation(() => undefined);
 
     renderDashboard(api);
     await screen.findByText('Garuda Robotika');
-    await userEvent.click(screen.getByRole('button', { name: 'Ekspor presensi' }));
+    await userEvent.click(screen.getByRole('button', { name: buttonName }));
 
-    expect(api.admin.exportAttendance).toHaveBeenCalledOnce();
-    expect(api.admin.exportRegistrations).not.toHaveBeenCalled();
-    expect(createObjectURL).toHaveBeenCalledOnce();
+    expect(api.admin[method]).toHaveBeenCalledOnce();
+    const blob = createObjectURL.mock.calls[0]?.[0];
+    expect(blob).toBeInstanceOf(Blob);
+    expect((blob as Blob).type).toBe('application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    expect(createObjectURL).toHaveBeenCalledWith(blob);
+    expect(click.mock.instances[0]).toHaveAttribute('download', filename);
     expect(click).toHaveBeenCalledOnce();
-    expect(revokeObjectURL).toHaveBeenCalledWith('blob:attendance');
+    expect(revokeObjectURL).toHaveBeenCalledWith(objectUrl);
   });
 
   it('loads registrations from the admin API and links to each review detail', async () => {

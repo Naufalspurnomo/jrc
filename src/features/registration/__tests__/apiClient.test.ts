@@ -86,4 +86,29 @@ describe('ApiClient', () => {
       '/api/admin/finance/invoices/invoice%2F1/proof',
     );
   });
+
+  it('downloads authenticated admin XLSX exports as binary blobs', async () => {
+    const mime = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
+    const fetcher = vi.fn<typeof fetch>().mockImplementation(async () => new Response(new Uint8Array([80, 75, 3, 4]), {
+      status: 200,
+      headers: { 'Content-Type': mime },
+    }));
+    const api = createRegistrationApi(new ApiClient(fetcher));
+
+    const registrations = await api.admin.exportRegistrations();
+    const attendance = await api.admin.exportAttendance();
+
+    expect(registrations).toMatchObject({ size: 4, type: mime });
+    expect(attendance).toMatchObject({ size: 4, type: mime });
+    expect(fetcher).toHaveBeenNthCalledWith(
+      1,
+      '/api/admin/registrations/export.xlsx',
+      expect.objectContaining({ credentials: 'include', method: 'GET' }),
+    );
+    expect(fetcher).toHaveBeenNthCalledWith(
+      2,
+      '/api/admin/registrations/attendance.xlsx',
+      expect.objectContaining({ credentials: 'include', method: 'GET' }),
+    );
+  });
 });
