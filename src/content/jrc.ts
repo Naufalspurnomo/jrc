@@ -1,6 +1,7 @@
 export const pendingAnnouncement = 'Akan diumumkan' as const;
 export const registrationPeriod = '15 September–15 Oktober 2026' as const;
 export const registrationDeadline = '2026-10-15T23:59:59+07:00' as const;
+export const competitionFee = 'Rp 250.000 per tim' as const;
 
 export type CompetitionLevel = 'SD' | 'SMP' | 'SMA' | 'Umum';
 
@@ -16,7 +17,8 @@ export interface Competition {
   level: CompetitionLevel;
   discipline: string;
   fixtureLabel: 'Kategori resmi JRC XIV';
-  fee: typeof pendingAnnouncement;
+  fee: typeof competitionFee;
+  contact: { name: string; phone: string };
   guidebook: {
     label: 'Guidebook';
     status: typeof pendingAnnouncement;
@@ -41,7 +43,8 @@ export const competitions: readonly Competition[] = [
     level: 'SD',
     discipline: 'Transporter',
     fixtureLabel: 'Kategori resmi JRC XIV',
-    fee: pendingAnnouncement,
+    fee: competitionFee,
+    contact: { name: 'Naya', phone: '0878-4132-4886' },
     guidebook: { label: 'Guidebook', status: pendingAnnouncement, href: null },
     provocation: 'Bawa misi sampai garis akhir.',
     description:
@@ -61,7 +64,8 @@ export const competitions: readonly Competition[] = [
     level: 'SMP',
     discipline: 'Rescue Transporter',
     fixtureLabel: 'Kategori resmi JRC XIV',
-    fee: pendingAnnouncement,
+    fee: competitionFee,
+    contact: { name: 'Manda', phone: '0857-5540-9648' },
     guidebook: { label: 'Guidebook', status: pendingAnnouncement, href: null },
     provocation: 'Temukan jalan ketika arena menggelap.',
     description:
@@ -81,7 +85,8 @@ export const competitions: readonly Competition[] = [
     level: 'SMA',
     discipline: 'Transporter Shooter',
     fixtureLabel: 'Kategori resmi JRC XIV',
-    fee: pendingAnnouncement,
+    fee: competitionFee,
+    contact: { name: 'Aisyah', phone: '0881-0360-87367' },
     guidebook: { label: 'Guidebook', status: pendingAnnouncement, href: null },
     provocation: 'Angkut, bidik, tuntaskan.',
     description:
@@ -101,7 +106,8 @@ export const competitions: readonly Competition[] = [
     level: 'Umum',
     discipline: 'Line Follower Mikro',
     fixtureLabel: 'Kategori resmi JRC XIV',
-    fee: pendingAnnouncement,
+    fee: competitionFee,
+    contact: { name: 'Alzar', phone: '0813-3002-5557' },
     guidebook: { label: 'Guidebook', status: pendingAnnouncement, href: null },
     provocation: 'Kecepatan lahir dari kendali.',
     description:
@@ -121,7 +127,8 @@ export const competitions: readonly Competition[] = [
     level: 'Umum',
     discipline: 'Sumo',
     fixtureLabel: 'Kategori resmi JRC XIV',
-    fee: pendingAnnouncement,
+    fee: competitionFee,
+    contact: { name: 'Nadjwa', phone: '0888-5454-111' },
     guidebook: { label: 'Guidebook', status: pendingAnnouncement, href: null },
     provocation: 'Satu ring. Tidak ada ruang untuk ragu.',
     description:
@@ -141,7 +148,8 @@ export const competitions: readonly Competition[] = [
     level: 'Umum',
     discipline: 'Soccer',
     fixtureLabel: 'Kategori resmi JRC XIV',
-    fee: pendingAnnouncement,
+    fee: competitionFee,
+    contact: { name: 'Rissa', phone: '0851-1954-6428' },
     guidebook: { label: 'Guidebook', status: pendingAnnouncement, href: null },
     provocation: 'Baca arena. Rebut bola. Cetak sejarah.',
     description:
@@ -326,7 +334,8 @@ export const faqItems = [
   },
   {
     question: 'Bagaimana menghubungi panitia?',
-    answer: 'Kanal kontak panitia belum tersedia.',
+    answer:
+      'Hubungi narahubung sesuai kategori: SD — Naya 0878-4132-4886; SMP — Manda 0857-5540-9648; SMA — Aisyah 0881-0360-87367; Line Follower — Alzar 0813-3002-5557; SumoBot — Nadjwa 0888-5454-111; Soccer — Rissa 0851-1954-6428.',
   },
 ] as const;
 

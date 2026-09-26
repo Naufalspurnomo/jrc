@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { competitions } from './jrc';
+import { competitions, faqItems } from './jrc';
 
 describe('JRC XIV competition catalog', () => {
   it('pairs stable competition identities with the exact arena, level, and discipline mapping', () => {
@@ -79,5 +79,24 @@ describe('JRC XIV competition catalog', () => {
         },
       },
     ]);
+  });
+
+  it('publishes the official per-team fee and contact for every category', () => {
+    expect(competitions.map(({ level, discipline, fee, contact }) => ({
+      level,
+      discipline,
+      fee,
+      contact,
+    }))).toEqual([
+      { level: 'SD', discipline: 'Transporter', fee: 'Rp 250.000 per tim', contact: { name: 'Naya', phone: '0878-4132-4886' } },
+      { level: 'SMP', discipline: 'Rescue Transporter', fee: 'Rp 250.000 per tim', contact: { name: 'Manda', phone: '0857-5540-9648' } },
+      { level: 'SMA', discipline: 'Transporter Shooter', fee: 'Rp 250.000 per tim', contact: { name: 'Aisyah', phone: '0881-0360-87367' } },
+      { level: 'Umum', discipline: 'Line Follower Mikro', fee: 'Rp 250.000 per tim', contact: { name: 'Alzar', phone: '0813-3002-5557' } },
+      { level: 'Umum', discipline: 'Sumo', fee: 'Rp 250.000 per tim', contact: { name: 'Nadjwa', phone: '0888-5454-111' } },
+      { level: 'Umum', discipline: 'Soccer', fee: 'Rp 250.000 per tim', contact: { name: 'Rissa', phone: '0851-1954-6428' } },
+    ]);
+
+    expect(faqItems.at(-1)?.answer).toContain('Naya 0878-4132-4886');
+    expect(faqItems.at(-1)?.answer).toContain('Rissa 0851-1954-6428');
   });
 });

@@ -272,6 +272,9 @@ export function ShowcaseHero() {
             <p className="character-selector__status">
               {current.level} · Kategori resmi JRC XIV
             </p>
+            <p className="character-selector__status">
+              {current.fee} · {current.contact.name} · {current.contact.phone}
+            </p>
           </div>
 
           <div className="character-selector__action">

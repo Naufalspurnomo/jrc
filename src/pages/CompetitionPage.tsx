@@ -83,10 +83,7 @@ export default function CompetitionPage() {
             <header>
               <p className="site-kicker kicker">Detail kategori</p>
               <h2 id="competition-intel-title">Informasi resmi.</h2>
-              <p>
-                Biaya pendaftaran dan guidebook belum diumumkan. Informasi akan diperbarui setelah
-                tersedia.
-              </p>
+              <p>Biaya berlaku per tim. Hubungi narahubung kategori untuk informasi lebih lanjut.</p>
             </header>
             <dl>
               <div>
@@ -96,6 +93,10 @@ export default function CompetitionPage() {
               <div>
                 <dt>Biaya pendaftaran</dt>
                 <dd>{competition.fee}</dd>
+              </div>
+              <div>
+                <dt>Narahubung</dt>
+                <dd>{competition.contact.name} · {competition.contact.phone}</dd>
               </div>
               <div>
                 <dt>Guidebook</dt>

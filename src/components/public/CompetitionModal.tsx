@@ -153,6 +153,10 @@ export function CompetitionModal({ competition, open, onClose }: CompetitionModa
               <dd>{competition.fee}</dd>
             </div>
             <div>
+              <dt>Narahubung</dt>
+              <dd>{competition.contact.name} · {competition.contact.phone}</dd>
+            </div>
+            <div>
               <dt>Guidebook</dt>
               <dd>{competition.guidebook.status}</dd>
             </div>

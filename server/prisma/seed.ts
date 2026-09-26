@@ -28,7 +28,7 @@ const COMPETITION_DEFINITIONS = [
     level: 'SMP',
     discipline: 'Rescue Transporter',
     feeEnv: 'RESCUE_SMP_FEE',
-    defaultFee: 300_000,
+    defaultFee: 250_000,
   },
   {
     slug: 'pirate-clash-transporter-shooter',
@@ -36,7 +36,7 @@ const COMPETITION_DEFINITIONS = [
     level: 'SMA',
     discipline: 'Transporter Shooter',
     feeEnv: 'SHOOTER_SMA_FEE',
-    defaultFee: 350_000,
+    defaultFee: 250_000,
   },
   {
     slug: 'wacky-rally-line-follower-mikro',
@@ -44,7 +44,7 @@ const COMPETITION_DEFINITIONS = [
     level: 'Umum',
     discipline: 'Line Follower Mikro',
     feeEnv: 'LINE_FOLLOWER_FEE',
-    defaultFee: 300_000,
+    defaultFee: 250_000,
   },
   {
     slug: 'ring-rumble-sumo',
@@ -52,7 +52,7 @@ const COMPETITION_DEFINITIONS = [
     level: 'Umum',
     discipline: 'Sumo',
     feeEnv: 'SUMO_FEE',
-    defaultFee: 300_000,
+    defaultFee: 250_000,
   },
   {
     slug: 'goal-rush-soccer',
@@ -60,7 +60,7 @@ const COMPETITION_DEFINITIONS = [
     level: 'Umum',
     discipline: 'Soccer',
     feeEnv: 'SOCCER_FEE',
-    defaultFee: 350_000,
+    defaultFee: 250_000,
   },
 ] as const;
 
