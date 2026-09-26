@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent }
 import { useNavigate, useParams } from 'react-router-dom';
 
 import { PortalShell } from '../../components/portal/PortalShell';
+import { competitions as competitionCatalog } from '../../content/jrc';
 import { useAuth } from '../../features/auth/AuthProvider';
 import {
   ApiError,
@@ -21,6 +22,7 @@ import {
   isAcceptedDocumentType,
 } from '../../features/registration/documentErrors';
 import { registrationGaps, REQUIRED_DOCUMENT_CATEGORIES } from '../../features/registration/readiness';
+import { calculateCropSource, canvasToJpegFile, loadCropImage } from '../../features/registration/photoCrop';
 import { useAutosave, type AutosaveState } from '../../hooks/useAutosave';
 
 interface PortalRegistrationPageProps {
@@ -107,8 +109,12 @@ export default function PortalRegistrationPage({ api = registrationApi }: Portal
   const [reviewReasonCategory, setReviewReasonCategory] = useState<ReviewReasonCategory | null>(null);
   const [reviewReasonComment, setReviewReasonComment] = useState('');
   const [documentCategory, setDocumentCategory] = useState('RECOMMENDATION_LETTER');
-  const [photoSubjectName, setPhotoSubjectName] = useState('');
-  const [photoSubjectRole, setPhotoSubjectRole] = useState<'PARTICIPANT' | 'SUPERVISOR'>('PARTICIPANT');
+  const [selectedPhotoPerson, setSelectedPhotoPerson] = useState('');
+  const [cropFile, setCropFile] = useState<File | null>(null);
+  const [cropUrl, setCropUrl] = useState<string | null>(null);
+  const [cropZoom, setCropZoom] = useState(1);
+  const [cropOffset, setCropOffset] = useState({ x: 0, y: 0 });
+  const [cropBusy, setCropBusy] = useState(false);
   const [documentFile, setDocumentFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -130,6 +136,8 @@ export default function PortalRegistrationPage({ api = registrationApi }: Portal
 
   const competitionCardRefs = useRef<Array<HTMLButtonElement | null>>([]);
   const documentInputRef = useRef<HTMLInputElement | null>(null);
+  const cropCanvasRef = useRef<HTMLCanvasElement | null>(null);
+  const cropDragRef = useRef<{ x: number; y: number; offsetX: number; offsetY: number } | null>(null);
   const formRef = useRef<HTMLFormElement | null>(null);
   const createInFlight = useRef(false);
   // Ids hydrated during this session. A draft we just created is added *before*
@@ -218,7 +226,7 @@ export default function PortalRegistrationPage({ api = registrationApi }: Portal
     };
   }, [api, existingRegistrationId, loadAttempt]);
 
-  // Object URL for the staged file preview; revoked whenever the file changes.
+  // Object URLs for staged output and the source shown in the crop dialog.
   useEffect(() => {
     if (!documentFile || !isPreviewableImage(documentFile.type)) {
       setPreviewUrl(null);
@@ -228,6 +236,16 @@ export default function PortalRegistrationPage({ api = registrationApi }: Portal
     setPreviewUrl(url);
     return () => URL.revokeObjectURL(url);
   }, [documentFile]);
+
+  useEffect(() => {
+    if (!cropFile) {
+      setCropUrl(null);
+      return;
+    }
+    const url = URL.createObjectURL(cropFile);
+    setCropUrl(url);
+    return () => URL.revokeObjectURL(url);
+  }, [cropFile]);
 
   const persist = useCallback(async () => {
     if (!registrationId) return;
@@ -351,6 +369,15 @@ export default function PortalRegistrationPage({ api = registrationApi }: Portal
 
   const selectedCompetitionIndex = competitions.findIndex((competition) => competition.id === competitionId);
   const tabbableCompetitionIndex = selectedCompetitionIndex >= 0 ? selectedCompetitionIndex : 0;
+  const selectedCompetition = selectedCompetitionIndex >= 0
+    ? competitions[selectedCompetitionIndex]
+    : undefined;
+  const selectedCatalogCompetition = selectedCompetition
+    ? (
+        competitionCatalog.find((competition) => competition.slug === selectedCompetition.slug)
+        ?? competitionCatalog.find((competition) => competition.name === selectedCompetition.name)
+      )
+    : undefined;
 
   const handleCompetitionKeyDown = (
     event: KeyboardEvent<HTMLButtonElement>,
@@ -431,6 +458,18 @@ export default function PortalRegistrationPage({ api = registrationApi }: Portal
   };
 
   const acceptDocumentFile = (file: File | null) => {
+    if (file && documentCategory === 'MEMBER_PHOTO') {
+      if (!['image/jpeg', 'image/png'].includes(file.type)) {
+        setError('Foto formal 3x4 harus berformat JPEG atau PNG.');
+        return;
+      }
+      setCropZoom(1);
+      setCropOffset({ x: 0, y: 0 });
+      setCropFile(file);
+      setDocumentFile(null);
+      setError('');
+      return;
+    }
     setDocumentFile(file);
     setOversizedFile(null);
     if (file && !isAcceptedDocumentType(file.type)) {
@@ -447,6 +486,45 @@ export default function PortalRegistrationPage({ api = registrationApi }: Portal
       return;
     }
     setError('');
+  };
+
+  const roster = useMemo(() => [
+    ...(leader.name.trim() ? [{ key: 'leader', name: leader.name.trim(), label: 'Ketua', role: 'PARTICIPANT' as const }] : []),
+    ...members.flatMap((member, index) => member.name.trim()
+      ? [{ key: `member-${index}`, name: member.name.trim(), label: 'Peserta', role: 'PARTICIPANT' as const }]
+      : []),
+    ...(supervisor.name.trim() ? [{ key: 'supervisor', name: supervisor.name.trim(), label: 'Pembina', role: 'SUPERVISOR' as const }] : []),
+  ], [leader.name, members, supervisor.name]);
+  const selectedRosterPerson = roster.find((person) => person.key === selectedPhotoPerson);
+  const hasMemberPhoto = (person: typeof roster[number]) => documents.some((document) =>
+    document.category.toUpperCase() === 'MEMBER_PHOTO'
+    && document.subjectName?.toLocaleLowerCase('id-ID') === person.name.toLocaleLowerCase('id-ID')
+    && document.subjectRole === person.role,
+  );
+
+  const applyCrop = async () => {
+    if (!cropFile || !selectedRosterPerson) return;
+    setCropBusy(true);
+    try {
+      const image = await loadCropImage(cropFile);
+      try {
+        const canvas = cropCanvasRef.current ?? document.createElement('canvas');
+        canvas.width = 900;
+        canvas.height = 1200;
+        const context = canvas.getContext('2d');
+        if (!context) throw new Error('Canvas tidak tersedia.');
+        const source = calculateCropSource(image.width, image.height, cropZoom, cropOffset.x, cropOffset.y);
+        context.drawImage(image.source, source.x, source.y, source.width, source.height, 0, 0, 900, 1200);
+        setDocumentFile(await canvasToJpegFile(canvas, selectedRosterPerson.name));
+        setCropFile(null);
+      } finally {
+        image.close();
+      }
+    } catch {
+      setError('Foto gagal dipotong. Silakan pilih foto lain.');
+    } finally {
+      setCropBusy(false);
+    }
   };
 
   const uploadDocument = async () => {
@@ -484,16 +562,16 @@ export default function PortalRegistrationPage({ api = registrationApi }: Portal
       const formData = new FormData();
       formData.append('category', documentCategory);
       if (documentCategory === 'MEMBER_PHOTO') {
-        if (!photoSubjectName.trim()) {
-          setError('Nama lengkap pemilik foto wajib diisi.');
+        if (!selectedRosterPerson) {
+          setError('Pilih anggota dari daftar tim.');
           return;
         }
-        if (!['image/jpeg', 'image/png'].includes(documentFile.type)) {
-          setError('Foto formal 3x4 harus berformat JPEG atau PNG.');
+        if (hasMemberPhoto(selectedRosterPerson)) {
+          setError('Hapus foto lama untuk mengganti foto anggota ini.');
           return;
         }
-        formData.append('subjectName', photoSubjectName.trim());
-        formData.append('subjectRole', photoSubjectRole);
+        formData.append('subjectName', selectedRosterPerson.name);
+        formData.append('subjectRole', selectedRosterPerson.role);
       }
       formData.append('file', documentFile);
       await api.registrations.uploadDocument(registrationId, formData);
@@ -503,7 +581,7 @@ export default function PortalRegistrationPage({ api = registrationApi }: Portal
       setReviewReasonCategory(refreshedRegistration.reviewReasonCategory ?? null);
       setReviewReasonComment(refreshedRegistration.reviewReasonComment ?? '');
       setDocumentFile(null);
-      setPhotoSubjectName('');
+      setSelectedPhotoPerson('');
       if (documentInputRef.current) documentInputRef.current.value = '';
       setMessage('Dokumen berhasil diunggah.');
     } catch (uploadError) {
@@ -532,7 +610,7 @@ export default function PortalRegistrationPage({ api = registrationApi }: Portal
   // While the session probe is still in flight we do not know the verification
   // state yet. Reporting it as missing would flash a false "verify your email"
   // requirement and block submit for a participant who is already verified.
-  const gaps = registrationGaps({
+  const baseGaps = registrationGaps({
     emailVerified: authLoading || emailVerified,
     competitionId,
     teamName,
@@ -543,6 +621,14 @@ export default function PortalRegistrationPage({ api = registrationApi }: Portal
     documentCategories: documents.map((document) => document.category),
     hasSupervisor: Boolean(supervisor.name.trim()),
   });
+  const missingPhotoPeople = roster.filter((person) => !hasMemberPhoto(person));
+  const gaps = missingPhotoPeople.length > 0
+    ? [...baseGaps, {
+      key: 'memberPhotos',
+      label: `Foto formal 3x4: ${missingPhotoPeople.map((person) => person.name).join(', ')}`,
+      targetId: 'registration-documents-panel',
+    }]
+    : baseGaps;
   const ready = gaps.length === 0;
 
   const focusGap = (gapKey: string) => {
@@ -670,6 +756,32 @@ export default function PortalRegistrationPage({ api = registrationApi }: Portal
                     );
                   })}
                 </div>
+                {selectedCompetition && (
+                  <section
+                    className="portal-competition-detail"
+                    role="region"
+                    aria-label={`Detail kompetisi ${selectedCompetition.name}`}
+                    aria-live="polite"
+                  >
+                    <p className="portal-competition-detail__eyebrow">Detail arena</p>
+                    <h3 id="selected-competition-title">
+                      {selectedCompetition.level ?? selectedCatalogCompetition?.level ?? 'Umum'} · {selectedCompetition.name}
+                    </h3>
+                    <dl>
+                      <div>
+                        <dt>Jenis lomba</dt>
+                        <dd>{selectedCatalogCompetition?.discipline ?? 'Belum tersedia'}</dd>
+                      </div>
+                      <div>
+                        <dt>Tantangan utama</dt>
+                        <dd>{selectedCatalogCompetition?.objective ?? 'Belum tersedia'}</dd>
+                      </div>
+                    </dl>
+                    {(selectedCatalogCompetition?.description || selectedCompetition.description) && (
+                      <p>{selectedCatalogCompetition?.description ?? selectedCompetition.description}</p>
+                    )}
+                  </section>
+                )}
               </div>
             </section>
 
@@ -894,28 +1006,28 @@ export default function PortalRegistrationPage({ api = registrationApi }: Portal
                     </label>
 
                     {documentCategory === 'MEMBER_PHOTO' && (
-                      <div className="portal-field-row">
-                        <label>
-                          Nama lengkap pemilik foto
-                          <input
-                            disabled={!editable || uploading}
-                            value={photoSubjectName}
-                            onChange={(event) => setPhotoSubjectName(event.target.value)}
-                          />
-                        </label>
-                        <label>
-                          Jabatan
-                          <select
-                            disabled={!editable || uploading}
-                            value={photoSubjectRole}
-                            onChange={(event) => setPhotoSubjectRole(event.target.value as 'PARTICIPANT' | 'SUPERVISOR')}
-                          >
-                            <option value="PARTICIPANT">Peserta</option>
-                            <option value="SUPERVISOR">Pembina</option>
-                          </select>
-                        </label>
-                        <p>Unggah foto formal 3x4 berformat JPEG atau PNG.</p>
-                      </div>
+                      <section className="portal-photo-roster" aria-labelledby="photo-roster-title">
+                        <h3 id="photo-roster-title">Pilih pemilik foto</h3>
+                        <p>Foto akan dipotong menjadi rasio resmi 3:4 (900×1200).</p>
+                        {roster.length === 0 ? (
+                          <p role="status">Isi nama ketua, peserta, atau pembina terlebih dahulu.</p>
+                        ) : (
+                          <div className="portal-photo-roster__grid">
+                            {roster.map((person) => {
+                              const complete = hasMemberPhoto(person);
+                              const photoStatus = complete ? 'Foto lengkap' : 'Belum ada foto';
+                              return <button key={person.key} className="portal-photo-person" aria-label={`${person.name} · ${person.label} · ${photoStatus}`} aria-pressed={selectedPhotoPerson === person.key} disabled={!editable || uploading || complete} type="button" onClick={() => {
+                                setSelectedPhotoPerson(person.key);
+                                setDocumentFile(null);
+                                if (documentInputRef.current) documentInputRef.current.value = '';
+                              }}>
+                                <strong>{person.name}</strong><span>{person.label}</span>
+                                <small>{complete ? 'Foto lengkap · hapus foto lama untuk mengganti' : 'Belum ada foto'}</small>
+                              </button>;
+                            })}
+                          </div>
+                        )}
+                      </section>
                     )}
 
                     <div
@@ -942,11 +1054,47 @@ export default function PortalRegistrationPage({ api = registrationApi }: Portal
                         className={isHighlighted('documents') || oversizedFile ? 'portal-field--attention' : undefined}
                         aria-invalid={isHighlighted('documents') || Boolean(oversizedFile) || undefined}
                         accept={documentCategory === 'MEMBER_PHOTO' ? 'image/jpeg,image/png' : DOCUMENT_ACCEPT_ATTRIBUTE}
-                        disabled={!editable || uploading}
+                        disabled={!editable || uploading || (documentCategory === 'MEMBER_PHOTO' && (!selectedRosterPerson || hasMemberPhoto(selectedRosterPerson)))}
                         type="file"
                         onChange={(event) => acceptDocumentFile(event.target.files?.[0] ?? null)}
                       />
                     </div>
+
+                    {cropFile && cropUrl && (
+                      <div className="portal-crop-backdrop" role="presentation">
+                        <section className="portal-crop-dialog" role="dialog" aria-modal="true" aria-labelledby="crop-title">
+                          <h3 id="crop-title">Atur potongan foto 3:4</h3>
+                          <p>Geser foto dan atur zoom. Hasil akhir JPEG 900×1200.</p>
+                          <div
+                            className="portal-crop-viewport"
+                            onPointerDown={(event) => {
+                              event.currentTarget.setPointerCapture(event.pointerId);
+                              cropDragRef.current = { x: event.clientX, y: event.clientY, offsetX: cropOffset.x, offsetY: cropOffset.y };
+                            }}
+                            onPointerMove={(event) => {
+                              const drag = cropDragRef.current;
+                              if (!drag) return;
+                              const rect = event.currentTarget.getBoundingClientRect();
+                              setCropOffset({
+                                x: Math.max(-1, Math.min(1, drag.offsetX - (event.clientX - drag.x) / (rect.width / 2))),
+                                y: Math.max(-1, Math.min(1, drag.offsetY - (event.clientY - drag.y) / (rect.height / 2))),
+                              });
+                            }}
+                            onPointerUp={() => { cropDragRef.current = null; }}
+                          >
+                            <img src={cropUrl} alt="Pratinjau foto yang akan dipotong" style={{ transform: `translate(${-cropOffset.x * 25}%, ${-cropOffset.y * 25}%) scale(${cropZoom})` }} />
+                          </div>
+                          <label>Zoom
+                            <input aria-label="Zoom foto" type="range" min="1" max="3" step="0.05" value={cropZoom} onChange={(event) => setCropZoom(Number(event.target.value))} />
+                          </label>
+                          <canvas ref={cropCanvasRef} className="portal-crop-canvas" width="900" height="1200" aria-hidden="true" />
+                          <div className="portal-crop-actions">
+                            <button className="portal-button portal-button--primary" disabled={cropBusy} type="button" onClick={() => void applyCrop()}>{cropBusy ? 'Memproses…' : 'Gunakan hasil crop'}</button>
+                            <button className="portal-button portal-button--ghost" disabled={cropBusy} type="button" onClick={() => { setCropFile(null); if (documentInputRef.current) documentInputRef.current.value = ''; }}>Batal</button>
+                          </div>
+                        </section>
+                      </div>
+                    )}
 
                     {documentFile && (
                       <div className="portal-file-row">

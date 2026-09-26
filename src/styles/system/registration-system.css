@@ -464,6 +464,48 @@
   gap: .75rem;
 }
 
+.portal-shell .portal-competition-detail {
+  grid-column: 1 / -1;
+  padding: 1.25rem 1.4rem;
+  border: 1px solid #917764;
+  border-left: .35rem solid #e5b84e;
+  background: #fffaf0;
+  color: #35231b;
+}
+
+.portal-shell .portal-competition-detail__eyebrow,
+.portal-shell .portal-competition-detail dt {
+  color: #6d5544;
+  font-size: .68rem;
+  font-weight: 700;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+
+.portal-shell .portal-competition-detail h3 {
+  margin: .2rem 0 .75rem;
+  color: #2c1d17;
+  font-family: var(--font-display);
+  font-size: clamp(1.35rem, 2vw, 1.8rem);
+  font-weight: 500;
+}
+
+.portal-shell .portal-competition-detail dl {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: .75rem 1.5rem;
+  margin: 0 0 .8rem;
+}
+
+.portal-shell .portal-competition-detail dd {
+  margin: .15rem 0 0;
+}
+
+.portal-shell .portal-competition-detail > p:last-child {
+  margin: 0;
+  line-height: 1.65;
+}
+
 .portal-shell .portal-competition-card {
   position: relative;
   display: flex;
@@ -1167,6 +1209,21 @@
   color: #5c4636;
 }
 
+.portal-shell .portal-photo-roster { grid-column: 1 / -1; }
+.portal-shell .portal-photo-roster__grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:.65rem; }
+.portal-shell .portal-photo-person { display:grid; gap:.2rem; padding:.85rem; border:1px solid #876d59; background:#fffaf0; color:#35231b; text-align:left; }
+.portal-shell .portal-photo-person[aria-pressed='true'] { border:3px solid #7d3930; background:#f4dfbc; }
+.portal-shell .portal-photo-person small { color:#675244; }
+.portal-shell .portal-crop-backdrop { position:fixed; z-index:1000; inset:0; display:grid; place-items:center; padding:1rem; background:rgb(16 10 8 / 82%); }
+.portal-shell .portal-crop-dialog { width:min(100%,32rem); max-height:calc(100vh - 2rem); overflow:auto; padding:1.5rem; background:#f7efdf; color:#271912; box-shadow:0 1rem 4rem #000; }
+.portal-shell .portal-crop-viewport { position:relative; width:min(100%,18rem); aspect-ratio:3/4; margin:1rem auto; overflow:hidden; border:3px solid #e5b84e; background:#17100e; cursor:grab; touch-action:none; }
+.portal-shell .portal-crop-viewport:active { cursor:grabbing; }
+.portal-shell .portal-crop-viewport img { width:100%; height:100%; object-fit:cover; user-select:none; pointer-events:none; transform-origin:center; }
+.portal-shell .portal-crop-dialog label { display:grid; gap:.4rem; }
+.portal-shell .portal-crop-dialog input[type='range'] { width:100%; }
+.portal-shell .portal-crop-canvas { display:none; }
+.portal-shell .portal-crop-actions { display:flex; flex-wrap:wrap; gap:.75rem; margin-top:1rem; }
+
 /* Exact short-screen treatment for 1280 × 633 and similar desktop viewports. */
 @media (min-width: 75.0625rem) and (max-height: 43rem) {
   .portal-auth .portal-auth__scene {
@@ -1390,6 +1447,7 @@
   .portal-shell .portal-fieldset,
   .portal-shell .portal-field-row,
   .portal-shell .portal-competition-grid,
+  .portal-shell .portal-competition-detail dl,
   .portal-shell .portal-document-panel {
     grid-template-columns: minmax(0, 1fr);
   }

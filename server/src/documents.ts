@@ -145,6 +145,65 @@ export function hasAllowedDocumentSignature(
   );
 }
 
+interface ImageDimensions {
+  width: number;
+  height: number;
+}
+
+function pngDimensions(contents: Buffer): ImageDimensions | null {
+  if (
+    contents.length < 24 ||
+    contents.readUInt32BE(8) !== 13 ||
+    contents.toString('ascii', 12, 16) !== 'IHDR'
+  ) return null;
+  const width = contents.readUInt32BE(16);
+  const height = contents.readUInt32BE(20);
+  return width > 0 && height > 0 ? { width, height } : null;
+}
+
+const JPEG_START_OF_FRAME_MARKERS = new Set([
+  0xc0, 0xc1, 0xc2, 0xc3, 0xc5, 0xc6, 0xc7, 0xc9, 0xca, 0xcb, 0xcd, 0xce, 0xcf,
+]);
+
+function jpegDimensions(contents: Buffer): ImageDimensions | null {
+  let offset = 2;
+  while (offset < contents.length) {
+    if (contents[offset] !== 0xff) return null;
+    while (offset < contents.length && contents[offset] === 0xff) offset += 1;
+    if (offset >= contents.length) return null;
+    const marker = contents[offset];
+    offset += 1;
+    if (marker === 0xd9 || marker === 0xda) return null;
+    if (marker === 0x01 || (marker >= 0xd0 && marker <= 0xd7)) continue;
+    if (offset + 2 > contents.length) return null;
+    const segmentLength = contents.readUInt16BE(offset);
+    if (segmentLength < 2 || offset + segmentLength > contents.length) return null;
+    if (JPEG_START_OF_FRAME_MARKERS.has(marker)) {
+      if (segmentLength < 7) return null;
+      const height = contents.readUInt16BE(offset + 3);
+      const width = contents.readUInt16BE(offset + 5);
+      return width > 0 && height > 0 ? { width, height } : null;
+    }
+    offset += segmentLength;
+  }
+  return null;
+}
+
+/** Accept MEMBER_PHOTO images within 0.02 of the required 3:4 ratio. */
+export function validateMemberPhotoAspectRatio(mimeType: string, contents: Buffer): void {
+  const dimensions = mimeType === 'image/png'
+    ? pngDimensions(contents)
+    : mimeType === 'image/jpeg'
+      ? jpegDimensions(contents)
+      : null;
+  if (!dimensions) {
+    throw new BadRequestException('Member photo image dimensions could not be read');
+  }
+  if (Math.abs(dimensions.width / dimensions.height - 3 / 4) > 0.02) {
+    throw new BadRequestException('Member photo must have a 3:4 portrait aspect ratio');
+  }
+}
+
 export function resolveDocumentStoragePath(
   root: string,
   storageKey: string,
@@ -251,6 +310,7 @@ export class DocumentsService {
       if (!normalizedSubjectName || normalizedSubjectName.length > 150) throw new BadRequestException('Member photo requires a full participant name');
       if (!normalizedSubjectRole || !MEMBER_PHOTO_ROLES.has(normalizedSubjectRole)) throw new BadRequestException('Member photo role must be PARTICIPANT or SUPERVISOR');
       if (!['image/jpeg', 'image/png'].includes(file.mimetype)) throw new BadRequestException('Member photo must be a JPEG or PNG image');
+      validateMemberPhotoAspectRatio(file.mimetype, file.buffer);
     } else if (normalizedSubjectName || normalizedSubjectRole) {
       throw new BadRequestException('Subject metadata is allowed only for member photos');
     }

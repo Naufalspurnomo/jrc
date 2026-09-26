@@ -8,6 +8,10 @@ const REGISTRATION_ID = '18a46e52-63ee-439d-8a77-280f126d82e6';
 const AUDIT = { requestId: 'request-id', ipAddress: '127.0.0.1' };
 
 function currentRegistration(documents: number) {
+  const members = [
+    { name: 'Leader One', role: TeamMemberRole.LEADER },
+    { name: 'Supervisor One', role: TeamMemberRole.SUPERVISOR },
+  ];
   return {
     status: RegistrationStatus.DRAFT,
     teamName: 'Team One',
@@ -19,17 +23,36 @@ function currentRegistration(documents: number) {
     reviewReasonComment: null,
     owner: { email: 'owner@example.test', displayName: 'Owner' },
     competition: { id: '943ca4f3-5dbf-4510-b5c7-a3309920d637', name: 'Sumo' },
+    members,
     documents: documents === 0 ? [] : [
-      'RECOMMENDATION_LETTER',
-      'IDENTITY_CARD',
-      'REGISTRATION_FORM',
-      'TEAM_PHOTO',
-      'TWIBBON_PROOF',
-    ].map((category) => ({ category })),
+      ...[
+        'RECOMMENDATION_LETTER',
+        'IDENTITY_CARD',
+        'REGISTRATION_FORM',
+        'TEAM_PHOTO',
+        'TWIBBON_PROOF',
+      ].map((category) => ({ category, subjectName: null, subjectRole: null })),
+      { category: 'MEMBER_PHOTO', subjectName: 'Leader One', subjectRole: 'PARTICIPANT' },
+      { category: 'MEMBER_PHOTO', subjectName: 'Supervisor One', subjectRole: 'SUPERVISOR' },
+    ],
   };
 }
 
 describe('RegistrationsService submission requirements', () => {
+  it('rejects submission and names roster people missing a formal photo', async () => {
+    const current = currentRegistration(1);
+    current.documents = current.documents.filter((document) => document.category !== 'MEMBER_PHOTO');
+    const transaction = {
+      registration: { findFirst: vi.fn().mockResolvedValue(current) },
+      user: { findUnique: vi.fn().mockResolvedValue({ emailVerifiedAt: new Date() }) },
+    };
+    const prisma = { $transaction: vi.fn((operation: (client: typeof transaction) => Promise<unknown>) => operation(transaction)) };
+
+    await expect(
+      new RegistrationsService(prisma as unknown as PrismaService).submit(OWNER_ID, REGISTRATION_ID, AUDIT),
+    ).rejects.toThrow('Formal member photos are required for: Leader One, Supervisor One');
+  });
+
   it('atomically enqueues an encrypted submission acknowledgement', async () => {
     process.env.TICKET_SECRET = 'test-ticket-secret-with-at-least-32-characters';
     const returned = {
@@ -116,7 +139,7 @@ describe('RegistrationsService submission requirements', () => {
     expect(transaction.registration.findFirst).toHaveBeenCalledWith(
       expect.objectContaining({
         select: expect.objectContaining({
-          documents: { select: { category: true } },
+          documents: { select: { category: true, subjectName: true, subjectRole: true } },
         }),
       }),
     );

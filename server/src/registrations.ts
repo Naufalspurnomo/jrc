@@ -627,7 +627,8 @@ export class RegistrationsService {
           competition: { select: { id: true, name: true } },
           registrationNumber: true,
           owner: { select: { email: true, displayName: true } },
-          documents: { select: { category: true } },
+          documents: { select: { category: true, subjectName: true, subjectRole: true } },
+          members: { select: { name: true, role: true } },
         },
       });
       if (!current) throw new NotFoundException('Registration not found');
@@ -657,6 +658,25 @@ export class RegistrationsService {
       if (requiredCategories.some((category) => !categories.has(category))) {
         throw new BadRequestException(
           'All five required document categories must be uploaded before submission',
+        );
+      }
+
+      const memberPhotos = current.documents.filter(
+        (document) => document.category === 'MEMBER_PHOTO',
+      );
+      const missingMemberPhotos = current.members.filter((member) => {
+        const subjectRole = member.role === TeamMemberRole.SUPERVISOR
+          ? 'SUPERVISOR'
+          : 'PARTICIPANT';
+        return !memberPhotos.some(
+          (photo) => photo.subjectRole === subjectRole
+            && photo.subjectName?.trim().toLocaleLowerCase('id-ID')
+              === member.name.trim().toLocaleLowerCase('id-ID'),
+        );
+      });
+      if (missingMemberPhotos.length > 0) {
+        throw new BadRequestException(
+          `Formal member photos are required for: ${missingMemberPhotos.map((member) => member.name).join(', ')}`,
         );
       }
 

@@ -172,6 +172,40 @@ describe('PortalRegistrationPage', () => {
     }));
   });
 
+  it('shows official details for the selected competition and updates them when selection changes', async () => {
+    const user = userEvent.setup();
+    const api = createApi();
+    vi.mocked(api.competitions.list).mockResolvedValueOnce(competitions.map((item, index) => ({
+      ...item,
+      slug: [
+        'donatopia-transporter',
+        'nightmaze-rescue-transporter',
+        'pirate-clash-transporter-shooter',
+        'wacky-rally-line-follower-mikro',
+        'ring-rumble-sumo',
+        'goal-rush-soccer',
+      ][index],
+    })));
+    renderPage(api);
+
+    await user.click(await screen.findByRole('radio', { name: 'Umum · Colosseum — Sumo' }));
+
+    const details = await screen.findByRole('region', { name: 'Detail kompetisi Colosseum — Sumo' });
+    expect(details).toHaveTextContent('Umum · Colosseum — Sumo');
+    expect(details).toHaveTextContent('Jenis lomba');
+    expect(details).toHaveTextContent('Sumo');
+    expect(details).toHaveTextContent('Pertarungan robot sumo yang menempatkan traksi, deteksi lawan, konstruksi, dan strategi dalam satu lingkar arena.');
+    expect(details).toHaveTextContent('Tantangan utama');
+    expect(details).toHaveTextContent('Mendorong lawan keluar ring melalui desain tangguh dan strategi kendali yang disiplin.');
+
+    await user.click(screen.getByRole('radio', { name: 'Umum · Harpastum — Soccer' }));
+
+    expect(await screen.findByRole('region', { name: 'Detail kompetisi Harpastum — Soccer' })).toHaveTextContent(
+      'Sepak bola robot sebagai ujian integrasi gerak, pembacaan situasi, dan eksekusi strategi di arena dinamis.',
+    );
+    expect(screen.queryByText('Mendorong lawan keluar ring melalui desain tangguh dan strategi kendali yang disiplin.')).not.toBeInTheDocument();
+  });
+
   it('uses a roving tab stop and selects competitions with wrapped radio keyboard navigation', async () => {
     const user = userEvent.setup();
     const api = createApi();
@@ -308,6 +342,36 @@ describe('PortalRegistrationPage', () => {
     expect(competitionCards[4]).toHaveAttribute('aria-checked', 'true');
     expect(api.registrations.create).not.toHaveBeenCalled();
     expect(api.registrations.update).not.toHaveBeenCalled();
+  });
+
+  it('derives member photo choices and completion status from the roster', async () => {
+    const user = userEvent.setup();
+    const api = createApi({
+      get: vi.fn().mockResolvedValue(registration({
+        members: [
+          { id: 'leader-1', name: 'Ari Wijaya', role: 'LEADER' },
+          { id: 'member-1', name: 'Bima Putra', role: 'MEMBER' },
+          { id: 'supervisor-1', name: 'Citra Dewi', role: 'SUPERVISOR' },
+        ],
+        documents: [{
+          id: 'photo-1', category: 'member_photo', originalName: 'ari.jpg', mimeType: 'image/jpeg', size: 100,
+          subjectName: 'ARI WIJAYA', subjectRole: 'PARTICIPANT',
+        }],
+      })),
+    });
+    renderPage(api, '/portal/pendaftaran/registration-1');
+
+    await screen.findByDisplayValue('Garuda Robotika');
+    await user.selectOptions(screen.getByLabelText('Kategori dokumen'), 'MEMBER_PHOTO');
+
+    expect(screen.queryByLabelText('Nama lengkap pemilik foto')).not.toBeInTheDocument();
+    expect(screen.queryByLabelText('Jabatan')).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Ari Wijaya.*Ketua.*Foto lengkap/i })).toBeDisabled();
+    const member = screen.getByRole('button', { name: /Bima Putra.*Peserta.*Belum ada foto/i });
+    await user.click(member);
+    expect(member).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getByLabelText('Berkas dokumen')).toBeEnabled();
+    expect(screen.getByRole('button', { name: /Citra Dewi.*Pembina.*Belum ada foto/i })).toBeEnabled();
   });
 
   it('keeps the chosen file visible in the file input until it is uploaded', async () => {

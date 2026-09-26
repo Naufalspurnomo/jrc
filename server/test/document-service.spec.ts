@@ -8,10 +8,49 @@ import { ROLES_KEY } from '../src/auth';
 import {
   AdminDocumentsController,
   DocumentsService,
+  validateMemberPhotoAspectRatio,
 } from '../src/documents';
 import { PrismaService } from '../src/prisma.service';
 import { PrivateStorageService } from '../src/private-storage';
 
+function pngImage(width: number, height: number): Buffer {
+  const buffer = Buffer.alloc(24);
+  Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]).copy(buffer);
+  buffer.writeUInt32BE(13, 8);
+  buffer.write('IHDR', 12, 'ascii');
+  buffer.writeUInt32BE(width, 16);
+  buffer.writeUInt32BE(height, 20);
+  return buffer;
+}
+
+function jpegImage(width: number, height: number): Buffer {
+  const buffer = Buffer.alloc(13);
+  Buffer.from([0xff, 0xd8, 0xff, 0xc0]).copy(buffer);
+  buffer.writeUInt16BE(9, 4);
+  buffer[6] = 8;
+  buffer.writeUInt16BE(height, 7);
+  buffer.writeUInt16BE(width, 9);
+  buffer[11] = 1;
+  buffer[12] = 0;
+  return buffer;
+}
+
+describe('member photo dimensions', () => {
+  it.each([
+    ['PNG', 'image/png', pngImage(900, 1200)],
+    ['JPEG', 'image/jpeg', jpegImage(900, 1200)],
+  ])('accepts a 3:4 %s portrait', (_label, mimeType, contents) => {
+    expect(() => validateMemberPhotoAspectRatio(mimeType, contents)).not.toThrow();
+  });
+
+  it.each([
+    ['landscape PNG', 'image/png', pngImage(1200, 900)],
+    ['square JPEG', 'image/jpeg', jpegImage(900, 900)],
+    ['truncated PNG', 'image/png', Buffer.from([0x89, 0x50])],
+  ])('rejects %s', (_label, mimeType, contents) => {
+    expect(() => validateMemberPhotoAspectRatio(mimeType, contents)).toThrow();
+  });
+});
 const ORIGINAL_ENV = { ...process.env };
 const REGISTRATION_ID = '18a46e52-63ee-439d-8a77-280f126d82e6';
 const DOCUMENT_ID = '4fe8fb90-e44b-42c4-a4c4-4c671f1e34c6';
