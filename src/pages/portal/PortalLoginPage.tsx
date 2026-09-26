@@ -91,7 +91,7 @@ export default function PortalLoginPage() {
         <p className="portal-eyebrow">JRC XIV · IMPERIUM MACHINA</p>
         <blockquote>Siapkan timmu untuk memasuki arena.</blockquote>
         <dl className="portal-auth__facts">
-          <div><dt>Pendaftaran</dt><dd>Beberapa tim</dd></div>
+          <div><dt>Pendaftaran</dt><dd>Satu akun, satu tim</dd></div>
           <div><dt>Berkas</dt><dd>Unggah aman</dd></div>
           <div><dt>Pembayaran</dt><dd>Verifikasi panitia</dd></div>
         </dl>
