@@ -58,32 +58,33 @@ export function AdminShell({ children }: AdminShellProps) {
           <span aria-hidden="true">XIV</span><strong>JRC</strong>
         </Link>
         <div className="admin-sidebar__identity">
-          <p>OFFICIUM</p><strong>Command Desk</strong><small>Operasi JRC XIV</small>
+          <p>WORKSPACE ADMIN</p><strong>Kontrol operasi</strong><small>JRC XIV</small>
         </div>
         <nav aria-label="Navigasi admin">
           {role && registrationRoles.has(role) && (
-            <NavLink end to="/admin"><span>01</span> Pendaftaran</NavLink>
+            <NavLink end to="/admin">Pendaftaran</NavLink>
           )}
           {role && financeRoles.has(role) && (
-            <NavLink to="/admin/finance"><span>02</span> Finance</NavLink>
+            <NavLink to="/admin/finance">Keuangan</NavLink>
           )}
           {role && scannerRoles.has(role) && (
-            <NavLink to="/admin/scanner"><span>03</span> Scanner</NavLink>
+            <NavLink to="/admin/scanner">Pemindai</NavLink>
           )}
         </nav>
         <button
           className="admin-signout"
           type="button"
           disabled={signingOut}
+          aria-busy={signingOut}
           onClick={() => void signOut()}
         >
-          {signingOut ? 'Sedang keluar…' : 'Keluar dari meja'}
+          {signingOut ? 'Sedang keluar…' : 'Keluar'}
         </button>
       </aside>
       <div className="admin-workspace">
         <header className="admin-topbar">
-          <p><span aria-hidden="true" /> JRC XIV · SISTEM PANITIA</p>
-          <span>{displayName} · {roleLabel}</span>
+          <p>JRC XIV · Sistem panitia</p>
+          <span><strong>{displayName}</strong><small>{roleLabel}</small></span>
         </header>
         {children}
       </div>

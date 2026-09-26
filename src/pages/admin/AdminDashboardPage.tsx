@@ -71,6 +71,7 @@ async function downloadAttendanceCsv(api: RegistrationApi): Promise<void> {
   const anchor = document.createElement('a');
   anchor.href = url;
   anchor.download = 'presensi-jrc-xiv.csv';
+
   try {
     anchor.click();
   } finally {
@@ -145,10 +146,11 @@ export default function AdminDashboardPage({ api = registrationApi }: AdminDashb
       <main className="admin-main">
         <header className="admin-page-heading">
           <div>
-            <p className="admin-eyebrow">TABULARIUM · XIV</p>
-            <h1>Meja komando pendaftaran</h1>
+            <p className="admin-eyebrow">PENDAFTARAN</p>
+            <h1>Ringkasan pendaftaran</h1>
+            <p className="admin-page-description">Pantau status dan tindak lanjuti data tim.</p>
           </div>
-          <div>
+          <div className="admin-page-heading__actions">
             <button
               className="admin-export"
               type="button"
@@ -199,7 +201,7 @@ export default function AdminDashboardPage({ api = registrationApi }: AdminDashb
           <section className="admin-register" aria-labelledby="admin-register-title">
             <div className="admin-register__heading">
               <div>
-                <p className="admin-eyebrow">INDEX LEGIONUM</p>
+                <p className="admin-eyebrow">DATA TIM</p>
                 <h2 id="admin-register-title">Daftar pendaftar</h2>
               </div>
               <span>{filteredRegistrations.length} hasil</span>
@@ -224,6 +226,7 @@ export default function AdminDashboardPage({ api = registrationApi }: AdminDashb
                   ))}
                 </select>
               </label>
+              <button className="admin-filter-reset" type="button" disabled={!query && status === 'ALL'} onClick={() => { setQuery(''); setStatus('ALL'); }}>Reset filter</button>
             </div>
 
             {registrations.length === 0 ? (
@@ -232,7 +235,7 @@ export default function AdminDashboardPage({ api = registrationApi }: AdminDashb
                 <p>Pendaftaran baru akan tampil di sini.</p>
               </div>
             ) : filteredRegistrations.length === 0 ? (
-              <p className="admin-empty">Tidak ada pendaftaran yang cocok dengan filter.</p>
+              <div className="admin-empty"><p>Tidak ada pendaftaran yang cocok dengan filter.</p><button className="admin-action" type="button" onClick={() => { setQuery(''); setStatus('ALL'); }}>Reset filter</button></div>
             ) : (
               <div className="admin-table-wrap">
                 <table>

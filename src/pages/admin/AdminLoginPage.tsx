@@ -60,16 +60,16 @@ export default function AdminLoginPage() {
   };
 
   return (
-    <main className="portal-auth">
-      <section className="portal-auth__scene" aria-labelledby="admin-login-title">
-        <div className="portal-auth__crest" aria-hidden="true">XIV</div>
-        <p className="portal-eyebrow">SISTEM PANITIA · JRC XIV</p>
+    <main className="admin-login">
+      <section className="admin-login__form-panel" aria-labelledby="admin-login-title">
+        <div className="admin-login__brand"><span aria-hidden="true">XIV</span> JRC XIV</div>
+        <p className="admin-login__eyebrow">Sistem panitia</p>
         <h1 id="admin-login-title">Masuk ke meja panitia.</h1>
-        <p className="portal-auth__lead">
+        <p className="admin-login__lead">
           Kelola pendaftaran, pembayaran, dan akses gerbang sesuai peran Anda.
         </p>
 
-        <form className="portal-auth__form" onSubmit={submit}>
+        <form className="admin-login__form" aria-label="Masuk ke sistem panitia" onSubmit={submit}>
           <label htmlFor="admin-login-email">Email</label>
           <input
             id="admin-login-email"
@@ -100,15 +100,15 @@ export default function AdminLoginPage() {
         </form>
       </section>
 
-      <aside className="portal-auth__aside" aria-label="Informasi sistem panitia">
-        <p className="portal-eyebrow">OFFICIUM · IMPERIUM MACHINA</p>
-        <blockquote>Satu pusat kendali untuk seluruh arena.</blockquote>
-        <dl className="portal-auth__facts">
+      <aside className="admin-login__aside" aria-label="Informasi sistem panitia">
+        <p className="admin-login__eyebrow">Cakupan akses</p>
+        <h2>Pusat kerja panitia<br />JRC XIV</h2>
+        <dl className="admin-login__facts">
           <div><dt>Pendaftaran</dt><dd>Telaah terpusat</dd></div>
           <div><dt>Keuangan</dt><dd>Verifikasi pembayaran</dd></div>
           <div><dt>Gerbang</dt><dd>Pemindaian tiket</dd></div>
         </dl>
-        <Link className="portal-text-link" to="/">Kembali ke arena publik</Link>
+        <Link className="portal-text-link" to="/">Kembali ke situs publik</Link>
       </aside>
     </main>
   );

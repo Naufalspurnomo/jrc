@@ -28,9 +28,8 @@ import {
 } from '@prisma/client';
 import { Transform, TransformFnParams } from 'class-transformer';
 import { IsIn, IsString, MaxLength, MinLength } from 'class-validator';
-import { randomBytes, randomUUID, timingSafeEqual } from 'node:crypto';
-import { chmod, lstat, mkdir, unlink, writeFile } from 'node:fs/promises';
-import { basename, join, resolve } from 'node:path';
+import { randomUUID, timingSafeEqual } from 'node:crypto';
+import { basename } from 'node:path';
 import { Request, Response } from 'express';
 import multer from 'multer';
 import QRCode from 'qrcode';
@@ -47,6 +46,7 @@ import {
 } from './common/ticket-token';
 import { assertPaymentTransition } from './domain/payment-state';
 import { PrismaService } from './prisma.service';
+import { PrivateStorageService } from './private-storage';
 import { encryptEmailBody, encryptRichEmail } from './email-outbox';
 
 const DEFAULT_MAX_UPLOAD_BYTES = 10 * 1024 * 1024;
@@ -94,13 +94,6 @@ function maxUploadBytes(): number {
   return parsed;
 }
 
-function storageRoot(): string {
-  const configured = process.env.STORAGE_PATH?.trim();
-  if (!configured) {
-    throw new InternalServerErrorException('STORAGE_PATH is required');
-  }
-  return resolve(configured);
-}
 
 function ticketSecret(): string {
   const secret = process.env.TICKET_SECRET ?? '';
@@ -346,7 +339,10 @@ export class PaymentProofUploadInterceptor implements NestInterceptor {
 
 @Injectable()
 export class PaymentVerificationService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly storage: PrivateStorageService = new PrivateStorageService(),
+  ) {}
 
   async uploadProof(
     ownerId: string,
@@ -716,45 +712,17 @@ export class PaymentVerificationService {
   }
 
   private async storeProof(file: Express.Multer.File): Promise<UploadedProof> {
-    const root = storageRoot();
-    await mkdir(root, { recursive: true, mode: 0o700 });
-    const rootStat = await lstat(root);
-    if (!rootStat.isDirectory() || rootStat.isSymbolicLink()) {
-      throw new InternalServerErrorException(
-        'STORAGE_PATH must be a real directory',
-      );
-    }
-    await chmod(root, 0o700);
-
-    for (let attempt = 0; attempt < 3; attempt += 1) {
-      const storageKey = randomBytes(32).toString('hex');
-      try {
-        await writeFile(join(root, storageKey), file.buffer, {
-          flag: 'wx',
-          mode: 0o600,
-        });
-        return {
-          storageKey,
-          originalName: safeOriginalName(file.originalname),
-          mimeType: file.mimetype,
-          size: file.size,
-        };
-      } catch (error: unknown) {
-        const code = (error as NodeJS.ErrnoException).code;
-        if (code !== 'EEXIST' || attempt === 2) throw error;
-      }
-    }
-
-    throw new InternalServerErrorException('Could not store payment proof');
+    return {
+      storageKey: await this.storage.upload(file.buffer, file.mimetype),
+      originalName: safeOriginalName(file.originalname),
+      mimeType: file.mimetype,
+      size: file.size,
+    };
   }
 
   private async removeStoredProof(storageKey: string): Promise<void> {
     if (!STORAGE_KEY_PATTERN.test(storageKey)) return;
-    try {
-      await unlink(join(storageRoot(), storageKey));
-    } catch (error: unknown) {
-      if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error;
-    }
+    await this.storage.delete(storageKey);
   }
 }
 

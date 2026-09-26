@@ -225,10 +225,11 @@ export default function AdminScannerPage({ api = registrationApi }: AdminScanner
     return Number.isNaN(date.getTime()) ? verification.checkedInAt : new Intl.DateTimeFormat('id-ID', { dateStyle: 'medium', timeStyle: 'short' }).format(date);
   }, [verification?.checkedInAt]);
 
-  return <AdminShell><main className="admin-main">
-    <header className="admin-page-heading"><div><p className="admin-eyebrow">GERBANG ACARA</p><h1>Pemindai tiket</h1></div></header>
+  return <AdminShell><main className="admin-main admin-scanner">
+    <header className="admin-page-heading"><div><p className="admin-eyebrow">GERBANG ACARA</p><h1>Pemindai tiket</h1>
+            <p className="admin-page-description">Pindai QR atau masukkan token untuk memeriksa akses.</p></div></header>
     <section className="admin-register" aria-labelledby="scanner-config-title">
-      <div className="admin-register__heading"><div><p className="admin-eyebrow">KONFIGURASI</p><h2 id="scanner-config-title">Periksa tiket masuk</h2></div></div>
+      <div className="admin-register__heading"><div><p className="admin-eyebrow">PEMERIKSAAN MANUAL</p><h2 id="scanner-config-title">Periksa tiket masuk</h2></div></div>
       <div className="admin-filters">
         <label htmlFor="scanner-event-id">Acara aktif
           <select id="scanner-event-id" value={eventId} disabled={eventsLoading || requesting} onChange={(event) => { setEventId(event.target.value); setVerification(null); setInspectedRequest(null); }}>
@@ -264,7 +265,7 @@ export default function AdminScannerPage({ api = registrationApi }: AdminScanner
         {checkedInBy && <div><dt>Petugas check-in awal</dt><dd>{checkedInBy}</dd></div>}
       </dl>
       {members.length > 0 && <div className="admin-member-list" aria-label="Anggota tim">{members.map((member, index) => <article key={`${member.name}-${member.studentId ?? index}`}><strong>{member.name}</strong>{member.studentId && <small>{member.studentId}</small>}</article>)}</div>}
-      {verification.result === 'VALID' && inspectedRequest && <button className="admin-action" type="button" disabled={requesting} onClick={() => void redeem()}>{requesting ? 'Mengonfirmasi…' : 'Konfirmasi check-in'}</button>}
+      {verification.result === 'VALID' && inspectedRequest && <button className="admin-action admin-action--primary" type="button" disabled={requesting} onClick={() => void redeem()}>{requesting ? 'Mengonfirmasi…' : 'Konfirmasi check-in'}</button>}
     </section>}
   </main></AdminShell>;
 }

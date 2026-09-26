@@ -53,6 +53,16 @@ async function submitCredentials() {
 }
 
 describe('AdminLoginPage', () => {
+  it('uses the isolated operational admin login surface', async () => {
+    renderLogin(createApi('SUPER_ADMIN'));
+
+    const main = await screen.findByRole('main');
+    expect(main).toHaveClass('admin-login');
+    expect(main).not.toHaveClass('portal-auth');
+    expect(screen.getByRole('heading', { name: 'Masuk ke meja panitia.' })).toBeInTheDocument();
+    expect(screen.getByRole('form', { name: 'Masuk ke sistem panitia' })).toBeInTheDocument();
+  });
+
   it.each([
     ['SUPER_ADMIN', 'Dashboard admin'],
     ['REGISTRATION_REVIEWER', 'Dashboard admin'],

@@ -2,6 +2,7 @@ import { RegistrationStatus, Role } from '@prisma/client';
 import { mkdir, readFile, readdir, rm, stat, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { Readable } from 'node:stream';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { ROLES_KEY } from '../src/auth';
 import {
@@ -9,6 +10,7 @@ import {
   DocumentsService,
 } from '../src/documents';
 import { PrismaService } from '../src/prisma.service';
+import { PrivateStorageService } from '../src/private-storage';
 
 const ORIGINAL_ENV = { ...process.env };
 const REGISTRATION_ID = '18a46e52-63ee-439d-8a77-280f126d82e6';
@@ -171,6 +173,57 @@ describe('DocumentsService', () => {
       ),
     ).rejects.toThrow('database unavailable');
     expect(await readdir(storagePath)).toEqual([]);
+  });
+
+  it('preserves the transaction error when rollback cleanup fails', async () => {
+    const primary = new Error('database unavailable');
+    const prisma = {
+      registration: { findFirst: vi.fn().mockResolvedValue({ status: RegistrationStatus.DRAFT }) },
+      $transaction: vi.fn().mockRejectedValue(primary),
+    };
+    const storage = {
+      upload: vi.fn().mockResolvedValue(STORAGE_KEY),
+      delete: vi.fn().mockRejectedValue(new Error('secret cleanup failure')),
+    };
+    const service = new DocumentsService(
+      prisma as unknown as PrismaService,
+      storage as unknown as PrivateStorageService,
+    );
+
+    await expect(service.upload(
+      OWNER_ID, REGISTRATION_ID, 'IDENTITY_CARD', undefined, undefined,
+      uploadFile(), { requestId: 'request-id', ipAddress: null },
+    )).rejects.toBe(primary);
+    expect(storage.delete).toHaveBeenCalledWith(STORAGE_KEY);
+  });
+
+  it('rejects a stored document whose size differs from the database record', async () => {
+    const stream = Readable.from(['short']);
+    const prisma = {
+      document: {
+        findFirst: vi.fn().mockResolvedValue({
+          id: DOCUMENT_ID,
+          registrationId: REGISTRATION_ID,
+          category: 'IDENTITY_CARD',
+          originalName: 'identity.pdf',
+          mimeType: 'application/pdf',
+          size: 100,
+          storageKey: STORAGE_KEY,
+          subjectName: null,
+          subjectRole: null,
+        }),
+      },
+    };
+    const storage = { read: vi.fn().mockResolvedValue({ stream, size: 5 }) };
+    const service = new DocumentsService(
+      prisma as unknown as PrismaService,
+      storage as unknown as PrivateStorageService,
+    );
+
+    await expect(
+      service.getParticipantDocument(OWNER_ID, REGISTRATION_ID, DOCUMENT_ID),
+    ).rejects.toThrow('Document file not found');
+    expect(stream.destroyed).toBe(true);
   });
 
   it('returns 404 for a registration not owned by the participant', async () => {

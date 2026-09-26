@@ -10,6 +10,7 @@ import {
   HttpStatus,
   Injectable,
   InternalServerErrorException,
+  Logger,
   NestInterceptor,
   NotFoundException,
   Param,
@@ -23,10 +24,8 @@ import {
   UseInterceptors,
 } from '@nestjs/common';
 import { Prisma, Role, TeamMemberRole } from '@prisma/client';
-import { randomBytes, randomUUID } from 'node:crypto';
-import { createReadStream } from 'node:fs';
+import { randomUUID } from 'node:crypto';
 import type { Readable } from 'node:stream';
-import { chmod, lstat, mkdir, unlink, writeFile } from 'node:fs/promises';
 import { basename, dirname, resolve } from 'node:path';
 import { Request, Response } from 'express';
 import multer from 'multer';
@@ -39,6 +38,7 @@ import {
 } from './auth';
 import { canEditRegistration } from './domain/registration-state';
 import { PrismaService } from './prisma.service';
+import { PrivateStorageService } from './private-storage';
 
 const DEFAULT_MAX_UPLOAD_BYTES = 10 * 1024 * 1024;
 const DOCUMENT_CATEGORIES = new Set(['RECOMMENDATION_LETTER', 'IDENTITY_CARD', 'REGISTRATION_FORM', 'TEAM_PHOTO', 'TWIBBON_PROOF', 'MEMBER_PHOTO']);
@@ -95,13 +95,6 @@ function maxUploadBytes(): number {
   return parsed;
 }
 
-function storageRoot(): string {
-  const configured = process.env.STORAGE_PATH?.trim();
-  if (!configured) {
-    throw new InternalServerErrorException('STORAGE_PATH is required');
-  }
-  return resolve(configured);
-}
 
 function safeOriginalName(originalName: string): string {
   const cleaned = basename(originalName.replaceAll('\\', '/'))
@@ -218,7 +211,12 @@ export class DocumentUploadInterceptor implements NestInterceptor {
 
 @Injectable()
 export class DocumentsService {
-  constructor(private readonly prisma: PrismaService) {}
+  private readonly logger = new Logger(DocumentsService.name);
+
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly storage: PrivateStorageService = new PrivateStorageService(),
+  ) {}
 
   async upload(
     ownerId: string,
@@ -329,7 +327,13 @@ export class DocumentsService {
         return serialized;
       });
     } catch (error: unknown) {
-      await this.removeStoredDocument(stored.storageKey);
+      try {
+        await this.removeStoredDocument(stored.storageKey);
+      } catch {
+        this.logger.error(
+          'Failed to remove stored document after transaction rollback',
+        );
+      }
       throw error;
     }
   }
@@ -413,45 +417,27 @@ export class DocumentsService {
   private async storeDocument(
     file: Express.Multer.File,
   ): Promise<StoredDocument> {
-    const root = storageRoot();
-    await mkdir(root, { recursive: true, mode: 0o700 });
-    const rootStat = await lstat(root);
-    if (!rootStat.isDirectory() || rootStat.isSymbolicLink()) {
-      throw new InternalServerErrorException(
-        'STORAGE_PATH must be a real directory',
-      );
-    }
-    await chmod(root, 0o700);
-
-    for (let attempt = 0; attempt < 3; attempt += 1) {
-      const storageKey = randomBytes(32).toString('hex');
-      try {
-        await writeFile(resolveDocumentStoragePath(root, storageKey), file.buffer, {
-          flag: 'wx',
-          mode: 0o600,
-        });
-        return {
-          storageKey,
-          originalName: safeOriginalName(file.originalname),
-          mimeType: file.mimetype,
-          size: file.buffer.length,
-        };
-      } catch (error: unknown) {
-        const code = (error as NodeJS.ErrnoException).code;
-        if (code !== 'EEXIST' || attempt === 2) throw error;
-      }
-    }
-
-    throw new InternalServerErrorException('Could not store document');
+    return {
+      storageKey: await this.storage.upload(file.buffer, file.mimetype),
+      originalName: safeOriginalName(file.originalname),
+      mimeType: file.mimetype,
+      size: file.buffer.length,
+    };
   }
 
   private async openDocument(document: DocumentRecord): Promise<DocumentDownload> {
-    const path = resolveDocumentStoragePath(storageRoot(), document.storageKey);
     try {
-      const fileStat = await lstat(path);
-      if (!fileStat.isFile() || fileStat.isSymbolicLink()) {
+      const stored = await this.storage.read(document.storageKey);
+      if (stored.size !== document.size) {
+        stored.stream.destroy();
         throw new NotFoundException('Document file not found');
       }
+      return {
+        stream: stored.stream,
+        originalName: document.originalName,
+        mimeType: document.mimeType,
+        size: document.size,
+      };
     } catch (error: unknown) {
       if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
         throw new NotFoundException('Document file not found');
@@ -459,21 +445,10 @@ export class DocumentsService {
       throw error;
     }
 
-    return {
-      stream: createReadStream(path),
-      originalName: document.originalName,
-      mimeType: document.mimeType,
-      size: document.size,
-    };
   }
 
   private async removeStoredDocument(storageKey: string): Promise<void> {
-    const path = resolveDocumentStoragePath(storageRoot(), storageKey);
-    try {
-      await unlink(path);
-    } catch (error: unknown) {
-      if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error;
-    }
+    await this.storage.delete(storageKey);
   }
 }
 

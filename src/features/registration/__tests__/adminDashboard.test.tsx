@@ -1,6 +1,7 @@
 import { render, screen, within } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { AuthProvider } from '../../auth/AuthProvider';
 import AdminDashboardPage from '../../../pages/admin/AdminDashboardPage';
@@ -24,7 +25,7 @@ function registration(
     id,
     registrationNumber: `JRC-${id}`,
     competitionId: 'competition-1',
-    competition: { id: 'competition-1', name: 'Colosseum Clash — Sumo' },
+    competition: { id: 'competition-1', name: 'Colosseum — Sumo' },
     teamName,
     institution: 'PENS',
     status,
@@ -44,6 +45,7 @@ function createApi(registrations: RegistrationRecord[]): RegistrationApi {
     admin: {
       listRegistrations: vi.fn().mockResolvedValue(registrations),
       exportRegistrations: vi.fn().mockResolvedValue('registrationNumber,teamName\nJRC-001,Garuda'),
+      exportAttendance: vi.fn().mockResolvedValue('registrationNumber,attendance\nJRC-001,HADIR'),
     },
   } as unknown as RegistrationApi;
 }
@@ -59,6 +61,27 @@ function renderDashboard(api: RegistrationApi) {
 }
 
 describe('AdminDashboardPage', () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it('downloads the canonical attendance CSV from the compact header', async () => {
+    const api = createApi([registration('001', 'Garuda Robotika', 'SUBMITTED')]);
+    const click = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => undefined);
+    const createObjectURL = vi.spyOn(URL, 'createObjectURL').mockReturnValue('blob:attendance');
+    const revokeObjectURL = vi.spyOn(URL, 'revokeObjectURL').mockImplementation(() => undefined);
+
+    renderDashboard(api);
+    await screen.findByText('Garuda Robotika');
+    await userEvent.click(screen.getByRole('button', { name: 'Ekspor presensi' }));
+
+    expect(api.admin.exportAttendance).toHaveBeenCalledOnce();
+    expect(api.admin.exportRegistrations).not.toHaveBeenCalled();
+    expect(createObjectURL).toHaveBeenCalledOnce();
+    expect(click).toHaveBeenCalledOnce();
+    expect(revokeObjectURL).toHaveBeenCalledWith('blob:attendance');
+  });
+
   it('loads registrations from the admin API and links to each review detail', async () => {
     const api = createApi([
       registration('001', 'Garuda Robotika', 'SUBMITTED'),

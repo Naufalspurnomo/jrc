@@ -30,6 +30,28 @@ describe('ApiClient', () => {
     }));
   });
 
+  it('prefixes CSRF and API requests with a configured HTTPS origin', async () => {
+    const fetcher = vi.fn<typeof fetch>()
+      .mockResolvedValueOnce(new Response(JSON.stringify({ csrfToken: 'csrf-123' }), {
+        headers: { 'Content-Type': 'application/json' },
+      }))
+      .mockResolvedValueOnce(new Response(null, { status: 204 }));
+    const client = new ApiClient(fetcher, 'https://api.example.com');
+
+    await client.request('/api/registrations/reg-1', { method: 'DELETE' });
+
+    expect(fetcher).toHaveBeenNthCalledWith(
+      1,
+      'https://api.example.com/api/auth/csrf',
+      expect.objectContaining({ credentials: 'include' }),
+    );
+    expect(fetcher).toHaveBeenNthCalledWith(
+      2,
+      'https://api.example.com/api/registrations/reg-1',
+      expect.objectContaining({ credentials: 'include', method: 'DELETE' }),
+    );
+  });
+
   it('does not set a JSON content type for multipart uploads', async () => {
     const fetcher = vi.fn<typeof fetch>()
       .mockResolvedValueOnce(new Response(JSON.stringify({ csrfToken: 'csrf-123' }), {

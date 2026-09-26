@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Navigate } from 'react-router-dom';
 
 import { AdminShell } from '../../components/portal/AdminShell';
@@ -10,6 +10,7 @@ import {
   type PaymentState,
   type RegistrationApi,
 } from '../../features/registration/api';
+import { apiUrl } from '../../features/registration/apiOrigin';
 
 interface AdminFinancePageProps {
   api?: RegistrationApi;
@@ -152,6 +153,7 @@ export default function AdminFinancePage({ api = registrationApi }: AdminFinance
   const [reasons, setReasons] = useState<Record<string, string>>({});
   const [decisionErrors, setDecisionErrors] = useState<Record<string, string>>({});
   const [savingIds, setSavingIds] = useState<Set<string>>(() => new Set());
+  const reasonRefs = useRef<Record<string, HTMLTextAreaElement | null>>({});
 
   useEffect(() => {
     if (authLoading || !user || !allowedRoles.has(user.role)) return undefined;
@@ -188,6 +190,7 @@ export default function AdminFinancePage({ api = registrationApi }: AdminFinance
         ...current,
         [invoiceId]: 'Alasan atau referensi verifikasi wajib diisi.',
       }));
+      reasonRefs.current[invoiceId]?.focus();
       return;
     }
 
@@ -225,8 +228,9 @@ export default function AdminFinancePage({ api = registrationApi }: AdminFinance
       <main className="admin-main admin-finance">
         <header className="admin-page-heading">
           <div>
-            <p className="admin-eyebrow">RATIO · XIV</p>
+            <p className="admin-eyebrow">KEUANGAN</p>
             <h1>Verifikasi pembayaran</h1>
+            <p className="admin-page-description">Periksa bukti, catat referensi, lalu putuskan pembayaran.</p>
           </div>
         </header>
 
@@ -261,7 +265,7 @@ export default function AdminFinancePage({ api = registrationApi }: AdminFinance
           <section className="admin-register" aria-labelledby="finance-queue-title">
             <div className="admin-register__heading">
               <div>
-                <p className="admin-eyebrow">ANTREAN FINANCE</p>
+                <p className="admin-eyebrow">ANTREAN VERIFIKASI</p>
                 <h2 id="finance-queue-title">Bukti menunggu verifikasi</h2>
               </div>
               <span>{invoices.length} invoice</span>
@@ -294,18 +298,24 @@ export default function AdminFinancePage({ api = registrationApi }: AdminFinance
                     </dl>
 
                     {invoice.proof && (
-                      <section aria-label="Bukti pembayaran">
+                      <section className="admin-proof" aria-label="Bukti pembayaran">
                         <h4>{invoice.proof.originalName}</h4>
                         <p>{invoice.proof.mimeType} · {formatFileSize(invoice.proof.size)}</p>
-                        <a href={`/api/admin/finance/invoices/${encodeURIComponent(invoice.id)}/proof`}>
+                        <a href={apiUrl(`/api/admin/finance/invoices/${encodeURIComponent(invoice.id)}/proof`)}>
                           Buka bukti pembayaran
                         </a>
                       </section>
                     )}
 
                     <label htmlFor={`finance-reason-${invoice.id}`}>Alasan atau referensi verifikasi</label>
+                    <p className="admin-field-help" id={`finance-reason-help-${invoice.id}`}>Wajib diisi sebelum menandai lunas atau menolak bukti.</p>
                     <textarea
                       id={`finance-reason-${invoice.id}`}
+                      ref={(element) => { reasonRefs.current[invoice.id] = element; }}
+                      aria-describedby={decisionErrors[invoice.id]
+                        ? `finance-reason-help-${invoice.id} finance-reason-error-${invoice.id}`
+                        : `finance-reason-help-${invoice.id}`}
+                      aria-invalid={Boolean(decisionErrors[invoice.id] && !(reasons[invoice.id]?.trim())) || undefined}
                       value={reasons[invoice.id] ?? ''}
                       disabled={saving}
                       onChange={(event) => {
@@ -318,12 +328,14 @@ export default function AdminFinancePage({ api = registrationApi }: AdminFinance
                     />
 
                     {decisionErrors[invoice.id] && (
-                      <p className="admin-error" role="alert">{decisionErrors[invoice.id]}</p>
+                      <p className="admin-error" id={`finance-reason-error-${invoice.id}`} role="alert">
+                        {decisionErrors[invoice.id]}
+                      </p>
                     )}
 
                     <div className="admin-detail-actions">
                       <button
-                        className="admin-action"
+                        className="admin-action admin-action--primary"
                         type="button"
                         disabled={saving}
                         onClick={() => void decide(invoice.id, 'PAID')}
@@ -331,7 +343,7 @@ export default function AdminFinancePage({ api = registrationApi }: AdminFinance
                         {saving ? 'Menyimpan…' : 'Tandai lunas'}
                       </button>
                       <button
-                        className="admin-action"
+                        className="admin-action admin-action--danger"
                         type="button"
                         disabled={saving}
                         onClick={() => void decide(invoice.id, 'REJECTED')}

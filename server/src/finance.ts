@@ -22,12 +22,11 @@ import {
   MaxLength,
   Min,
 } from 'class-validator';
-import { createReadStream } from 'node:fs';
-import { lstat } from 'node:fs/promises';
-import { dirname, resolve } from 'node:path';
+import type { Readable } from 'node:stream';
 import { Response } from 'express';
 import { Roles } from './auth';
 import { PrismaService } from './prisma.service';
+import { PrivateStorageService } from './private-storage';
 
 const DEFAULT_PAGE_SIZE = 50;
 const STORAGE_KEY_PATTERN = /^[0-9a-f]{64}$/;
@@ -134,30 +133,11 @@ export type SerializedFinanceInvoice = ReturnType<
 >;
 
 interface ProofRecord {
-  path: string;
+  stream: Readable;
   mimeType: string;
   size: number;
 }
 
-function storageRoot(): string {
-  const configured = process.env.STORAGE_PATH?.trim();
-  if (!configured) {
-    throw new InternalServerErrorException('STORAGE_PATH is required');
-  }
-  return resolve(configured);
-}
-
-function proofPath(storageKey: string): string {
-  if (!STORAGE_KEY_PATTERN.test(storageKey)) {
-    throw new InternalServerErrorException('Invalid payment proof storage key');
-  }
-  const root = storageRoot();
-  const path = resolve(root, storageKey);
-  if (dirname(path) !== root) {
-    throw new InternalServerErrorException('Invalid payment proof storage key');
-  }
-  return path;
-}
 
 function invoiceWhere(query: FinanceInvoiceListDto): Prisma.InvoiceWhereInput {
   const search = query.query?.trim();
@@ -199,7 +179,10 @@ function invoiceWhere(query: FinanceInvoiceListDto): Prisma.InvoiceWhereInput {
 
 @Injectable()
 export class FinanceService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly storage: PrivateStorageService = new PrivateStorageService(),
+  ) {}
 
   async list(
     query: FinanceInvoiceListDto,
@@ -236,12 +219,16 @@ export class FinanceService {
       throw new InternalServerErrorException('Invalid payment proof MIME type');
     }
 
-    const path = proofPath(invoice.proofStorageKey);
+    if (!STORAGE_KEY_PATTERN.test(invoice.proofStorageKey)) {
+      throw new InternalServerErrorException('Invalid payment proof storage key');
+    }
     try {
-      const stat = await lstat(path);
-      if (!stat.isFile() || stat.isSymbolicLink() || stat.size !== invoice.proofSize) {
+      const stored = await this.storage.read(invoice.proofStorageKey);
+      if (stored.size !== invoice.proofSize) {
+        stored.stream.destroy();
         throw new NotFoundException('Payment proof not found');
       }
+      return { stream: stored.stream, mimeType: invoice.proofMimeType, size: invoice.proofSize };
     } catch (error: unknown) {
       if (error instanceof NotFoundException) throw error;
       if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
@@ -250,7 +237,6 @@ export class FinanceService {
       throw error;
     }
 
-    return { path, mimeType: invoice.proofMimeType, size: invoice.proofSize };
   }
 }
 
@@ -277,6 +263,6 @@ export class FinanceController {
     response.setHeader('Content-Disposition', 'inline');
     response.setHeader('Cache-Control', 'private, no-store');
     response.setHeader('X-Content-Type-Options', 'nosniff');
-    return new StreamableFile(createReadStream(proof.path));
+    return new StreamableFile(proof.stream);
   }
 }

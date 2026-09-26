@@ -34,6 +34,56 @@ describe('RuntimeConfigValidator', () => {
     expect(() => new RuntimeConfigValidator().onModuleInit()).not.toThrow();
   });
 
+  it.each(['strict', 'lax', 'none'])(
+    'accepts production COOKIE_SAME_SITE value %j',
+    (value) => {
+      process.env.COOKIE_SAME_SITE = value;
+
+      expect(() => new RuntimeConfigValidator().onModuleInit()).not.toThrow();
+    },
+  );
+
+  it.each(['', 'invalid', 'cross-site'])(
+    'rejects invalid production COOKIE_SAME_SITE value %j',
+    (value) => {
+      process.env.COOKIE_SAME_SITE = value;
+
+      expect(() => new RuntimeConfigValidator().onModuleInit()).toThrowError(
+        /COOKIE_SAME_SITE/,
+      );
+    },
+  );
+
+  it('accepts Supabase storage without STORAGE_PATH', () => {
+    process.env.STORAGE_DRIVER = 'supabase';
+    delete process.env.STORAGE_PATH;
+    process.env.SUPABASE_URL = 'https://project.supabase.co';
+    process.env.SUPABASE_SERVICE_ROLE_KEY = 'service-role-secret';
+    process.env.SUPABASE_STORAGE_BUCKET = 'jrc-private';
+
+    expect(() => new RuntimeConfigValidator().onModuleInit()).not.toThrow();
+  });
+
+  it('requires complete Supabase storage configuration', () => {
+    process.env.STORAGE_DRIVER = 'supabase';
+    delete process.env.STORAGE_PATH;
+    process.env.SUPABASE_URL = 'http://project.supabase.co';
+    delete process.env.SUPABASE_SERVICE_ROLE_KEY;
+    delete process.env.SUPABASE_STORAGE_BUCKET;
+
+    expect(() => new RuntimeConfigValidator().onModuleInit()).toThrowError(
+      /SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, SUPABASE_STORAGE_BUCKET/,
+    );
+  });
+
+  it('rejects unknown storage drivers', () => {
+    process.env.STORAGE_DRIVER = 'unknown';
+
+    expect(() => new RuntimeConfigValidator().onModuleInit()).toThrowError(
+      /STORAGE_DRIVER/,
+    );
+  });
+
   it('lists every missing required variable without exposing values', () => {
     process.env = {
       NODE_ENV: 'production',

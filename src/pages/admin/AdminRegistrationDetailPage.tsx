@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState, type ComponentProps } from 'react';
+import { useCallback, useEffect, useRef, useState, type ComponentProps } from 'react';
 import { Link, Navigate, useParams } from 'react-router-dom';
 
 import { AdminShell } from '../../components/portal/AdminShell';
@@ -14,6 +14,7 @@ import {
   type ReviewReasonCategory,
   type RegistrationState,
 } from '../../features/registration/api';
+import { apiUrl } from '../../features/registration/apiOrigin';
 
 interface AdminRegistrationDetailPageProps {
   api?: RegistrationApi;
@@ -101,6 +102,7 @@ export default function AdminRegistrationDetailPage({ api = registrationApi }: A
   const [reviewReasonComment, setReviewReasonComment] = useState('');
   const [mutationLoading, setMutationLoading] = useState(false);
   const [mutationError, setMutationError] = useState<string | null>(null);
+  const reviewReasonRef = useRef<HTMLTextAreaElement>(null);
 
   const loadRegistration = useCallback(async () => {
     if (!registrationId) throw new Error('Registration ID is missing');
@@ -145,6 +147,7 @@ export default function AdminRegistrationDetailPage({ api = registrationApi }: A
     const reasonComment = reviewReasonComment.trim();
     if (requiresReason && (!reviewReasonCategory || !reasonComment)) {
       setMutationError('Kategori dan catatan wajib diisi untuk meminta revisi atau menolak pendaftaran.');
+      reviewReasonRef.current?.focus();
       return;
     }
 
@@ -212,7 +215,7 @@ export default function AdminRegistrationDetailPage({ api = registrationApi }: A
             <div className="admin-detail__layout">
               <div className="admin-detail__content">
                 <section className="admin-detail-section" aria-labelledby="admin-owner-title">
-                  <div className="admin-detail-section__heading"><span>I</span><h2 id="admin-owner-title">Pemilik pendaftaran</h2></div>
+                  <div className="admin-detail-section__heading"><h2 id="admin-owner-title">Pemilik pendaftaran</h2></div>
                   <dl className="admin-detail-grid">
                     <div><dt>Nama</dt><dd>{registration.owner?.displayName || '—'}</dd></div>
                     <div><dt>Email</dt><dd>{registration.owner?.email || '—'}</dd></div>
@@ -221,7 +224,7 @@ export default function AdminRegistrationDetailPage({ api = registrationApi }: A
                 </section>
 
                 <section className="admin-detail-section" aria-labelledby="admin-team-title">
-                  <div className="admin-detail-section__heading"><span>II</span><h2 id="admin-team-title">Tim dan kompetisi</h2></div>
+                  <div className="admin-detail-section__heading"><h2 id="admin-team-title">Tim dan kompetisi</h2></div>
                   <dl className="admin-detail-grid">
                     <div><dt>Nama tim</dt><dd>{registration.teamName || '—'}</dd></div>
                     <div><dt>Institusi</dt><dd>{registration.institution || '—'}</dd></div>
@@ -233,7 +236,7 @@ export default function AdminRegistrationDetailPage({ api = registrationApi }: A
                 </section>
 
                 <section className="admin-detail-section" aria-labelledby="admin-members-title">
-                  <div className="admin-detail-section__heading"><span>III</span><h2 id="admin-members-title">Anggota</h2></div>
+                  <div className="admin-detail-section__heading"><h2 id="admin-members-title">Anggota</h2></div>
                   {members.length > 0 ? (
                     <div className="admin-member-list">
                       {members.map((member) => (
@@ -250,7 +253,7 @@ export default function AdminRegistrationDetailPage({ api = registrationApi }: A
                 </section>
 
                 <section className="admin-detail-section" aria-labelledby="admin-documents-title">
-                  <div className="admin-detail-section__heading"><span>IV</span><h2 id="admin-documents-title">Dokumen</h2></div>
+                  <div className="admin-detail-section__heading"><h2 id="admin-documents-title">Dokumen</h2></div>
                   {documents.length > 0 ? documents.map((document) => (
                     <article className="admin-document" key={document.id}>
                       <span>DOC</span>
@@ -260,7 +263,7 @@ export default function AdminRegistrationDetailPage({ api = registrationApi }: A
                         {document.subjectName && <small>{document.subjectName} · {document.subjectRole === 'SUPERVISOR' ? 'Pembina' : 'Peserta'}</small>}
                       </div>
                       {document.downloadUrl && (
-                        <a href={document.downloadUrl} aria-label={`Unduh ${document.originalName}`}>
+                        <a href={apiUrl(document.downloadUrl)} aria-label={`Unduh ${document.originalName}`}>
                           Unduh
                         </a>
                       )}
@@ -269,7 +272,7 @@ export default function AdminRegistrationDetailPage({ api = registrationApi }: A
                 </section>
 
                 <section className="admin-detail-section" aria-labelledby="admin-billing-title">
-                  <div className="admin-detail-section__heading"><span>V</span><h2 id="admin-billing-title">Invoice dan tiket</h2></div>
+                  <div className="admin-detail-section__heading"><h2 id="admin-billing-title">Invoice dan tiket</h2></div>
                   <dl className="admin-detail-grid">
                     <div><dt>Invoice</dt><dd>{registration.invoice?.invoiceNumber || 'Belum dibuat'}</dd></div>
                     <div><dt>Jumlah</dt><dd>{formatAmount(registration.invoice?.amount, registration.invoice?.currency)}</dd></div>
@@ -280,7 +283,7 @@ export default function AdminRegistrationDetailPage({ api = registrationApi }: A
               </div>
 
               <aside className="admin-review-panel" aria-labelledby="admin-review-title">
-                <p className="admin-eyebrow">REVIEW ADMINISTRASI</p>
+                <p className="admin-eyebrow">TINDAKAN</p>
                 <h2 id="admin-review-title">Keputusan pendaftaran</h2>
                 <p>Status saat ini: <strong>{statusLabels[registration.status]}</strong></p>
                 {registration.reviewReasonCategory && (
@@ -315,8 +318,14 @@ export default function AdminRegistrationDetailPage({ api = registrationApi }: A
                       ))}
                     </select>
                     <label htmlFor="admin-review-reason">Catatan alasan</label>
+                    <p className="admin-field-help" id="admin-review-reason-help">Wajib bersama kategori untuk permintaan revisi dan penolakan.</p>
                     <textarea
                       id="admin-review-reason"
+                      ref={reviewReasonRef}
+                      aria-describedby={mutationError
+                        ? 'admin-review-reason-help admin-review-reason-error'
+                        : 'admin-review-reason-help'}
+                      aria-invalid={Boolean(mutationError && (!reviewReasonCategory || !reviewReasonComment.trim())) || undefined}
                       required
                       disabled={mutationLoading}
                       value={reviewReasonComment}
@@ -325,7 +334,7 @@ export default function AdminRegistrationDetailPage({ api = registrationApi }: A
                     />
                     <div>
                       <button
-                        className="admin-action"
+                        className="admin-action admin-action--primary"
                         disabled={mutationLoading}
                         type="button"
                         onClick={() => void updateReviewStatus('APPROVED')}
@@ -333,7 +342,7 @@ export default function AdminRegistrationDetailPage({ api = registrationApi }: A
                         Setujui
                       </button>
                       <button
-                        className="admin-action"
+                        className="admin-action admin-action--secondary"
                         disabled={mutationLoading}
                         type="button"
                         onClick={() => void updateReviewStatus('REVISION_REQUESTED')}
@@ -341,7 +350,7 @@ export default function AdminRegistrationDetailPage({ api = registrationApi }: A
                         Minta revisi
                       </button>
                       <button
-                        className="admin-action"
+                        className="admin-action admin-action--danger"
                         disabled={mutationLoading}
                         type="button"
                         onClick={() => void updateReviewStatus('REJECTED')}
@@ -353,7 +362,7 @@ export default function AdminRegistrationDetailPage({ api = registrationApi }: A
                 )}
 
                 {mutationLoading && <p role="status">Menyimpan keputusan…</p>}
-                {mutationError && <p role="alert">{mutationError}</p>}
+                {mutationError && <p id="admin-review-reason-error" role="alert">{mutationError}</p>}
               </aside>
             </div>
           </>

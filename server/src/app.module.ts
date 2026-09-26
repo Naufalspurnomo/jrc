@@ -44,6 +44,7 @@ import {
   PaymentVerificationService,
 } from './payment-verification';
 import { PrismaService } from './prisma.service';
+import { PrivateStorageService } from './private-storage';
 import {
   RegistrationsController,
   RegistrationsService,
@@ -288,6 +289,7 @@ export class HealthController {
   providers: [
     RuntimeConfigValidator,
     PrismaService,
+    PrivateStorageService,
     AuthService,
     AdminRegistrationsService,
     DocumentsService,

@@ -13,12 +13,12 @@ import type {
 } from '../api';
 
 const competitions: CompetitionRecord[] = [
-  { id: 'competition-1', name: 'Aquaduct Romana — Transporter', level: 'SD' },
-  { id: 'competition-2', name: 'Castra Guardian — Rescue Transporter', level: 'SMP' },
-  { id: 'competition-3', name: 'Robo-Chiper — Transporter Shooter', level: 'SMA' },
-  { id: 'competition-4', name: 'Chariot Line — Line Follower Mikro', level: 'Umum' },
-  { id: 'competition-5', name: 'Colosseum Clash — Sumo', level: 'Umum' },
-  { id: 'competition-6', name: 'Harpastum Arena — Soccer', level: 'Umum' },
+  { id: 'competition-1', name: 'Castra — Transporter', level: 'SD' },
+  { id: 'competition-2', name: 'Robo Chiper — Rescue Transporter', level: 'SMP' },
+  { id: 'competition-3', name: 'Aquaduct — Transporter Shooter', level: 'SMA' },
+  { id: 'competition-4', name: 'Charion Line — Line Follower Mikro', level: 'Umum' },
+  { id: 'competition-5', name: 'Colosseum — Sumo', level: 'Umum' },
+  { id: 'competition-6', name: 'Harpastum — Soccer', level: 'Umum' },
 ];
 const competition = competitions[4];
 
@@ -231,7 +231,7 @@ describe('PortalRegistrationPage', () => {
     const api = createApi();
     renderPage(api);
 
-    const competitionCard = await screen.findByRole('radio', { name: 'Umum · Colosseum Clash — Sumo' });
+    const competitionCard = await screen.findByRole('radio', { name: 'Umum · Colosseum — Sumo' });
     await user.click(competitionCard);
 
     // The draft is created by the choice alone, before any typing.
@@ -271,7 +271,7 @@ describe('PortalRegistrationPage', () => {
     const api = createApi();
     renderPage(api);
 
-    const competitionCard = await screen.findByRole('radio', { name: 'Umum · Colosseum Clash — Sumo' });
+    const competitionCard = await screen.findByRole('radio', { name: 'Umum · Colosseum — Sumo' });
     await user.click(competitionCard);
 
     await waitFor(() => expect(api.registrations.create).toHaveBeenCalledTimes(1));
@@ -284,7 +284,7 @@ describe('PortalRegistrationPage', () => {
     });
     renderPage(api, '/portal/pendaftaran/registration-1');
 
-    const selectedCompetition = await screen.findByRole('radio', { name: 'Umum · Colosseum Clash — Sumo' });
+    const selectedCompetition = await screen.findByRole('radio', { name: 'Umum · Colosseum — Sumo' });
     expect(selectedCompetition).toHaveAttribute('aria-checked', 'true');
     expect(selectedCompetition).toHaveAttribute('tabindex', '0');
     expect(screen.getAllByRole('radio').filter((card) => card.tabIndex === 0)).toEqual([selectedCompetition]);

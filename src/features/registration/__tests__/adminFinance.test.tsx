@@ -42,7 +42,7 @@ const pendingInvoice: FinanceInvoiceRecord = {
     teamName: 'Garuda Robotika',
     institution: 'PENS',
     owner: { displayName: 'Ayu Ketua' },
-    competition: { id: 'competition-1', name: 'Colosseum Clash — Sumo' },
+    competition: { id: 'competition-1', name: 'Ring Rumble — Sumo' },
   },
 };
 
@@ -95,7 +95,7 @@ describe('AdminFinancePage', () => {
     const item = await screen.findByRole('article', { name: 'Invoice INV-JRC-0001' });
     expect(within(item).getByText('Garuda Robotika')).toBeInTheDocument();
     expect(within(item).getByText('PENS')).toBeInTheDocument();
-    expect(within(item).getByText('Colosseum Clash — Sumo')).toBeInTheDocument();
+    expect(within(item).getByText('Ring Rumble — Sumo')).toBeInTheDocument();
     expect(within(item).getByText('Ayu Ketua')).toBeInTheDocument();
     expect(within(item).getByText(/Rp\s*900\.000/)).toBeInTheDocument();
     expect(within(item).getByText(/20 September 2026/)).toBeInTheDocument();
@@ -121,7 +121,15 @@ describe('AdminFinancePage', () => {
     await user.click(within(item).getByRole('button', { name: 'Tandai lunas' }));
 
     expect(api.admin.verifyPayment).not.toHaveBeenCalled();
-    expect(within(item).getByRole('alert')).toHaveTextContent(/alasan atau referensi/i);
+    const reference = within(item).getByLabelText('Alasan atau referensi verifikasi');
+    const validationError = within(item).getByRole('alert');
+    expect(validationError).toHaveAttribute('id', 'finance-reason-error-invoice-1');
+    expect(reference).toHaveAttribute('aria-invalid', 'true');
+    expect(reference).toHaveAttribute(
+      'aria-describedby',
+      'finance-reason-help-invoice-1 finance-reason-error-invoice-1',
+    );
+    expect(reference).toHaveFocus();
 
     await user.type(
       within(item).getByLabelText('Alasan atau referensi verifikasi'),
@@ -135,6 +143,27 @@ describe('AdminFinancePage', () => {
     }));
     expect(await screen.findByText('Tidak ada bukti pembayaran yang menunggu verifikasi.')).toBeInTheDocument();
     expect(screen.queryByText('Garuda Robotika')).not.toBeInTheDocument();
+  });
+
+  it('describes a save error without marking a non-empty reference invalid', async () => {
+    const api = createApi();
+    vi.mocked(api.admin.verifyPayment).mockRejectedValueOnce(new Error('offline'));
+    const user = userEvent.setup();
+    renderFinance(api);
+
+    const item = await screen.findByRole('article', { name: 'Invoice INV-JRC-0001' });
+    const reference = within(item).getByLabelText('Alasan atau referensi verifikasi');
+    expect(reference).toHaveAttribute('aria-describedby', 'finance-reason-help-invoice-1');
+    await user.type(reference, 'Mutasi bank #4812');
+    await user.click(within(item).getByRole('button', { name: 'Tandai lunas' }));
+
+    const saveError = await within(item).findByRole('alert');
+    expect(saveError).toHaveAttribute('id', 'finance-reason-error-invoice-1');
+    expect(reference).not.toHaveAttribute('aria-invalid');
+    expect(reference).toHaveAttribute(
+      'aria-describedby',
+      'finance-reason-help-invoice-1 finance-reason-error-invoice-1',
+    );
   });
 
   it('requires a rejection reason and sends the explicit finance decision', async () => {

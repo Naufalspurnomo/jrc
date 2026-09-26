@@ -27,19 +27,19 @@ describe('arena presentation', () => {
       </MemoryRouter>,
     );
 
-    expect(screen.getByRole('heading', { name: 'AQUADUCT ROMANA' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'CASTRA' })).toBeInTheDocument();
     expect(screen.getByText('Transporter')).toBeInTheDocument();
-    expect(screen.getByAltText('Lambang AQUADUCT ROMANA')).toHaveAttribute(
+    expect(screen.getByAltText('Lambang CASTRA')).toHaveAttribute(
       'src',
       '/assets/arena-emblems/aquaduct-romana.webp',
     );
 
     await user.click(screen.getByRole('button', { name: 'Lihat divisi' }));
 
-    const dialog = screen.getByRole('dialog', { name: /AQUADUCT ROMANA/ });
-    expect(dialog).toHaveTextContent('AQUADUCT ROMANA');
-    expect(dialog).toHaveTextContent('Aquaduct Romana — Transporter');
-    expect(within(dialog).getByAltText('Lambang AQUADUCT ROMANA')).toHaveAttribute(
+    const dialog = screen.getByRole('dialog', { name: /CASTRA/ });
+    expect(dialog).toHaveTextContent('CASTRA');
+    expect(dialog).toHaveTextContent('Castra — Transporter');
+    expect(within(dialog).getByAltText('Lambang CASTRA')).toHaveAttribute(
       'src',
       '/assets/arena-emblems/aquaduct-romana.webp',
     );
@@ -54,9 +54,9 @@ describe('arena presentation', () => {
       </MemoryRouter>,
     );
 
-    expect(screen.getByRole('heading', { level: 1, name: 'COLOSSEUM CLASH' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { level: 1, name: 'COLOSSEUM' })).toBeInTheDocument();
     expect(screen.getByText('Sumo')).toBeInTheDocument();
-    expect(screen.getByAltText('Lambang COLOSSEUM CLASH')).toHaveAttribute(
+    expect(screen.getByAltText('Lambang COLOSSEUM')).toHaveAttribute(
       'src',
       '/assets/arena-emblems/colosseum-clash.webp',
     );

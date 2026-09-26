@@ -77,7 +77,7 @@ suite('registration system e2e', () => {
     const competition = await prisma.competition.create({
       data: {
         slug: 'wacky-rally-line-follower-mikro',
-        name: 'Chariot Line — Line Follower Mikro',
+        name: 'Charion Line — Line Follower Mikro',
         level: 'Umum',
         discipline: 'Line Follower Mikro',
         eventId: 'JRC-XIV-2026',
@@ -147,7 +147,7 @@ suite('registration system e2e', () => {
         expect(body).toEqual([
           expect.objectContaining({
             slug: 'wacky-rally-line-follower-mikro',
-            name: 'Chariot Line — Line Follower Mikro',
+            name: 'Charion Line — Line Follower Mikro',
             level: 'Umum',
             discipline: 'Line Follower Mikro',
           }),
@@ -254,7 +254,7 @@ suite('registration system e2e', () => {
       .expect(200);
     expect(participantRegistration.body.competition).toMatchObject({
       slug: 'wacky-rally-line-follower-mikro',
-      name: 'Chariot Line — Line Follower Mikro',
+      name: 'Charion Line — Line Follower Mikro',
       level: 'Umum',
       discipline: 'Line Follower Mikro',
     });

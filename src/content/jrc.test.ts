@@ -3,65 +3,79 @@ import { describe, expect, it } from 'vitest';
 import { competitions } from './jrc';
 
 describe('JRC XIV competition catalog', () => {
-  it('pairs stable competition identities with the six synchronized arena names and emblems', () => {
-    expect(competitions.map(({ slug, name, shortName, emblem }) => ({
+  it('pairs stable competition identities with the exact arena, level, and discipline mapping', () => {
+    expect(competitions.map(({ slug, name, shortName, level, discipline, emblem }) => ({
       slug,
       name,
       shortName,
+      level,
+      discipline,
       emblem,
     }))).toEqual([
       {
         slug: 'donatopia-transporter',
-        name: 'Aquaduct Romana — Transporter',
-        shortName: 'AQUADUCT ROMANA',
+        name: 'Castra — Transporter',
+        shortName: 'CASTRA',
+        level: 'SD',
+        discipline: 'Transporter',
         emblem: {
           src: '/assets/arena-emblems/aquaduct-romana.webp',
-          alt: 'Lambang AQUADUCT ROMANA',
+          alt: 'Lambang CASTRA',
         },
       },
       {
         slug: 'nightmaze-rescue-transporter',
-        name: 'Castra Guardian — Rescue Transporter',
-        shortName: 'CASTRA GUARDIAN',
+        name: 'Robo Chiper — Rescue Transporter',
+        shortName: 'ROBO CHIPER',
+        level: 'SMP',
+        discipline: 'Rescue Transporter',
         emblem: {
           src: '/assets/arena-emblems/castra-guardian.webp',
-          alt: 'Lambang CASTRA GUARDIAN',
+          alt: 'Lambang ROBO CHIPER',
         },
       },
       {
         slug: 'pirate-clash-transporter-shooter',
-        name: 'Robo-Chiper — Transporter Shooter',
-        shortName: 'ROBO-CHIPER',
+        name: 'Aquaduct — Transporter Shooter',
+        shortName: 'AQUADUCT',
+        level: 'SMA',
+        discipline: 'Transporter Shooter',
         emblem: {
           src: '/assets/arena-emblems/robo-chiper.webp',
-          alt: 'Lambang ROBO-CHIPER',
+          alt: 'Lambang AQUADUCT',
         },
       },
       {
         slug: 'wacky-rally-line-follower-mikro',
-        name: 'Chariot Line — Line Follower Mikro',
-        shortName: 'CHARIOT LINE',
+        name: 'Charion Line — Line Follower Mikro',
+        shortName: 'CHARION LINE',
+        level: 'Umum',
+        discipline: 'Line Follower Mikro',
         emblem: {
           src: '/assets/arena-emblems/chariot-line.webp',
-          alt: 'Lambang CHARIOT LINE',
+          alt: 'Lambang CHARION LINE',
         },
       },
       {
         slug: 'ring-rumble-sumo',
-        name: 'Colosseum Clash — Sumo',
-        shortName: 'COLOSSEUM CLASH',
+        name: 'Colosseum — Sumo',
+        shortName: 'COLOSSEUM',
+        level: 'Umum',
+        discipline: 'Sumo',
         emblem: {
           src: '/assets/arena-emblems/colosseum-clash.webp',
-          alt: 'Lambang COLOSSEUM CLASH',
+          alt: 'Lambang COLOSSEUM',
         },
       },
       {
         slug: 'goal-rush-soccer',
-        name: 'Harpastum Arena — Soccer',
-        shortName: 'HARPASTUM ARENA',
+        name: 'Harpastum — Soccer',
+        shortName: 'HARPASTUM',
+        level: 'Umum',
+        discipline: 'Soccer',
         emblem: {
           src: '/assets/arena-emblems/harpastum-arena.webp',
-          alt: 'Lambang HARPASTUM ARENA',
+          alt: 'Lambang HARPASTUM',
         },
       },
     ]);

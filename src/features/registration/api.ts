@@ -1,3 +1,5 @@
+import { apiUrl } from './apiOrigin';
+
 export const API_PATHS = {
   auth: {
     csrf: '/api/auth/csrf',
@@ -117,7 +119,10 @@ export class ApiClient {
   private csrfToken: string | null = null;
   private csrfRequest: Promise<string> | null = null;
 
-  constructor(private readonly fetcher: Fetcher = globalThis.fetch.bind(globalThis)) {}
+  constructor(
+    private readonly fetcher: Fetcher = globalThis.fetch.bind(globalThis),
+    private readonly apiOrigin?: string,
+  ) {}
 
   clearCsrfToken(): void {
     this.csrfToken = null;
@@ -127,7 +132,7 @@ export class ApiClient {
   private async loadCsrfToken(): Promise<string> {
     if (this.csrfToken) return this.csrfToken;
     if (!this.csrfRequest) {
-      this.csrfRequest = this.fetcher(API_PATHS.auth.csrf, {
+      this.csrfRequest = this.fetcher(apiUrl(API_PATHS.auth.csrf, this.apiOrigin), {
         method: 'GET',
         credentials: 'include',
       }).then(async (response) => {
@@ -174,7 +179,7 @@ export class ApiClient {
       }
     }
 
-    const response = await this.fetcher(path, {
+    const response = await this.fetcher(apiUrl(path, this.apiOrigin), {
       ...requestInit,
       body,
       credentials: 'include',
