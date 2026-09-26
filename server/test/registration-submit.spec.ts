@@ -19,7 +19,13 @@ function currentRegistration(documents: number) {
     reviewReasonComment: null,
     owner: { email: 'owner@example.test', displayName: 'Owner' },
     competition: { id: '943ca4f3-5dbf-4510-b5c7-a3309920d637', name: 'Sumo' },
-    _count: { members: 1, documents },
+    documents: documents === 0 ? [] : [
+      'RECOMMENDATION_LETTER',
+      'IDENTITY_CARD',
+      'REGISTRATION_FORM',
+      'TEAM_PHOTO',
+      'TWIBBON_PROOF',
+    ].map((category) => ({ category })),
   };
 }
 
@@ -40,7 +46,7 @@ describe('RegistrationsService submission requirements', () => {
     const transaction = {
       registration: { findFirst: vi.fn().mockResolvedValue(currentRegistration(1)), updateMany: vi.fn().mockResolvedValue({ count: 1 }), findUnique: vi.fn().mockResolvedValue(returned) },
       user: { findUnique: vi.fn().mockResolvedValue({ emailVerifiedAt: new Date(), email: 'owner@example.test', displayName: 'Owner' }) },
-      teamMember: { count: vi.fn().mockResolvedValue(1) },
+      teamMember: { count: vi.fn().mockImplementation(({ where }: { where: { role: TeamMemberRole } }) => Promise.resolve(where.role === TeamMemberRole.MEMBER ? 0 : 1)) },
       auditLog: { create: vi.fn().mockResolvedValue({}) },
       emailOutbox: { create: vi.fn().mockResolvedValue({}) },
     };
@@ -55,7 +61,7 @@ describe('RegistrationsService submission requirements', () => {
     process.env.TICKET_SECRET = 'test-ticket-secret-with-at-least-32-characters';
     const current = { ...currentRegistration(1), status: RegistrationStatus.REVISION_REQUESTED, reviewReasonCategory: 'DATA_MISMATCH', reviewReasonComment: 'Fix ID' };
     const returned = { id: REGISTRATION_ID, registrationNumber: current.registrationNumber, competitionId: current.competitionId, teamName: current.teamName, institution: current.institution, phone: null, status: RegistrationStatus.SUBMITTED, reviewReasonCategory: null, reviewReasonComment: null, submittedAt: new Date(), reviewedAt: null, createdAt: new Date(), updatedAt: new Date(), competition: { id: current.competitionId, slug: 'sumo', name: 'Sumo', level: 'College', discipline: 'Robot', description: null, eventId: 'event', eventName: 'JRC', fee: 100, currency: 'IDR', registrationDeadline: new Date() }, members: [], documents: [], invoice: null, ticket: null };
-    const transaction = { registration: { findFirst: vi.fn().mockResolvedValue(current), updateMany: vi.fn().mockResolvedValue({ count: 1 }), findUnique: vi.fn().mockResolvedValue(returned) }, user: { findUnique: vi.fn().mockResolvedValue({ emailVerifiedAt: new Date() }) }, teamMember: { count: vi.fn().mockResolvedValue(1) }, auditLog: { create: vi.fn().mockResolvedValue({}) }, emailOutbox: { create: vi.fn().mockResolvedValue({}) } };
+    const transaction = { registration: { findFirst: vi.fn().mockResolvedValue(current), updateMany: vi.fn().mockResolvedValue({ count: 1 }), findUnique: vi.fn().mockResolvedValue(returned) }, user: { findUnique: vi.fn().mockResolvedValue({ emailVerifiedAt: new Date() }) }, teamMember: { count: vi.fn().mockImplementation(({ where }: { where: { role: TeamMemberRole } }) => Promise.resolve(where.role === TeamMemberRole.MEMBER ? 0 : 1)) }, auditLog: { create: vi.fn().mockResolvedValue({}) }, emailOutbox: { create: vi.fn().mockResolvedValue({}) } };
     const prisma = { $transaction: vi.fn((operation: (client: typeof transaction) => Promise<unknown>) => operation(transaction)) };
     await new RegistrationsService(prisma as unknown as PrismaService).submit(OWNER_ID, REGISTRATION_ID, AUDIT);
     expect(transaction.registration.findFirst).toHaveBeenCalledWith(expect.objectContaining({ select: expect.objectContaining({ reviewReasonCategory: true }) }));
@@ -106,11 +112,11 @@ describe('RegistrationsService submission requirements', () => {
 
     await expect(
       service.submit(OWNER_ID, REGISTRATION_ID, AUDIT),
-    ).rejects.toThrow('At least one document is required before submission');
+    ).rejects.toThrow('All five required document categories must be uploaded before submission');
     expect(transaction.registration.findFirst).toHaveBeenCalledWith(
       expect.objectContaining({
         select: expect.objectContaining({
-          _count: { select: { members: true, documents: true } },
+          documents: { select: { category: true } },
         }),
       }),
     );
@@ -126,7 +132,7 @@ describe('RegistrationsService submission requirements', () => {
         user: {
           findUnique: vi.fn().mockResolvedValue({ emailVerifiedAt: new Date() }),
         },
-        teamMember: { count: vi.fn().mockResolvedValue(leaderCount) },
+        teamMember: { count: vi.fn().mockImplementation(({ where }: { where: { role: TeamMemberRole } }) => Promise.resolve(where.role === TeamMemberRole.LEADER ? leaderCount : where.role === TeamMemberRole.SUPERVISOR ? 1 : 0)) },
       };
       const prisma = {
         $transaction: vi.fn(

@@ -46,6 +46,7 @@ enum TicketStatus {
 enum TeamMemberRole {
   LEADER
   MEMBER
+  SUPERVISOR
 }
 
 enum OutboxStatus {
@@ -146,7 +147,7 @@ model Registration {
   invoice            Invoice?
   ticket             Ticket?
 
-  @@index([ownerId])
+  @@unique([ownerId])
   @@index([competitionId, status])
   @@map("registrations")
 }
@@ -175,6 +176,8 @@ model Document {
   mimeType       String       @map("mime_type")
   size           Int
   storageKey     String       @unique @map("storage_key")
+  subjectName    String?      @map("subject_name")
+  subjectRole    String?      @map("subject_role")
   createdAt      DateTime     @default(now()) @map("created_at")
   registration   Registration @relation(fields: [registrationId], references: [id], onDelete: Cascade)
 

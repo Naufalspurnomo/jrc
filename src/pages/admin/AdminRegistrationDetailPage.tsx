@@ -238,7 +238,7 @@ export default function AdminRegistrationDetailPage({ api = registrationApi }: A
                     <div className="admin-member-list">
                       {members.map((member) => (
                         <article key={member.id}>
-                          <span>{member.role === 'LEADER' ? 'Ketua' : 'Anggota'}</span>
+                          <span>{member.role === 'LEADER' ? 'Ketua' : member.role === 'SUPERVISOR' ? 'Pembina' : 'Anggota'}</span>
                           <strong>{member.name || 'Nama belum tersedia'}</strong>
                           {member.studentId && <small>{member.studentId}</small>}
                           {member.email && <a href={`mailto:${member.email}`}>{member.email}</a>}
@@ -257,6 +257,7 @@ export default function AdminRegistrationDetailPage({ api = registrationApi }: A
                       <div>
                         <strong>{document.originalName || 'Dokumen tanpa nama'}</strong>
                         <small>{document.category || 'Kategori tidak tersedia'} · {Math.max(1, Math.round(document.size / 1024))} KB</small>
+                        {document.subjectName && <small>{document.subjectName} · {document.subjectRole === 'SUPERVISOR' ? 'Pembina' : 'Peserta'}</small>}
                       </div>
                       {document.downloadUrl && (
                         <a href={document.downloadUrl} aria-label={`Unduh ${document.originalName}`}>

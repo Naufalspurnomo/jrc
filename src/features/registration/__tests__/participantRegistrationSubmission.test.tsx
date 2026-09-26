@@ -27,14 +27,23 @@ function registration(status: RegistrationState, overrides: Partial<Registration
     institution: 'PENS',
     phone: '081234567890',
     status,
-    members: [{ id: 'leader-1', name: 'Ari Wijaya', studentId: '5025211001', role: 'LEADER' }],
-    documents: [{
-      id: 'document-1',
-      category: 'STUDENT_CARD',
-      originalName: 'kartu-mahasiswa.pdf',
+    members: [
+      { id: 'leader-1', name: 'Ari Wijaya', studentId: '5025211001', role: 'LEADER' },
+      { id: 'supervisor-1', name: 'Rina Pembina', role: 'SUPERVISOR' },
+    ],
+    documents: [
+      'RECOMMENDATION_LETTER',
+      'IDENTITY_CARD',
+      'REGISTRATION_FORM',
+      'TEAM_PHOTO',
+      'TWIBBON_PROOF',
+    ].map((category, index) => ({
+      id: `document-${index + 1}`,
+      category,
+      originalName: `${category.toLowerCase()}.pdf`,
       mimeType: 'application/pdf',
       size: 2_048,
-    }],
+    })),
     createdAt: '2026-09-01T00:00:00.000Z',
     updatedAt: '2026-09-02T00:00:00.000Z',
     ...overrides,
@@ -66,7 +75,9 @@ function createApi(record: RegistrationRecord): RegistrationApi {
       create: vi.fn(),
       update: vi.fn().mockResolvedValue(record),
       addMember: vi.fn(),
+      updateMember: vi.fn().mockResolvedValue(undefined),
       removeMember: vi.fn(),
+      removeDocument: vi.fn(),
       submit: vi.fn().mockResolvedValue(registration('SUBMITTED')),
       invoice: vi.fn(),
       ticket: vi.fn(),
@@ -98,6 +109,7 @@ describe('PortalRegistrationPage submission', () => {
     renderPage(api);
 
     await screen.findByDisplayValue('Garuda Robotika');
+    await waitFor(() => expect(api.auth.me).toHaveBeenCalled());
     await user.click(screen.getByRole('button', { name: 'Kirim pendaftaran' }));
 
     await waitFor(() => expect(api.registrations.submit).toHaveBeenCalledWith('registration-1'));
@@ -110,11 +122,19 @@ describe('PortalRegistrationPage submission', () => {
     renderPage(api);
 
     await screen.findByDisplayValue('Garuda Robotika');
-    expect(screen.getByRole('button', { name: 'Kirim pendaftaran' })).toBeDisabled();
 
-    await user.click(screen.getByRole('button', { name: 'Simpan draft' }));
+    // The submit button stays clickable and explains what is missing instead of
+    // sitting disabled with no reason.
+    const submit = screen.getByRole('button', { name: 'Kirim pendaftaran' });
+    expect(submit).toBeEnabled();
+    await user.click(submit);
 
-    await waitFor(() => expect(api.registrations.update).toHaveBeenCalledTimes(1));
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      'Masih ada 1 hal yang belum lengkap: Dokumen pendukung.',
+    );
+    expect(api.registrations.submit).not.toHaveBeenCalled();
+
+    await user.click(screen.getByRole('button', { name: 'Simpan sekarang' }));
     expect(api.registrations.addMember).not.toHaveBeenCalled();
     expect(api.registrations.submit).not.toHaveBeenCalled();
   });
@@ -143,7 +163,7 @@ describe('PortalRegistrationPage submission', () => {
     renderPage(api);
 
     expect(await screen.findByLabelText('Nama tim')).toBeEnabled();
-    expect(screen.getByRole('button', { name: 'Simpan draft' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Simpan sekarang' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Unggah dokumen' })).toBeInTheDocument();
     expect(screen.getByText('Dokumen belum lengkap')).toBeInTheDocument();
     expect(screen.getByText('Unggah ulang dokumen peserta.')).toBeInTheDocument();

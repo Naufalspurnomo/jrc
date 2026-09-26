@@ -40,11 +40,13 @@ function documentRecord(overrides: Record<string, unknown> = {}) {
   return {
     id: DOCUMENT_ID,
     registrationId: REGISTRATION_ID,
-    category: 'STUDENT_CARD',
+    category: 'IDENTITY_CARD',
     originalName: 'student-card.pdf',
     mimeType: 'application/pdf',
     size: Buffer.byteLength('%PDF-test'),
     storageKey: STORAGE_KEY,
+    subjectName: null,
+    subjectRole: null,
     createdAt: CREATED_AT,
     ...overrides,
   };
@@ -96,18 +98,22 @@ describe('DocumentsService', () => {
     const result = await service.upload(
       OWNER_ID,
       REGISTRATION_ID,
-      ' STUDENT_CARD ',
+      ' IDENTITY_CARD ',
+      undefined,
+      undefined,
       uploadFile(),
       { requestId: 'request-id', ipAddress: '127.0.0.1' },
     );
 
     expect(result).toEqual({
       id: DOCUMENT_ID,
-      category: 'STUDENT_CARD',
+      category: 'IDENTITY_CARD',
       originalName: 'student-card.pdf',
       mimeType: 'application/pdf',
       size: Buffer.byteLength('%PDF-test'),
       createdAt: CREATED_AT.toISOString(),
+      subjectName: null,
+      subjectRole: null,
     });
     expect(result).not.toHaveProperty('storageKey');
     const files = await readdir(storagePath);
@@ -124,7 +130,7 @@ describe('DocumentsService', () => {
       expect.objectContaining({
         data: expect.objectContaining({
           registrationId: REGISTRATION_ID,
-          category: 'STUDENT_CARD',
+          category: 'IDENTITY_CARD',
           storageKey: files[0],
         }),
       }),
@@ -157,7 +163,9 @@ describe('DocumentsService', () => {
       service.upload(
         OWNER_ID,
         REGISTRATION_ID,
-        'STUDENT_CARD',
+        'IDENTITY_CARD',
+        undefined,
+        undefined,
         uploadFile(),
         { requestId: 'request-id', ipAddress: null },
       ),
@@ -175,7 +183,9 @@ describe('DocumentsService', () => {
       service.upload(
         OWNER_ID,
         REGISTRATION_ID,
-        'STUDENT_CARD',
+        'IDENTITY_CARD',
+        undefined,
+        undefined,
         uploadFile(),
         { requestId: 'request-id', ipAddress: null },
       ),
@@ -197,7 +207,9 @@ describe('DocumentsService', () => {
       service.upload(
         OWNER_ID,
         REGISTRATION_ID,
-        'STUDENT_CARD',
+        'IDENTITY_CARD',
+        undefined,
+        undefined,
         uploadFile(),
         { requestId: 'request-id', ipAddress: null },
       ),
@@ -218,7 +230,9 @@ describe('DocumentsService', () => {
       service.upload(
         OWNER_ID,
         REGISTRATION_ID,
-        'STUDENT_CARD',
+        'IDENTITY_CARD',
+        undefined,
+        undefined,
         uploadFile({ mimetype: 'image/png' }),
         { requestId: 'request-id', ipAddress: null },
       ),

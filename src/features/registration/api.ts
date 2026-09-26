@@ -19,6 +19,8 @@ export const API_PATHS = {
     invoice: (registrationId: string) => `/api/registrations/${encodeURIComponent(registrationId)}/invoice`,
     ticket: (registrationId: string) => `/api/registrations/${encodeURIComponent(registrationId)}/ticket`,
     documents: (registrationId: string) => `/api/registrations/${encodeURIComponent(registrationId)}/documents`,
+    document: (registrationId: string, documentId: string) =>
+      `/api/registrations/${encodeURIComponent(registrationId)}/documents/${encodeURIComponent(documentId)}`,
   },
   invoices: {
     proof: (invoiceId: string) => `/api/invoices/${encodeURIComponent(invoiceId)}/proof`,
@@ -34,6 +36,7 @@ export const API_PATHS = {
     registrations: {
       root: '/api/admin/registrations',
       exportCsv: '/api/admin/registrations/export.csv',
+      attendanceCsv: '/api/admin/registrations/attendance.csv',
       byId: (registrationId: string) => `/api/admin/registrations/${encodeURIComponent(registrationId)}`,
       review: (registrationId: string) => `/api/admin/registrations/${encodeURIComponent(registrationId)}/review`,
     },
@@ -261,7 +264,7 @@ export interface TeamMemberRecord {
   studentId?: string | null;
   email?: string | null;
   phone?: string | null;
-  role?: 'LEADER' | 'MEMBER';
+  role?: 'LEADER' | 'MEMBER' | 'SUPERVISOR';
 }
 
 export interface CompetitionRecord {
@@ -286,6 +289,8 @@ export interface RegistrationDocumentRecord {
   size: number;
   downloadUrl?: string | null;
   createdAt?: string;
+  subjectName?: string | null;
+  subjectRole?: 'PARTICIPANT' | 'SUPERVISOR' | null;
 }
 
 export interface RegistrationRecord {
@@ -319,13 +324,14 @@ export interface RegistrationPersonInput {
   studentId?: string;
   email?: string;
   phone?: string;
-  role?: 'LEADER' | 'MEMBER';
+  role?: 'LEADER' | 'MEMBER' | 'SUPERVISOR';
 }
 
 export interface RegistrationInput {
   competitionId: string;
-  teamName: string;
-  institution: string;
+  /** A draft can be created empty; `submit` is what requires a filled team name. */
+  teamName?: string;
+  institution?: string;
   phone?: string;
   leader?: RegistrationPersonInput;
 }
@@ -446,6 +452,7 @@ export interface RegistrationApi {
     invoice(registrationId: string): Promise<InvoiceRecord>;
     ticket(registrationId: string): Promise<TicketRecord>;
     uploadDocument(registrationId: string, document: FormData): Promise<RegistrationDocumentRecord>;
+    removeDocument(registrationId: string, documentId: string): Promise<void>;
   };
   invoices: {
     uploadProof(invoiceId: string, proof: FormData): Promise<InvoiceRecord>;
@@ -462,6 +469,7 @@ export interface RegistrationApi {
     getRegistration(registrationId: string): Promise<RegistrationRecord>;
     reviewRegistration(registrationId: string, input: ReviewInput): Promise<RegistrationRecord>;
     exportRegistrations(): Promise<string>;
+    exportAttendance(): Promise<string>;
     listFinanceInvoices(): Promise<FinanceInvoiceRecord[]>;
     verifyPayment(invoiceId: string, input: PaymentReviewInput): Promise<InvoiceRecord>;
   };
@@ -531,6 +539,10 @@ export function createRegistrationApi(client = new ApiClient()): RegistrationApi
           body: document,
         },
       ),
+      removeDocument: (registrationId, documentId) => client.request<void>(
+        API_PATHS.registrations.document(registrationId, documentId),
+        { method: 'DELETE' },
+      ),
     },
     invoices: {
       uploadProof: (invoiceId, proof) => client.request<InvoiceRecord>(API_PATHS.invoices.proof(invoiceId), {
@@ -557,6 +569,7 @@ export function createRegistrationApi(client = new ApiClient()): RegistrationApi
         { method: 'POST', body: input },
       ),
       exportRegistrations: () => client.request<string>(API_PATHS.admin.registrations.exportCsv),
+      exportAttendance: () => client.request<string>(API_PATHS.admin.registrations.attendanceCsv),
       listFinanceInvoices: () => client.request<FinanceInvoiceRecord[]>(API_PATHS.admin.finance.invoices.root),
       verifyPayment: (invoiceId, input) => client.request<InvoiceRecord>(API_PATHS.admin.invoices.verify(invoiceId), {
         method: 'POST',

@@ -46,7 +46,7 @@ import {
 import { PrismaService } from './prisma.service';
 import { encryptEmailBody } from './email-outbox';
 
-const MAX_TEAM_MEMBERS = 10;
+const MAX_PARTICIPANTS = 3;
 const REGISTRATION_NUMBER_ATTEMPTS = 5;
 const EDITABLE_STATUSES: RegistrationStatus[] = [
   RegistrationStatus.DRAFT,
@@ -60,17 +60,19 @@ export class CreateRegistrationDto {
   @IsUUID()
   competitionId!: string;
 
+  // A draft may be created before the participant has typed anything; the
+  // completeness gate lives in `submit`, which rejects an empty team name.
+  @IsOptional()
   @Transform(trim)
   @IsString()
-  @MinLength(1)
   @MaxLength(150)
-  teamName!: string;
+  teamName?: string;
 
+  @IsOptional()
   @Transform(trim)
   @IsString()
-  @MinLength(1)
   @MaxLength(200)
-  institution!: string;
+  institution?: string;
 
   @IsOptional()
   @Transform(trim)
@@ -84,17 +86,17 @@ export class UpdateRegistrationDto {
   @IsUUID()
   competitionId?: string;
 
+  // Drafts stay partially filled while the participant types, so an empty value
+  // is accepted here; `submit` is what requires a complete registration.
   @IsOptional()
   @Transform(trim)
   @IsString()
-  @MinLength(1)
   @MaxLength(150)
   teamName?: string;
 
   @IsOptional()
   @Transform(trim)
   @IsString()
-  @MinLength(1)
   @MaxLength(200)
   institution?: string;
 
@@ -221,6 +223,8 @@ const registrationSelect = {
       originalName: true,
       mimeType: true,
       size: true,
+      subjectName: true,
+      subjectRole: true,
       createdAt: true,
     },
   },
@@ -310,6 +314,8 @@ function serializeRegistration(registration: RegistrationRecord) {
       originalName: document.originalName,
       mimeType: document.mimeType,
       size: document.size,
+      subjectName: document.subjectName,
+      subjectRole: document.subjectRole,
       createdAt: document.createdAt.toISOString(),
       downloadUrl: `/api/registrations/${encodeURIComponent(registration.id)}/documents/${encodeURIComponent(document.id)}`,
     })),
@@ -362,6 +368,9 @@ export class RegistrationsService {
     dto: CreateRegistrationDto,
   ): Promise<SerializedRegistration> {
     await this.requireOpenCompetition(dto.competitionId);
+    if (await this.prisma.registration.findUnique({ where: { ownerId }, select: { id: true } })) {
+      throw new BadRequestException('A participant account may own only one registration');
+    }
 
     for (let attempt = 0; attempt < REGISTRATION_NUMBER_ATTEMPTS; attempt += 1) {
       try {
@@ -370,15 +379,18 @@ export class RegistrationsService {
             registrationNumber: this.newRegistrationNumber(),
             ownerId,
             competitionId: dto.competitionId,
-            teamName: dto.teamName.trim(),
-            institution: dto.institution.trim(),
+            teamName: dto.teamName?.trim() ?? '',
+            institution: dto.institution?.trim() ?? '',
             phone: dto.phone?.trim() || null,
           },
           select: registrationSelect,
         });
         return serializeRegistration(registration);
       } catch (error: unknown) {
-        if (this.isUniqueConstraintError(error)) continue;
+        if (this.isUniqueConstraintError(error, 'owner_id')) {
+          throw new BadRequestException('A participant account may own only one registration');
+        }
+        if (this.isUniqueConstraintError(error, 'registration_number')) continue;
         throw error;
       }
     }
@@ -460,27 +472,33 @@ export class RegistrationsService {
         }
         this.assertEditable(registration.status);
 
-        const memberCount = await transaction.teamMember.count({
-          where: { registrationId },
+        const existingCount = await transaction.teamMember.count({ where: { registrationId } });
+        const role = dto.role ?? (existingCount === 0 ? TeamMemberRole.LEADER : TeamMemberRole.MEMBER);
+        const participantCount = await transaction.teamMember.count({
+          where: { registrationId, role: { in: [TeamMemberRole.LEADER, TeamMemberRole.MEMBER] } },
         });
-        if (memberCount >= MAX_TEAM_MEMBERS) {
+        if (role !== TeamMemberRole.SUPERVISOR && participantCount >= MAX_PARTICIPANTS) {
           throw new BadRequestException(
-            `A registration may have at most ${MAX_TEAM_MEMBERS} members`,
+            `A registration may have at most ${MAX_PARTICIPANTS} participants`,
           );
         }
 
         const leaderCount = await transaction.teamMember.count({
           where: { registrationId, role: TeamMemberRole.LEADER },
         });
-        if (dto.role === TeamMemberRole.LEADER && leaderCount > 0) {
+        if (role === TeamMemberRole.LEADER && leaderCount > 0) {
           throw new BadRequestException(
             'A registration may have only one team leader',
           );
         }
 
-        const role =
-          dto.role ??
-          (memberCount === 0 ? TeamMemberRole.LEADER : TeamMemberRole.MEMBER);
+        const roleCount = await transaction.teamMember.count({ where: { registrationId, role } });
+        if (role === TeamMemberRole.MEMBER && roleCount >= 2) {
+          throw new BadRequestException('A registration may have at most two team members');
+        }
+        if (role === TeamMemberRole.SUPERVISOR && roleCount >= 1) {
+          throw new BadRequestException('A registration may have only one supervisor');
+        }
         const member = await transaction.teamMember.create({
           data: {
             registrationId,
@@ -580,9 +598,7 @@ export class RegistrationsService {
         select: { role: true },
       });
       if (!member) throw new NotFoundException('Member not found');
-      if (member.role === TeamMemberRole.LEADER) {
-        throw new BadRequestException('The team leader cannot be removed');
-      }
+      if (member.role === TeamMemberRole.LEADER) throw new BadRequestException('The team leader cannot be removed');
 
       const deleted = await transaction.teamMember.deleteMany({
         where: { id: memberId, registrationId },
@@ -610,7 +626,7 @@ export class RegistrationsService {
           competition: { select: { id: true, name: true } },
           registrationNumber: true,
           owner: { select: { email: true, displayName: true } },
-          _count: { select: { members: true, documents: true } },
+          documents: { select: { category: true } },
         },
       });
       if (!current) throw new NotFoundException('Registration not found');
@@ -635,25 +651,31 @@ export class RegistrationsService {
           'Team, institution, and competition are required',
         );
       }
-      if (current._count.members < 1) {
+      const requiredCategories = ['RECOMMENDATION_LETTER', 'IDENTITY_CARD', 'REGISTRATION_FORM', 'TEAM_PHOTO', 'TWIBBON_PROOF'];
+      const categories = new Set(current.documents.map((document) => document.category));
+      if (requiredCategories.some((category) => !categories.has(category))) {
         throw new BadRequestException(
-          'At least one team member is required before submission',
-        );
-      }
-      if (current._count.documents < 1) {
-        throw new BadRequestException(
-          'At least one document is required before submission',
+          'All five required document categories must be uploaded before submission',
         );
       }
 
-      const leaderCount = await transaction.teamMember.count({
-        where: { registrationId: id, role: TeamMemberRole.LEADER },
-      });
+      const [leaderCount, memberCount, supervisorCount] = await Promise.all([
+        transaction.teamMember.count({ where: { registrationId: id, role: TeamMemberRole.LEADER } }),
+        transaction.teamMember.count({ where: { registrationId: id, role: TeamMemberRole.MEMBER } }),
+        transaction.teamMember.count({ where: { registrationId: id, role: TeamMemberRole.SUPERVISOR } }),
+      ]);
       if (leaderCount !== 1) {
         throw new BadRequestException(
           'Exactly one team leader is required before submission',
         );
       }
+      if (supervisorCount !== 1) {
+        throw new BadRequestException('Exactly one supervisor is required before submission');
+      }
+      if (leaderCount + memberCount > MAX_PARTICIPANTS) {
+        throw new BadRequestException(`A registration may have at most ${MAX_PARTICIPANTS} participants`);
+      }
+      if (memberCount > 2) throw new BadRequestException('A registration may have at most two team members');
 
       assertRegistrationTransition(current.status, RegistrationStatus.SUBMITTED);
       const submittedAt = new Date();
@@ -751,11 +773,15 @@ export class RegistrationsService {
     return `JRC14-${year}-${suffix}`;
   }
 
-  private isUniqueConstraintError(error: unknown): boolean {
-    return (
-      error instanceof Prisma.PrismaClientKnownRequestError &&
-      error.code === 'P2002'
-    );
+  private isUniqueConstraintError(error: unknown, field?: string): boolean {
+    if (!(error instanceof Prisma.PrismaClientKnownRequestError) || error.code !== 'P2002') {
+      return false;
+    }
+    if (!field) return true;
+    const target = error.meta?.target;
+    return Array.isArray(target)
+      ? target.some((value) => value === field)
+      : typeof target === 'string' && target.includes(field);
   }
 
   private async withSerializableRetry<T>(

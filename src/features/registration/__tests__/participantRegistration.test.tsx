@@ -1,6 +1,6 @@
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { MemoryRouter, Route, Routes } from 'react-router-dom';
+import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom';
 import { describe, expect, it, vi } from 'vitest';
 
 import { AuthProvider } from '../../auth/AuthProvider';
@@ -96,9 +96,15 @@ function renderPage(api: RegistrationApi, entry = '/portal/pendaftaran/baru') {
           <Route path="/portal/pendaftaran/baru" element={<PortalRegistrationPage api={api} />} />
           <Route path="/portal/pendaftaran/:registrationId" element={<PortalRegistrationPage api={api} />} />
         </Routes>
+        <LocationProbe />
       </AuthProvider>
     </MemoryRouter>,
   );
+}
+
+function LocationProbe() {
+  const location = useLocation();
+  return <span data-testid="location">{location.pathname}</span>;
 }
 
 describe('PortalRegistrationPage', () => {
@@ -138,7 +144,7 @@ describe('PortalRegistrationPage', () => {
     expect(api.registrations.update).not.toHaveBeenCalled();
   });
 
-  it('starts with six accessible competition cards and makes no registration request before choice and save', async () => {
+  it('starts with six accessible competition cards and makes no registration request before a choice', async () => {
     const user = userEvent.setup();
     const api = createApi();
     renderPage(api);
@@ -159,9 +165,11 @@ describe('PortalRegistrationPage', () => {
       name: `${selectedCompetition.level} · ${selectedCompetition.name}`,
     }));
 
-    expect(screen.getByLabelText('Nama tim')).toBeInTheDocument();
-    expect(api.registrations.create).not.toHaveBeenCalled();
-    expect(api.registrations.update).not.toHaveBeenCalled();
+    // Choosing a competition is what creates the draft; the form opens with it.
+    expect(await screen.findByLabelText('Nama tim')).toBeInTheDocument();
+    await waitFor(() => expect(api.registrations.create).toHaveBeenCalledWith({
+      competitionId: selectedCompetition.id,
+    }));
   });
 
   it('uses a roving tab stop and selects competitions with wrapped radio keyboard navigation', async () => {
@@ -169,7 +177,7 @@ describe('PortalRegistrationPage', () => {
     const api = createApi();
     renderPage(api);
 
-    const competitionCards = await screen.findAllByRole('radio');
+    let competitionCards = await screen.findAllByRole('radio');
     expect(competitionCards).toHaveLength(competitions.length);
     expect(competitionCards.map((card) => card.tabIndex)).toEqual([0, -1, -1, -1, -1, -1]);
 
@@ -178,47 +186,60 @@ describe('PortalRegistrationPage', () => {
     expect(competitionCards[1]).toHaveFocus();
     expect(competitionCards[1]).toHaveAttribute('aria-checked', 'true');
     expect(competitionCards.map((card) => card.tabIndex)).toEqual([-1, 0, -1, -1, -1, -1]);
-    expect(screen.getByLabelText('Nama tim')).toBeInTheDocument();
+    expect(await screen.findByLabelText('Nama tim')).toBeInTheDocument();
 
     await user.keyboard('{ArrowDown}');
-    expect(competitionCards[2]).toHaveFocus();
+    await waitFor(() => expect(screen.getAllByRole('radio')[2]).toHaveFocus());
+    competitionCards = screen.getAllByRole('radio');
     expect(competitionCards[2]).toHaveAttribute('aria-checked', 'true');
 
     await user.keyboard('{ArrowLeft}');
-    expect(competitionCards[1]).toHaveFocus();
+    await waitFor(() => expect(screen.getAllByRole('radio')[1]).toHaveFocus());
+    competitionCards = screen.getAllByRole('radio');
     expect(competitionCards[1]).toHaveAttribute('aria-checked', 'true');
 
     await user.keyboard('{ArrowUp}');
-    expect(competitionCards[0]).toHaveFocus();
+    await waitFor(() => expect(screen.getAllByRole('radio')[0]).toHaveFocus());
+    competitionCards = screen.getAllByRole('radio');
     expect(competitionCards[0]).toHaveAttribute('aria-checked', 'true');
 
     await user.keyboard('{ArrowLeft}');
-    expect(competitionCards[5]).toHaveFocus();
+    await waitFor(() => expect(screen.getAllByRole('radio')[5]).toHaveFocus());
+    competitionCards = screen.getAllByRole('radio');
     expect(competitionCards[5]).toHaveAttribute('aria-checked', 'true');
 
     await user.keyboard('{ArrowRight}');
-    expect(competitionCards[0]).toHaveFocus();
+    await waitFor(() => expect(screen.getAllByRole('radio')[0]).toHaveFocus());
+    competitionCards = screen.getAllByRole('radio');
     expect(competitionCards[0]).toHaveAttribute('aria-checked', 'true');
 
     await user.keyboard('{End}');
-    expect(competitionCards[5]).toHaveFocus();
+    await waitFor(() => expect(screen.getAllByRole('radio')[5]).toHaveFocus());
+    competitionCards = screen.getAllByRole('radio');
     expect(competitionCards[5]).toHaveAttribute('aria-checked', 'true');
 
     await user.keyboard('{Home}');
-    expect(competitionCards[0]).toHaveFocus();
+    await waitFor(() => expect(screen.getAllByRole('radio')[0]).toHaveFocus());
+    competitionCards = screen.getAllByRole('radio');
     expect(competitionCards[0]).toHaveAttribute('aria-checked', 'true');
-    expect(api.registrations.create).not.toHaveBeenCalled();
-    expect(api.registrations.update).not.toHaveBeenCalled();
+    // Exactly one draft is created, no matter how many times the choice changes.
+    expect(api.registrations.create).toHaveBeenCalledTimes(1);
   });
 
-  it('creates the registration before adding leader and dynamic members with backend-supported fields', async () => {
+  it('creates the draft on competition choice, then autosaves members with backend-supported fields', async () => {
     const user = userEvent.setup();
     const api = createApi();
     renderPage(api);
 
     const competitionCard = await screen.findByRole('radio', { name: 'Umum · Colosseum Clash — Sumo' });
     await user.click(competitionCard);
-    await user.type(screen.getByLabelText('Nama tim'), 'Nova');
+
+    // The draft is created by the choice alone, before any typing.
+    await waitFor(() => expect(api.registrations.create).toHaveBeenCalledWith({
+      competitionId: competition.id,
+    }));
+
+    await user.type(await screen.findByLabelText('Nama tim'), 'Nova');
     await user.type(screen.getByLabelText('Institusi'), 'ITS');
     await user.type(screen.getByLabelText('Nomor WhatsApp tim'), '081234567890');
     await user.type(screen.getByLabelText('Nama ketua'), 'Ari Wijaya');
@@ -226,24 +247,35 @@ describe('PortalRegistrationPage', () => {
     await user.click(screen.getByRole('button', { name: 'Tambah anggota' }));
     await user.type(screen.getByLabelText('Nama anggota 1'), 'Bima Putra');
     await user.type(screen.getByLabelText('NIS/NIM anggota 1'), '5025211002');
-    await user.click(screen.getByRole('button', { name: 'Simpan draft' }));
 
-    await waitFor(() => expect(api.registrations.create).toHaveBeenCalledWith({
-      competitionId: competition.id,
-      teamName: 'Nova',
-      institution: 'ITS',
-      phone: '081234567890',
-    }));
-    expect(api.registrations.addMember).toHaveBeenNthCalledWith(1, 'registration-1', {
+    // Typing is persisted without an explicit save action.
+    await waitFor(() => expect(api.registrations.update).toHaveBeenCalledWith(
+      'registration-1',
+      expect.objectContaining({ teamName: 'Nova', institution: 'ITS' }),
+    ));
+    await waitFor(() => expect(api.registrations.addMember).toHaveBeenCalledWith('registration-1', {
       name: 'Ari Wijaya',
+      role: 'LEADER',
       studentId: '5025211001',
-    });
-    expect(api.registrations.addMember).toHaveBeenNthCalledWith(2, 'registration-1', {
+    }));
+    await waitFor(() => expect(api.registrations.addMember).toHaveBeenCalledWith('registration-1', {
       name: 'Bima Putra',
+      role: 'MEMBER',
       studentId: '5025211002',
-    });
+    }));
     expect(competitionCard).toHaveAttribute('aria-checked', 'true');
-    expect(await screen.findByRole('status')).toHaveTextContent('Pendaftaran tersimpan.');
+  });
+
+  it('moves /baru to the saved draft URL so a reload cannot create a second registration', async () => {
+    const user = userEvent.setup();
+    const api = createApi();
+    renderPage(api);
+
+    const competitionCard = await screen.findByRole('radio', { name: 'Umum · Colosseum Clash — Sumo' });
+    await user.click(competitionCard);
+
+    await waitFor(() => expect(api.registrations.create).toHaveBeenCalledTimes(1));
+    expect(await screen.findByTestId('location')).toHaveTextContent('/portal/pendaftaran/registration-1');
   });
 
   it('preloads and displays the selected competition when editing a draft', async () => {
@@ -278,6 +310,22 @@ describe('PortalRegistrationPage', () => {
     expect(api.registrations.update).not.toHaveBeenCalled();
   });
 
+  it('keeps the chosen file visible in the file input until it is uploaded', async () => {
+    const user = userEvent.setup();
+    const api = createApi();
+    renderPage(api, '/portal/pendaftaran/registration-1');
+
+    await screen.findByDisplayValue('Garuda Robotika');
+    const input = screen.getByLabelText('Berkas dokumen') as HTMLInputElement;
+    const file = new File(['%PDF-test'], 'kartu-mahasiswa.pdf', { type: 'application/pdf' });
+    await user.upload(input, file);
+
+    // The input must not be remounted on selection, otherwise the browser resets
+    // it to "No file chosen" and the user cannot tell a file is staged.
+    expect(screen.getByLabelText('Berkas dokumen')).toBe(input);
+    expect(input.files?.[0]).toBe(file);
+  });
+
   it('uploads a categorized document then refreshes and displays safe metadata', async () => {
     const user = userEvent.setup();
     const leader: TeamMemberRecord = {
@@ -288,7 +336,7 @@ describe('PortalRegistrationPage', () => {
     };
     const document = {
       id: 'document-1',
-      category: 'STUDENT_CARD',
+      category: 'IDENTITY_CARD',
       originalName: 'kartu-mahasiswa.pdf',
       mimeType: 'application/pdf',
       size: 2_048,
@@ -302,7 +350,7 @@ describe('PortalRegistrationPage', () => {
     renderPage(api, '/portal/pendaftaran/registration-1');
 
     await screen.findByDisplayValue('Garuda Robotika');
-    await user.selectOptions(screen.getByLabelText('Kategori dokumen'), 'STUDENT_CARD');
+    await user.selectOptions(screen.getByLabelText('Kategori dokumen'), 'IDENTITY_CARD');
     const file = new File(['%PDF-test'], 'kartu-mahasiswa.pdf', { type: 'application/pdf' });
     await user.upload(screen.getByLabelText('Berkas dokumen'), file);
     await user.click(screen.getByRole('button', { name: 'Unggah dokumen' }));
@@ -310,7 +358,7 @@ describe('PortalRegistrationPage', () => {
     await waitFor(() => expect(uploadDocument).toHaveBeenCalledTimes(1));
     const formData = uploadDocument.mock.calls[0][1] as FormData;
     expect(uploadDocument).toHaveBeenCalledWith('registration-1', expect.any(FormData));
-    expect(formData.get('category')).toBe('STUDENT_CARD');
+    expect(formData.get('category')).toBe('IDENTITY_CARD');
     expect(formData.get('file')).toBe(file);
     expect(get).toHaveBeenCalledTimes(2);
     expect(await screen.findByText('kartu-mahasiswa.pdf')).toBeInTheDocument();
@@ -347,8 +395,8 @@ describe('PortalRegistrationPage', () => {
     const memberEmail = screen.getByLabelText('Email anggota 1');
     await user.clear(memberEmail);
     await user.type(memberEmail, 'bima.baru@example.test');
-    await user.click(screen.getByRole('button', { name: 'Simpan draft' }));
 
+    // Edits persist through autosave; no explicit save action is needed.
     await waitFor(() => expect(api.registrations.updateMember).toHaveBeenCalledTimes(2));
     expect(api.registrations.updateMember).toHaveBeenNthCalledWith(1, 'registration-1', 'leader-1', {
       name: 'Ari Baru',

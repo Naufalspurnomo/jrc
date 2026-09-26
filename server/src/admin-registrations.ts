@@ -184,6 +184,8 @@ const adminRegistrationSelect = {
       originalName: true,
       mimeType: true,
       size: true,
+      subjectName: true,
+      subjectRole: true,
       createdAt: true,
     },
   },
@@ -295,6 +297,8 @@ function serializeAdminRegistration(registration: AdminRegistrationRecord) {
       originalName: document.originalName,
       mimeType: document.mimeType,
       size: document.size,
+      subjectName: document.subjectName,
+      subjectRole: document.subjectRole,
       createdAt: document.createdAt.toISOString(),
       downloadUrl: `/api/admin/registrations/${encodeURIComponent(registration.id)}/documents/${encodeURIComponent(document.id)}`,
     })),
@@ -463,6 +467,26 @@ export class AdminRegistrationsService {
       ]),
       ...rows,
     ].join('\r\n')}\r\n`;
+  }
+
+  async exportAttendanceCsv(filters: AdminRegistrationFiltersDto): Promise<string> {
+    const registrations = await this.prisma.registration.findMany({
+      where: registrationWhere({
+        ...filters,
+        status: filters.status ?? RegistrationStatus.APPROVED,
+      }),
+      orderBy: { registrationNumber: 'asc' },
+      select: {
+        registrationNumber: true, teamName: true, institution: true,
+        competition: { select: { name: true } },
+        members: { where: { role: { in: ['LEADER', 'MEMBER'] } }, orderBy: [{ role: 'asc' }, { createdAt: 'asc' }, { id: 'asc' }], select: { role: true, name: true, studentId: true } },
+      },
+    });
+    const rows = registrations.flatMap((registration) => registration.members.map((member) => csvRow([
+      registration.registrationNumber, registration.teamName, registration.competition.name,
+      registration.institution, member.role, member.name, member.studentId ?? '', '', '',
+    ])));
+    return `\uFEFF${[csvRow(['Nomor Pendaftaran', 'Tim', 'Kompetisi', 'Institusi', 'Peran', 'Nama Peserta', 'NIS/NIM', 'Tanda Tangan Kehadiran', 'Cek JRC Kit']), ...rows].join('\r\n')}\r\n`;
   }
 
   async review(
@@ -686,6 +710,16 @@ export class AdminRegistrationsController {
       `attachment; filename="registrations.csv"; filename*=UTF-8''registrations.csv`,
     );
     return this.registrations.exportCsv(query);
+  }
+
+  @Get('attendance.csv')
+  async exportAttendanceCsv(
+    @Query() query: AdminRegistrationFiltersDto,
+    @Res({ passthrough: true }) response: Response,
+  ): Promise<string> {
+    response.setHeader('Content-Type', 'text/csv; charset=utf-8');
+    response.setHeader('Content-Disposition', `attachment; filename="attendance.csv"; filename*=UTF-8''attendance.csv`);
+    return this.registrations.exportAttendanceCsv(query);
   }
 
   @Get(':id')

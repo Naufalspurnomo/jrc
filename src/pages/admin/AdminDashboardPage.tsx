@@ -65,6 +65,19 @@ async function downloadCsv(api: RegistrationApi): Promise<void> {
   }
 }
 
+async function downloadAttendanceCsv(api: RegistrationApi): Promise<void> {
+  const csv = await api.admin.exportAttendance();
+  const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }));
+  const anchor = document.createElement('a');
+  anchor.href = url;
+  anchor.download = 'presensi-jrc-xiv.csv';
+  try {
+    anchor.click();
+  } finally {
+    URL.revokeObjectURL(url);
+  }
+}
+
 export default function AdminDashboardPage({ api = registrationApi }: AdminDashboardPageProps) {
   const { loading: authLoading, user } = useAuth();
   const [registrations, setRegistrations] = useState<RegistrationRecord[]>([]);
@@ -113,13 +126,15 @@ export default function AdminDashboardPage({ api = registrationApi }: AdminDashb
     });
   }, [query, registrations, status]);
 
-  const exportRecords = async () => {
+  const exportRecords = async (attendance = false) => {
     setExporting(true);
     setExportError('');
     try {
-      await downloadCsv(api);
+      await (attendance ? downloadAttendanceCsv(api) : downloadCsv(api));
     } catch {
-      setExportError('Ekspor CSV gagal. Coba lagi beberapa saat lagi.');
+      setExportError(attendance
+        ? 'Ekspor presensi gagal. Coba lagi beberapa saat lagi.'
+        : 'Ekspor CSV gagal. Coba lagi beberapa saat lagi.');
     } finally {
       setExporting(false);
     }
@@ -133,14 +148,24 @@ export default function AdminDashboardPage({ api = registrationApi }: AdminDashb
             <p className="admin-eyebrow">TABULARIUM · XIV</p>
             <h1>Meja komando pendaftaran</h1>
           </div>
-          <button
-            className="admin-export"
-            type="button"
-            disabled={loading || exporting}
-            onClick={() => void exportRecords()}
-          >
-            {exporting ? 'Menyiapkan CSV…' : 'Ekspor CSV'}
-          </button>
+          <div>
+            <button
+              className="admin-export"
+              type="button"
+              disabled={loading || exporting}
+              onClick={() => void exportRecords()}
+            >
+              {exporting ? 'Menyiapkan CSV…' : 'Ekspor CSV'}
+            </button>
+            <button
+              className="admin-export"
+              type="button"
+              disabled={loading || exporting}
+              onClick={() => void exportRecords(true)}
+            >
+              Ekspor presensi
+            </button>
+          </div>
         </header>
         {exportError && <p className="admin-error" role="alert">{exportError}</p>}
 

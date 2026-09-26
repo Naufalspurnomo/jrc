@@ -22,7 +22,7 @@ import {
   UploadedFile,
   UseInterceptors,
 } from '@nestjs/common';
-import { Prisma, Role } from '@prisma/client';
+import { Prisma, Role, TeamMemberRole } from '@prisma/client';
 import { randomBytes, randomUUID } from 'node:crypto';
 import { createReadStream } from 'node:fs';
 import type { Readable } from 'node:stream';
@@ -41,6 +41,8 @@ import { canEditRegistration } from './domain/registration-state';
 import { PrismaService } from './prisma.service';
 
 const DEFAULT_MAX_UPLOAD_BYTES = 10 * 1024 * 1024;
+const DOCUMENT_CATEGORIES = new Set(['RECOMMENDATION_LETTER', 'IDENTITY_CARD', 'REGISTRATION_FORM', 'TEAM_PHOTO', 'TWIBBON_PROOF', 'MEMBER_PHOTO']);
+const MEMBER_PHOTO_ROLES = new Set(['PARTICIPANT', 'SUPERVISOR']);
 
 const DOCUMENT_SIGNATURES: Readonly<Record<string, readonly number[]>> = {
   'application/pdf': [0x25, 0x50, 0x44, 0x46, 0x2d],
@@ -62,6 +64,8 @@ interface DocumentRecord {
   size: number;
   storageKey: string;
   createdAt: Date;
+  subjectName: string | null;
+  subjectRole: string | null;
 }
 
 interface StoredDocument {
@@ -116,9 +120,7 @@ function normalizeCategory(category: string): string {
   if (!normalized) {
     throw new BadRequestException('Document category is required');
   }
-  if (normalized.length > 100) {
-    throw new BadRequestException('Document category must not exceed 100 characters');
-  }
+  if (!DOCUMENT_CATEGORIES.has(normalized)) throw new BadRequestException('Unsupported document category');
   return normalized;
 }
 
@@ -130,6 +132,8 @@ function serializeDocument(document: DocumentRecord) {
     mimeType: document.mimeType,
     size: document.size,
     createdAt: document.createdAt.toISOString(),
+    subjectName: document.subjectName,
+    subjectRole: document.subjectRole,
   };
 }
 
@@ -220,6 +224,8 @@ export class DocumentsService {
     ownerId: string,
     registrationId: string,
     category: string,
+    subjectName: string | undefined,
+    subjectRole: string | undefined,
     file: Express.Multer.File | undefined,
     audit: AuditContext,
   ): Promise<SerializedDocument> {
@@ -241,6 +247,15 @@ export class DocumentsService {
     }
 
     const normalizedCategory = normalizeCategory(category);
+    const normalizedSubjectName = subjectName?.trim() || null;
+    const normalizedSubjectRole = subjectRole?.trim() || null;
+    if (normalizedCategory === 'MEMBER_PHOTO') {
+      if (!normalizedSubjectName || normalizedSubjectName.length > 150) throw new BadRequestException('Member photo requires a full participant name');
+      if (!normalizedSubjectRole || !MEMBER_PHOTO_ROLES.has(normalizedSubjectRole)) throw new BadRequestException('Member photo role must be PARTICIPANT or SUPERVISOR');
+      if (!['image/jpeg', 'image/png'].includes(file.mimetype)) throw new BadRequestException('Member photo must be a JPEG or PNG image');
+    } else if (normalizedSubjectName || normalizedSubjectRole) {
+      throw new BadRequestException('Subject metadata is allowed only for member photos');
+    }
     validateDocument(file);
     const stored = await this.storeDocument(file);
 
@@ -257,6 +272,33 @@ export class DocumentsService {
           );
         }
 
+        if (normalizedCategory === 'MEMBER_PHOTO') {
+          const rosterRole = normalizedSubjectRole === 'SUPERVISOR'
+            ? TeamMemberRole.SUPERVISOR
+            : { in: [TeamMemberRole.LEADER, TeamMemberRole.MEMBER] };
+          const rosterMember = await transaction.teamMember.findFirst({
+            where: {
+              registrationId,
+              name: { equals: normalizedSubjectName as string, mode: Prisma.QueryMode.insensitive },
+              role: rosterRole,
+            },
+            select: { id: true },
+          });
+          if (!rosterMember) {
+            throw new BadRequestException('Member photo subject must match the registered roster');
+          }
+          const duplicate = await transaction.document.findFirst({
+            where: {
+              registrationId,
+              category: 'MEMBER_PHOTO',
+              subjectName: { equals: normalizedSubjectName as string, mode: Prisma.QueryMode.insensitive },
+              subjectRole: normalizedSubjectRole,
+            },
+            select: { id: true },
+          });
+          if (duplicate) throw new BadRequestException('A member photo already exists for this roster person');
+        }
+
         const created = await transaction.document.create({
           data: {
             registrationId,
@@ -265,6 +307,8 @@ export class DocumentsService {
             mimeType: stored.mimeType,
             size: stored.size,
             storageKey: stored.storageKey,
+            subjectName: normalizedSubjectName,
+            subjectRole: normalizedSubjectRole,
           },
         });
         const serialized = serializeDocument(created);
@@ -470,6 +514,8 @@ export class ParticipantDocumentsController {
     @CurrentUser() user: AuthPrincipal,
     @Param('registrationId', new ParseUUIDPipe()) registrationId: string,
     @Body('category') category: string,
+    @Body('subjectName') subjectName: string | undefined,
+    @Body('subjectRole') subjectRole: string | undefined,
     @UploadedFile() file: Express.Multer.File | undefined,
     @Req() request: AuthenticatedRequest,
   ): Promise<SerializedDocument> {
@@ -477,6 +523,8 @@ export class ParticipantDocumentsController {
       user.id,
       registrationId,
       category,
+      subjectName,
+      subjectRole,
       file,
       auditContext(request),
     );

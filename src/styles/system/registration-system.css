@@ -942,6 +942,205 @@
   font-weight: 700;
 }
 
+/* Registration: form column + live completeness checklist. */
+.portal-shell .portal-registration__layout {
+  display: grid;
+  min-width: 0;
+  gap: clamp(1.5rem, 3vw, 2.5rem);
+  grid-template-columns: minmax(0, 1fr) minmax(17rem, 20rem);
+  align-items: start;
+  margin-top: 1.5rem;
+}
+
+.portal-shell .portal-registration__layout > .portal-form-panel {
+  margin-top: 0;
+}
+
+.portal-shell .portal-checklist {
+  position: sticky;
+  top: 1.5rem;
+  display: grid;
+  min-width: 0;
+  gap: .85rem;
+  padding: clamp(1.25rem, 2.5vw, 1.75rem);
+  border: 1px solid #927763;
+  background: #eee1ca;
+}
+
+.portal-shell .portal-checklist h2 {
+  margin: 0;
+  font-size: 1.15rem;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+}
+
+.portal-shell .portal-checklist__progress {
+  margin: 0;
+  color: #624e3f;
+  font-size: .85rem;
+}
+
+.portal-shell .portal-checklist ul {
+  display: grid;
+  gap: .5rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.portal-shell .portal-checklist__item {
+  min-width: 0;
+}
+
+.portal-shell .portal-checklist__item > button {
+  display: grid;
+  width: 100%;
+  min-width: 0;
+  padding: .7rem .8rem;
+  grid-template-columns: 1.5rem minmax(0, 1fr);
+  gap: .6rem;
+  align-items: start;
+  border: 1px solid rgb(96 28 30 / 32%);
+  background: #f7ecda;
+  color: #38231b;
+  cursor: pointer;
+  text-align: left;
+}
+
+.portal-shell .portal-checklist__item > button:hover {
+  border-color: #7d3930;
+  background: #f2e2c8;
+}
+
+.portal-shell .portal-checklist__item strong,
+.portal-shell .portal-checklist__item small {
+  display: block;
+}
+
+.portal-shell .portal-checklist__item strong {
+  font-size: .85rem;
+}
+
+.portal-shell .portal-checklist__item small {
+  margin-top: .2rem;
+  color: #6d5848;
+  font-size: .75rem;
+  line-height: 1.45;
+}
+
+.portal-shell .portal-checklist__item > button > span:first-child {
+  color: #9b6419;
+  font-family: var(--font-mono);
+  font-weight: 700;
+}
+
+.portal-shell .portal-checklist__item--done {
+  display: grid;
+  padding: .7rem .8rem;
+  grid-template-columns: 1.5rem minmax(0, 1fr);
+  gap: .6rem;
+  align-items: center;
+  border: 1px solid rgb(46 94 62 / 30%);
+  background: #e6efe0;
+  color: #2c4a33;
+  font-size: .85rem;
+  font-weight: 600;
+}
+
+.portal-shell .portal-checklist__item--done > span:first-child {
+  color: #2e6b3f;
+  font-weight: 700;
+}
+
+.portal-shell .portal-checklist__autosave {
+  margin: 0;
+  padding-top: .6rem;
+  border-top: 1px solid rgb(55 34 25 / 18%);
+  color: #6d5848;
+  font-size: .75rem;
+}
+
+/* A field the participant was sent to by the checklist. */
+.portal-shell .portal-field--attention {
+  border-color: #9b6419 !important;
+  box-shadow: 0 0 0 3px rgb(155 100 25 / 22%) !important;
+}
+
+.portal-shell .portal-dropzone {
+  display: grid;
+  min-height: 9rem;
+  place-content: center;
+  gap: .5rem;
+  padding: 1.5rem;
+  border: 1px dashed rgb(96 28 30 / 50%);
+  background: #f0e2ca;
+  text-align: center;
+}
+
+.portal-shell .portal-dropzone--active {
+  border-color: #7d3930;
+  background: #ead6b6;
+}
+
+.portal-shell .portal-dropzone label {
+  color: #665346;
+  font-family: var(--font-mono);
+  font-size: .57rem;
+  font-weight: 600;
+  letter-spacing: .07em;
+  text-transform: uppercase;
+}
+
+.portal-shell .portal-dropzone__hint {
+  margin: 0;
+  color: #7a6656;
+  font-size: .8rem;
+}
+
+.portal-shell .portal-dropzone input[type='file'] {
+  width: 100%;
+  min-height: 2.75rem;
+  padding: .55rem;
+  border: 1px solid rgb(52 32 24 / 26%);
+  background: rgb(255 252 245 / 68%);
+  color: #281b15;
+}
+
+.portal-shell .portal-file-row {
+  grid-template-columns: 3rem minmax(0, 1fr) max-content;
+}
+
+.portal-shell .portal-file-row img {
+  width: 3rem;
+  height: 3rem;
+  object-fit: cover;
+  border: 1px solid rgb(52 32 24 / 22%);
+}
+
+.portal-shell .portal-file-row > div {
+  min-width: 0;
+}
+
+.portal-shell .portal-file-row strong {
+  overflow-wrap: anywhere;
+}
+
+.portal-shell .portal-document-panel > ul li {
+  grid-template-columns: minmax(9rem, .8fr) minmax(0, 1.2fr) max-content max-content;
+}
+
+.portal-shell .portal-review-note {
+  padding: .8rem 1rem;
+  border-left: 3px solid #9b6419;
+  background: #f7ecda;
+  color: #38231b;
+}
+
+.portal-shell .portal-review-note p {
+  margin: .3rem 0 0;
+  color: #5c4636;
+}
+
 /* Exact short-screen treatment for 1280 × 633 and similar desktop viewports. */
 @media (min-width: 75.0625rem) and (max-height: 43rem) {
   .portal-auth .portal-auth__scene {
@@ -1034,6 +1233,17 @@
   .portal-shell .portal-dashboard-grid,
   .portal-shell .portal-dashboard-grid:has(svg[aria-label='Kode QR verifikasi tiket']) {
     grid-template-columns: minmax(0, 1fr);
+  }
+
+  /* The checklist moves above the form on narrow screens so it stays visible
+     without a sticky column. */
+  .portal-shell .portal-registration__layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .portal-shell .portal-checklist {
+    position: static;
+    order: -1;
   }
 
   .portal-shell .portal-progress-panel,
