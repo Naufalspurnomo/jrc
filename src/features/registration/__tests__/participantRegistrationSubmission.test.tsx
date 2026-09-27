@@ -166,25 +166,39 @@ describe('PortalRegistrationPage submission', () => {
     expect(api.registrations.submit).not.toHaveBeenCalled();
   });
 
-  it('shows an oversized selected file with the exact limit and remedy', async () => {
+  it('accepts a selected file of exactly 5 MiB', async () => {
+    const user = userEvent.setup();
+    const api = createApi(registration('DRAFT'));
+    renderPage(api);
+
+    const input = await screen.findByLabelText('Berkas dokumen');
+    const file = new File(['x'], 'exact-limit.pdf', { type: 'application/pdf' });
+    Object.defineProperty(file, 'size', { value: 5 * 1024 * 1024 });
+    await user.upload(input, file);
+
+    expect(screen.queryByRole('alert', { name: 'Berkas terlalu besar' })).not.toBeInTheDocument();
+    expect(screen.getByText('5.0 MB · siap diunggah')).toBeInTheDocument();
+  });
+
+  it('rejects a selected file of 5 MiB plus one byte with the exact limit and remedy', async () => {
     const user = userEvent.setup();
     const api = createApi(registration('DRAFT'));
     renderPage(api);
 
     const input = await screen.findByLabelText('Berkas dokumen');
     const file = new File(['x'], 'IMG_6568.jpg.jpeg', { type: 'image/jpeg' });
-    Object.defineProperty(file, 'size', { value: 17.1 * 1024 * 1024 });
+    Object.defineProperty(file, 'size', { value: 5 * 1024 * 1024 + 1 });
     await user.upload(input, file);
 
     const alert = await screen.findByRole('alert');
     expect(alert).toHaveFocus();
     expect(alert).toHaveAccessibleName('Berkas terlalu besar');
     expect(alert).toHaveTextContent('IMG_6568.jpg.jpeg');
-    expect(alert).toHaveTextContent('17.1 MB');
-    expect(alert).toHaveTextContent('Ukuran maksimum 10 MB');
+    expect(alert).toHaveTextContent('5.0 MB');
+    expect(alert).toHaveTextContent('Ukuran maksimum 5 MiB (5.242.880 byte)');
     expect(alert).toHaveTextContent('Kompres berkas atau pilih berkas yang lebih kecil');
     expect(input).toHaveAttribute('aria-invalid', 'true');
-    expect(screen.getByText('17.1 MB · belum dapat diunggah')).toBeInTheDocument();
+    expect(screen.getByText('5.0 MB · belum dapat diunggah')).toBeInTheDocument();
     expect(api.registrations.uploadDocument).not.toHaveBeenCalled();
   });
 

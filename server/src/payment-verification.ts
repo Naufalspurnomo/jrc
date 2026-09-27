@@ -49,8 +49,8 @@ import { PrismaService } from './prisma.service';
 import { PrivateStorageService } from './private-storage';
 import { encryptRichEmail } from './email-outbox';
 import { renderTransactionalEmail } from './email-template';
+import { assertUploadSize, maxUploadBytes, uploadLimitDescription } from './upload-limits';
 
-const DEFAULT_MAX_UPLOAD_BYTES = 10 * 1024 * 1024;
 const STORAGE_KEY_PATTERN = /^[a-f0-9]{64}$/;
 const VERIFY_STATUSES = [PaymentStatus.PAID, PaymentStatus.REJECTED] as const;
 
@@ -80,19 +80,6 @@ export class VerifyPaymentDto {
   @MinLength(1)
   @MaxLength(2_000)
   reason!: string;
-}
-
-function maxUploadBytes(): number {
-  const raw = process.env.MAX_UPLOAD_BYTES?.trim();
-  if (!raw) return DEFAULT_MAX_UPLOAD_BYTES;
-
-  const parsed = Number(raw);
-  if (!Number.isSafeInteger(parsed) || parsed <= 0) {
-    throw new InternalServerErrorException(
-      'MAX_UPLOAD_BYTES must be a positive integer',
-    );
-  }
-  return parsed;
 }
 
 
@@ -315,7 +302,7 @@ export class PaymentProofUploadInterceptor implements NestInterceptor {
         ) {
           rejectUpload(
             new PayloadTooLargeException(
-              `Payment proof exceeds ${maxUploadBytes()} bytes`,
+              `Payment proof exceeds the per-file limit of ${uploadLimitDescription()}`,
             ),
           );
           return;
@@ -342,11 +329,7 @@ export class PaymentVerificationService {
     audit: AuditContext,
   ): Promise<SerializedPaymentInvoice> {
     if (!file) throw new BadRequestException('Payment proof file is required');
-    if (file.size > maxUploadBytes()) {
-      throw new PayloadTooLargeException(
-        `Payment proof exceeds ${maxUploadBytes()} bytes`,
-      );
-    }
+    assertUploadSize(file.size, 'Payment proof');
     validateProof(file);
 
     const initial = await this.prisma.invoice.findFirst({

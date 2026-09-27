@@ -9,7 +9,7 @@ import {
   HttpCode,
   HttpStatus,
   Injectable,
-  InternalServerErrorException,
+
   Logger,
   NestInterceptor,
   NotFoundException,
@@ -39,8 +39,8 @@ import {
 import { canEditRegistration } from './domain/registration-state';
 import { PrismaService } from './prisma.service';
 import { PrivateStorageService } from './private-storage';
+import { assertUploadSize, maxUploadBytes, uploadLimitDescription } from './upload-limits';
 
-const DEFAULT_MAX_UPLOAD_BYTES = 10 * 1024 * 1024;
 const DOCUMENT_CATEGORIES = new Set(['RECOMMENDATION_LETTER', 'IDENTITY_CARD', 'REGISTRATION_FORM', 'TEAM_PHOTO', 'TWIBBON_PROOF', 'MEMBER_PHOTO']);
 const MEMBER_PHOTO_ROLES = new Set(['PARTICIPANT', 'SUPERVISOR']);
 
@@ -80,19 +80,6 @@ export interface DocumentDownload {
   originalName: string;
   mimeType: string;
   size: number;
-}
-
-function maxUploadBytes(): number {
-  const configured = process.env.MAX_UPLOAD_BYTES?.trim();
-  if (!configured) return DEFAULT_MAX_UPLOAD_BYTES;
-
-  const parsed = Number(configured);
-  if (!Number.isSafeInteger(parsed) || parsed <= 0) {
-    throw new InternalServerErrorException(
-      'MAX_UPLOAD_BYTES must be a positive integer',
-    );
-  }
-  return parsed;
 }
 
 
@@ -255,7 +242,7 @@ export class DocumentUploadInterceptor implements NestInterceptor {
         ) {
           rejectUpload(
             new PayloadTooLargeException(
-              `Document exceeds ${maxUploadBytes()} bytes`,
+              `Document exceeds the per-file limit of ${uploadLimitDescription()}`,
             ),
           );
           return;
@@ -297,11 +284,7 @@ export class DocumentsService {
       );
     }
     if (!file) throw new BadRequestException('Document file is required');
-    if (file.buffer.length > maxUploadBytes()) {
-      throw new PayloadTooLargeException(
-        `Document exceeds ${maxUploadBytes()} bytes`,
-      );
-    }
+    assertUploadSize(file.buffer.length, 'Document');
 
     const normalizedCategory = normalizeCategory(category);
     const normalizedSubjectName = subjectName?.trim() || null;

@@ -41,7 +41,8 @@ interface MemberDraft {
 const emptyMember = (): MemberDraft => ({ name: '', studentId: '', email: '', phone: '' });
 
 const editableStatuses: RegistrationState[] = ['DRAFT', 'REVISION_REQUESTED'];
-const MAX_UPLOAD_BYTES = 10 * 1024 * 1024;
+const MAX_UPLOAD_BYTES = 5 * 1024 * 1024;
+const UPLOAD_LIMIT_LABEL = '5 MiB (5.242.880 byte)';
 const MAX_TEAM_MEMBERS = 3;
 
 const documentCategoryLabels: Record<string, string> = {
@@ -1260,7 +1261,7 @@ export default function PortalRegistrationPage({ api = registrationApi }: Portal
                 <div>
                   <h2>{error}</h2>
                   {oversizedFile ? (
-                    <><p><strong>{oversizedFile.name}</strong> berukuran {formatBytes(oversizedFile.size)}.</p><p>Ukuran maksimum 10 MB. Kompres berkas atau pilih berkas yang lebih kecil.</p></>
+                    <><p><strong>{oversizedFile.name}</strong> berukuran {formatBytes(oversizedFile.size)}.</p><p>Ukuran maksimum {UPLOAD_LIMIT_LABEL}. Kompres berkas atau pilih berkas yang lebih kecil.</p></>
                   ) : (
                     <>
                       <p>Lengkapi bagian berikut sebelum mengirim:</p>

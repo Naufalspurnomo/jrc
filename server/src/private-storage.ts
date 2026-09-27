@@ -4,9 +4,9 @@ import { constants } from 'node:fs';
 import { chmod, lstat, mkdir, open, unlink, writeFile } from 'node:fs/promises';
 import { dirname, resolve } from 'node:path';
 import { Readable } from 'node:stream';
+import { assertUploadSize, maxUploadBytes, uploadLimitDescription } from './upload-limits';
 
 const STORAGE_KEY_PATTERN = /^[0-9a-f]{64}$/;
-const DEFAULT_MAX_UPLOAD_BYTES = 10 * 1024 * 1024;
 
 type StorageDriver = 'local' | 'supabase';
 
@@ -28,6 +28,7 @@ function storageError(code: string, message: string): NodeJS.ErrnoException {
 @Injectable()
 export class PrivateStorageService {
   async upload(contents: Buffer, mimeType: string): Promise<string> {
+    assertUploadSize(contents.length, 'Private storage object');
     const driver = this.driver();
     for (let attempt = 0; attempt < 3; attempt += 1) {
       const storageKey = randomBytes(32).toString('hex');
@@ -227,7 +228,7 @@ export class PrivateStorageService {
       }
     }
 
-    const limit = this.maxObjectBytes();
+    const limit = maxUploadBytes();
     const reader = response.body.getReader();
     const chunks: Uint8Array[] = [];
     let size = 0;
@@ -239,7 +240,7 @@ export class PrivateStorageService {
         if (size > limit) {
           await reader.cancel();
           throw new InternalServerErrorException(
-            'Stored object exceeds the configured maximum size',
+            `Stored object exceeds the per-file limit of ${uploadLimitDescription(limit)}`,
           );
         }
         chunks.push(value);
@@ -251,17 +252,6 @@ export class PrivateStorageService {
     return { stream: Readable.from(chunks), size };
   }
 
-  private maxObjectBytes(): number {
-    const configured = process.env.MAX_UPLOAD_BYTES?.trim();
-    if (!configured) return DEFAULT_MAX_UPLOAD_BYTES;
-    const parsed = Number(configured);
-    if (!Number.isSafeInteger(parsed) || parsed <= 0) {
-      throw new InternalServerErrorException(
-        'MAX_UPLOAD_BYTES must be a positive integer',
-      );
-    }
-    return parsed;
-  }
 
   private async deleteSupabase(storageKey: string): Promise<void> {
     const config = this.supabaseConfig();

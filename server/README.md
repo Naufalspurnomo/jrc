@@ -112,7 +112,7 @@ Camera access requires a secure context. Serve scanner pages over HTTPS, grant c
 
 ## Private files
 
-Set the private-file directory to a persistent, non-public volume. Apache must not map or alias this directory. Downloads flow through an authenticated backend route that validates role, ownership, and record scope before streaming. Use generated storage names, preserve validated metadata separately, reject unsafe types and oversized files, and prevent path traversal. Include private files in backup and restore procedures.
+Set the private-file directory to a persistent, non-public volume. Apache must not map or alias this directory. Downloads flow through an authenticated backend route that validates role, ownership, and record scope before streaming. Use generated storage names, preserve validated metadata separately, reject unsafe types and oversized files, and prevent path traversal. Registration documents, member photos, and payment proofs use a 5 MiB (5,242,880-byte) per-file limit by default; `MAX_UPLOAD_BYTES` may override it with a positive integer byte count. Include private files in backup and restore procedures.
 
 ## Manual payment: bank-history rule
 

@@ -21,6 +21,15 @@ afterEach(async () => {
 });
 
 describe('PrivateStorageService local driver', () => {
+  it('rejects an oversized object before selecting a storage driver', async () => {
+    delete process.env.MAX_UPLOAD_BYTES;
+    await expect(
+      new PrivateStorageService().upload(Buffer.allocUnsafe(5 * 1024 * 1024 + 1), 'application/pdf'),
+    ).rejects.toThrow(
+      'Private storage object exceeds the per-file limit of 5 MiB (5,242,880 bytes)',
+    );
+  });
+
   it('remains the default and writes, reads, and deletes opaque objects', async () => {
     const root = join(tmpdir(), `jrc-storage-${crypto.randomUUID()}`);
     process.env.STORAGE_PATH = root;
@@ -149,7 +158,7 @@ describe('PrivateStorageService Supabase driver', () => {
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response(body)));
 
     await expect(new PrivateStorageService().read('a'.repeat(64))).rejects.toThrow(
-      'Stored object exceeds the configured maximum size',
+      'Stored object exceeds the per-file limit of 4 bytes',
     );
   });
 
