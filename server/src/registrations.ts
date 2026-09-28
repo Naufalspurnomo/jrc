@@ -197,6 +197,7 @@ const registrationSelect = {
       eventName: true,
       fee: true,
       currency: true,
+      registrationOpenAt: true,
       registrationDeadline: true,
     },
   },
@@ -305,6 +306,7 @@ function serializeRegistration(registration: RegistrationRecord) {
       eventName: registration.competition.eventName,
       fee: registration.competition.fee,
       currency: registration.competition.currency,
+      registrationOpenAt: registration.competition.registrationOpenAt.toISOString(),
       registrationDeadline:
         registration.competition.registrationDeadline.toISOString(),
     },
@@ -624,7 +626,7 @@ export class RegistrationsService {
           submittedAt: true,
           reviewReasonCategory: true,
           reviewReasonComment: true,
-          competition: { select: { id: true, name: true } },
+          competition: { select: { id: true, name: true, level: true, registrationOpenAt: true, registrationDeadline: true } },
           registrationNumber: true,
           owner: { select: { email: true, displayName: true } },
           documents: { select: { category: true, subjectName: true, subjectRole: true } },
@@ -632,6 +634,13 @@ export class RegistrationsService {
         },
       });
       if (!current) throw new NotFoundException('Registration not found');
+      const now = new Date();
+      if (now < current.competition.registrationOpenAt) {
+        throw new ForbiddenException({ code: 'REGISTRATION_NOT_OPEN', message: 'Registration submission is not open yet' });
+      }
+      if (now >= current.competition.registrationDeadline) {
+        throw new ForbiddenException({ code: 'REGISTRATION_CLOSED', message: 'Registration is closed' });
+      }
 
       const owner = await transaction.user.findUnique({
         where: { id: ownerId },
@@ -653,11 +662,20 @@ export class RegistrationsService {
           'Team, institution, and competition are required',
         );
       }
-      const requiredCategories = ['RECOMMENDATION_LETTER', 'IDENTITY_CARD', 'REGISTRATION_FORM', 'TEAM_PHOTO', 'TWIBBON_PROOF'];
+      const recommendationLetterLevels = new Set(['SD', 'SMP', 'SMA']);
+      const requiredCategories = [
+        ...(recommendationLetterLevels.has(current.competition.level)
+          ? ['RECOMMENDATION_LETTER']
+          : []),
+        'IDENTITY_CARD',
+        'REGISTRATION_FORM',
+        'TEAM_PHOTO',
+        'TWIBBON_PROOF',
+      ];
       const categories = new Set(current.documents.map((document) => document.category));
       if (requiredCategories.some((category) => !categories.has(category))) {
         throw new BadRequestException(
-          'All five required document categories must be uploaded before submission',
+          'All required document categories must be uploaded before submission',
         );
       }
 

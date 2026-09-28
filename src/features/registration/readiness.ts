@@ -14,6 +14,7 @@ export interface RegistrationReadinessInput {
   leaderStudentId: string;
   documentCategories?: string[];
   documentCount?: number;
+  competitionLevel?: string | null;
   hasSupervisor?: boolean;
 }
 
@@ -28,13 +29,51 @@ export interface RegistrationGap {
   missingDocumentCategories?: string[];
 }
 
-export const REQUIRED_DOCUMENT_CATEGORIES = [
-  'RECOMMENDATION_LETTER',
+export const BASE_REQUIRED_DOCUMENT_CATEGORIES = [
   'IDENTITY_CARD',
   'REGISTRATION_FORM',
   'TEAM_PHOTO',
   'TWIBBON_PROOF',
 ] as const;
+export const REQUIRED_DOCUMENT_CATEGORIES = ['RECOMMENDATION_LETTER', ...BASE_REQUIRED_DOCUMENT_CATEGORIES] as const;
+
+export function requiredDocumentCategories(level?: string | null): readonly string[] {
+  const recommendationLetterLevels = new Set(['sd', 'smp', 'sma']);
+  return recommendationLetterLevels.has(level?.trim().toLocaleLowerCase('id-ID') ?? '')
+    ? REQUIRED_DOCUMENT_CATEGORIES
+    : BASE_REQUIRED_DOCUMENT_CATEGORIES;
+}
+
+export interface RegistrationWindowSource {
+  registrationOpenAt?: string;
+  registrationDeadline?: string;
+  serverTime?: string;
+  registrationStatus?: 'UPCOMING' | 'OPEN' | 'CLOSED';
+}
+
+export interface RegistrationWindowState {
+  status: 'UPCOMING' | 'OPEN' | 'CLOSED';
+  serverNow: number;
+  remainingMs: number;
+}
+
+export function deriveRegistrationWindow(
+  source?: RegistrationWindowSource,
+  clientNow = Date.now(),
+  clientBaseline = clientNow,
+): RegistrationWindowState {
+  const serverBaseline = source?.serverTime ? Date.parse(source.serverTime) : clientBaseline;
+  const serverNow = (Number.isFinite(serverBaseline) ? serverBaseline : clientBaseline) + (clientNow - clientBaseline);
+  const opensAt = source?.registrationOpenAt ? Date.parse(source.registrationOpenAt) : Number.NaN;
+  const closesAt = source?.registrationDeadline ? Date.parse(source.registrationDeadline) : Number.NaN;
+  const status = Number.isFinite(closesAt) && serverNow >= closesAt
+    ? 'CLOSED'
+    : Number.isFinite(opensAt) && serverNow < opensAt
+      ? 'UPCOMING'
+      : source?.registrationStatus ?? 'OPEN';
+  const boundary = status === 'UPCOMING' ? opensAt : status === 'OPEN' ? closesAt : serverNow;
+  return { status, serverNow, remainingMs: Number.isFinite(boundary) ? Math.max(0, boundary - serverNow) : 0 };
+}
 
 export function registrationGaps(input: RegistrationReadinessInput): RegistrationGap[] {
   const gaps: RegistrationGap[] = [];
@@ -94,13 +133,13 @@ export function registrationGaps(input: RegistrationReadinessInput): Registratio
   }
 
   const missingDocumentCategories = input.documentCategories
-    ? REQUIRED_DOCUMENT_CATEGORIES.filter((category) => !input.documentCategories?.includes(category))
-    : input.documentCount === 0 ? [...REQUIRED_DOCUMENT_CATEGORIES] : [];
+    ? requiredDocumentCategories(input.competitionLevel).filter((category) => !input.documentCategories?.includes(category))
+    : input.documentCount === 0 ? [...requiredDocumentCategories(input.competitionLevel)] : [];
   if (missingDocumentCategories.length > 0) {
     gaps.push({
       key: 'documents',
       label: 'Dokumen pendukung',
-      detail: 'Unggah kelima kategori dokumen wajib.',
+      detail: `Unggah ${missingDocumentCategories.length} kategori dokumen wajib.`,
       targetId: 'field-document-file',
       missingDocumentCategories,
     });

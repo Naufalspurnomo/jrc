@@ -133,9 +133,9 @@ export function CompetitionModal({ competition, open, onClose }: CompetitionModa
           <p className="arena-modal__eyebrow">
             {competition.fixtureLabel} · {competition.level} · {competition.discipline}
           </p>
-          <h2 id={titleId} className="arena-modal__title" aria-label={competition.shortName}>
-            <span className="arena-modal__title-short">{competition.shortName}</span>
-            <span className="arena-modal__title-full" aria-hidden="true">{competition.name}</span>
+          <h2 id={titleId} className="arena-modal__title" aria-label={competition.name}>
+            <span className="arena-modal__title-short" aria-hidden="true">{competition.shortName}</span>
+            <span className="arena-modal__title-full">{competition.name}</span>
           </h2>
           <p className="arena-modal__provocation">“{competition.provocation}”</p>
           <p id={descId} className="arena-modal__description">
@@ -154,7 +154,10 @@ export function CompetitionModal({ competition, open, onClose }: CompetitionModa
             </div>
             <div>
               <dt>Narahubung</dt>
-              <dd>{competition.contact.name} · {competition.contact.phone}</dd>
+              <dd className="contact-lines">
+                <span>{competition.contact.name}</span>
+                <a href={`tel:${competition.contact.phone.replace(/-/g, '')}`}>{competition.contact.phone}</a>
+              </dd>
             </div>
             <div>
               <dt>Guidebook</dt>

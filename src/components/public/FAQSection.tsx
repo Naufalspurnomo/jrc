@@ -24,6 +24,7 @@ export function FAQSection() {
         <div className="faq-section__items" data-journey-anchor data-journey-side="left">
           {faqItems.map((item, index) => {
             const isOpen = openIndex === index;
+            const triggerId = `faq-trigger-${index}`;
             return (
               <div
                 key={item.question}
@@ -32,6 +33,7 @@ export function FAQSection() {
                 <button
                   type="button"
                   className="faq-item__trigger"
+                  id={triggerId}
                   aria-expanded={isOpen}
                   onClick={() => setOpenIndex(isOpen ? null : index)}
                 >
@@ -43,9 +45,23 @@ export function FAQSection() {
                 <div
                   className="faq-item__answer"
                   role="region"
+                  aria-labelledby={triggerId}
                   aria-hidden={!isOpen}
                 >
-                  <p>{item.answer}</p>
+                  <div className="faq-item__answer-content">
+                    <p>{item.answer}</p>
+                    {'contacts' in item ? (
+                      <ul className="faq-item__contacts">
+                        {item.contacts.map((contact) => (
+                          <li key={contact.category}>
+                            <strong>{contact.category}</strong>
+                            <span>{contact.name}</span>
+                            <a href={`tel:${contact.phone.replace(/-/g, '')}`}>{contact.phone}</a>
+                          </li>
+                        ))}
+                      </ul>
+                    ) : null}
+                  </div>
                 </div>
               </div>
             );

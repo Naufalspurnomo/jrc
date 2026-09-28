@@ -172,7 +172,7 @@ function getRouteMetadata(pathname: string) {
   const competition = findCompetition(competitionMatch?.params.slug);
   if (competition) {
     return {
-      title: `${competition.shortName} — Perlombaan JRC XIV`,
+      title: `${competition.name} — Perlombaan JRC XIV`,
       robots: indexedRobots,
     };
   }

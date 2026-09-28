@@ -178,11 +178,12 @@ async function main(): Promise<void> {
   const eventName = nonEmptyEnv('EVENT_NAME', 'JRC XIV — Imperium Machina');
   const registrationDeadline = dateTimeEnv(
     'REGISTRATION_DEADLINE',
-    '2026-10-15T23:59:59+07:00',
+    '2026-11-21T23:59:59+07:00',
   );
   if (registrationDeadline.getTime() <= Date.now()) {
     throw new Error('REGISTRATION_DEADLINE must be later than the current time');
   }
+  const registrationOpenAt = dateTimeEnv('REGISTRATION_OPEN_AT', '2026-09-30T08:00:00+07:00');
   const currency = nonEmptyEnv('CURRENCY', 'IDR').toUpperCase();
   if (!/^[A-Z]{3}$/.test(currency)) throw new Error('CURRENCY must be a three-letter currency code');
 
@@ -205,6 +206,7 @@ async function main(): Promise<void> {
           eventName,
           fee: competition.fee,
           currency,
+          registrationOpenAt,
           registrationDeadline,
         },
         update: {
@@ -215,6 +217,7 @@ async function main(): Promise<void> {
           eventName,
           fee: competition.fee,
           currency,
+          registrationOpenAt,
           registrationDeadline,
         },
       });

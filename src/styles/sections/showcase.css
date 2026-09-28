@@ -209,16 +209,15 @@
   bottom: .75rem;
   left: .8rem;
   z-index: 2;
-  overflow: hidden;
   color: currentColor;
   font-family: var(--font-display);
-  font-size: clamp(.78rem, 1vw, .96rem);
+  font-size: clamp(.72rem, .86vw, .92rem);
   font-weight: 600;
   letter-spacing: -.02em;
-  line-height: 1.05;
-  text-overflow: ellipsis;
+  line-height: 1.1;
+  overflow-wrap: anywhere;
   text-shadow: 0 .25rem .85rem rgb(0 0 0 / 90%);
-  white-space: nowrap;
+  white-space: normal;
 }
 
 .character-selector__preview:hover:not(:disabled),

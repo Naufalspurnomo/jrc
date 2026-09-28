@@ -22,7 +22,13 @@ function currentRegistration(documents: number) {
     reviewReasonCategory: null,
     reviewReasonComment: null,
     owner: { email: 'owner@example.test', displayName: 'Owner' },
-    competition: { id: '943ca4f3-5dbf-4510-b5c7-a3309920d637', name: 'Sumo' },
+    competition: {
+      id: '943ca4f3-5dbf-4510-b5c7-a3309920d637',
+      name: 'Sumo',
+      level: 'Umum',
+      registrationOpenAt: new Date('2020-01-01T00:00:00.000Z'),
+      registrationDeadline: new Date('2099-12-31T23:59:59.000Z'),
+    },
     members,
     documents: documents === 0 ? [] : [
       ...[
@@ -63,7 +69,7 @@ describe('RegistrationsService submission requirements', () => {
       status: RegistrationStatus.SUBMITTED, reviewReasonCategory: null,
       reviewReasonComment: null, submittedAt: new Date(), reviewedAt: null,
       createdAt: new Date(), updatedAt: new Date(),
-      competition: { id: '943ca4f3-5dbf-4510-b5c7-a3309920d637', slug: 'sumo', name: 'Sumo', level: 'College', discipline: 'Robot', description: null, eventId: 'event', eventName: 'JRC', fee: 100, currency: 'IDR', registrationDeadline: new Date() },
+      competition: { id: '943ca4f3-5dbf-4510-b5c7-a3309920d637', slug: 'sumo', name: 'Sumo', level: 'Umum', discipline: 'Robot', description: null, eventId: 'event', eventName: 'JRC', fee: 100, currency: 'IDR', registrationOpenAt: new Date('2020-01-01T00:00:00.000Z'), registrationDeadline: new Date('2099-12-31T23:59:59.000Z') },
       members: [], documents: [], invoice: null, ticket: null,
     };
     const transaction = {
@@ -83,7 +89,7 @@ describe('RegistrationsService submission requirements', () => {
   it('includes cleared review category and comment in the resubmission audit snapshot', async () => {
     process.env.TICKET_SECRET = 'test-ticket-secret-with-at-least-32-characters';
     const current = { ...currentRegistration(1), status: RegistrationStatus.REVISION_REQUESTED, reviewReasonCategory: 'DATA_MISMATCH', reviewReasonComment: 'Fix ID' };
-    const returned = { id: REGISTRATION_ID, registrationNumber: current.registrationNumber, competitionId: current.competitionId, teamName: current.teamName, institution: current.institution, phone: null, status: RegistrationStatus.SUBMITTED, reviewReasonCategory: null, reviewReasonComment: null, submittedAt: new Date(), reviewedAt: null, createdAt: new Date(), updatedAt: new Date(), competition: { id: current.competitionId, slug: 'sumo', name: 'Sumo', level: 'College', discipline: 'Robot', description: null, eventId: 'event', eventName: 'JRC', fee: 100, currency: 'IDR', registrationDeadline: new Date() }, members: [], documents: [], invoice: null, ticket: null };
+    const returned = { id: REGISTRATION_ID, registrationNumber: current.registrationNumber, competitionId: current.competitionId, teamName: current.teamName, institution: current.institution, phone: null, status: RegistrationStatus.SUBMITTED, reviewReasonCategory: null, reviewReasonComment: null, submittedAt: new Date(), reviewedAt: null, createdAt: new Date(), updatedAt: new Date(), competition: { id: current.competitionId, slug: 'sumo', name: 'Sumo', level: 'Umum', discipline: 'Robot', description: null, eventId: 'event', eventName: 'JRC', fee: 100, currency: 'IDR', registrationOpenAt: new Date('2020-01-01T00:00:00.000Z'), registrationDeadline: new Date('2099-12-31T23:59:59.000Z') }, members: [], documents: [], invoice: null, ticket: null };
     const transaction = { registration: { findFirst: vi.fn().mockResolvedValue(current), updateMany: vi.fn().mockResolvedValue({ count: 1 }), findUnique: vi.fn().mockResolvedValue(returned) }, user: { findUnique: vi.fn().mockResolvedValue({ emailVerifiedAt: new Date() }) }, teamMember: { count: vi.fn().mockImplementation(({ where }: { where: { role: TeamMemberRole } }) => Promise.resolve(where.role === TeamMemberRole.MEMBER ? 0 : 1)) }, auditLog: { create: vi.fn().mockResolvedValue({}) }, emailOutbox: { create: vi.fn().mockResolvedValue({}) } };
     const prisma = { $transaction: vi.fn((operation: (client: typeof transaction) => Promise<unknown>) => operation(transaction)) };
     await new RegistrationsService(prisma as unknown as PrismaService).submit(OWNER_ID, REGISTRATION_ID, AUDIT);
@@ -135,7 +141,7 @@ describe('RegistrationsService submission requirements', () => {
 
     await expect(
       service.submit(OWNER_ID, REGISTRATION_ID, AUDIT),
-    ).rejects.toThrow('All five required document categories must be uploaded before submission');
+    ).rejects.toThrow('All required document categories must be uploaded before submission');
     expect(transaction.registration.findFirst).toHaveBeenCalledWith(
       expect.objectContaining({
         select: expect.objectContaining({

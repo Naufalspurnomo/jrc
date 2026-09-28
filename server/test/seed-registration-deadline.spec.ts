@@ -29,7 +29,7 @@ describe('seed registration deadline contract', () => {
 
     expect(fallback).toBe(envValue(exampleEnv, 'REGISTRATION_DEADLINE'));
     expect(fallback).toBe(exportedString(frontendContent, 'registrationDeadline'));
-    expect(fallback).toBe('2026-10-15T23:59:59+07:00');
+    expect(fallback).toBe('2026-11-21T23:59:59+07:00');
     expect(fallback).not.toMatch(/-12-/);
   });
 });

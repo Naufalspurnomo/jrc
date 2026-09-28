@@ -152,7 +152,7 @@ describe('PortalRegistrationPage submission', () => {
     const alert = await screen.findByRole('alert');
     expect(alert).toHaveFocus();
     expect(alert).toHaveAccessibleName('Pendaftaran belum dapat dikirim');
-    expect(alert).toHaveTextContent('Surat rekomendasi');
+    expect(alert).not.toHaveTextContent('Surat rekomendasi');
     expect(alert).toHaveTextContent('Identitas diri (kartu pelajar/KTM/KTP)');
     expect(alert).toHaveTextContent('Formulir pendaftaran');
     expect(alert).toHaveTextContent('Foto tim');

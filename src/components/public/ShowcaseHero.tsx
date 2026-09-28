@@ -137,7 +137,7 @@ export function ShowcaseHero() {
           <button
             type="button"
             className="character-selector__preview character-selector__preview--previous"
-            aria-label={`Pilih ${previous.shortName} — pratinjau sebelumnya`}
+            aria-label={`Pilih ${previous.name} — pratinjau sebelumnya`}
             disabled={Boolean(transition)}
             onClick={() => changeDivision(-1)}
           >
@@ -155,7 +155,7 @@ export function ShowcaseHero() {
                 decoding="async"
               />
             </span>
-            <span className="character-selector__preview-name">{previous.shortName}</span>
+            <span className="character-selector__preview-name">{previous.name}</span>
           </button>
 
           <button
@@ -234,7 +234,7 @@ export function ShowcaseHero() {
           <button
             type="button"
             className="character-selector__preview character-selector__preview--next"
-            aria-label={`Pilih ${next.shortName} — pratinjau berikutnya`}
+            aria-label={`Pilih ${next.name} — pratinjau berikutnya`}
             disabled={Boolean(transition)}
             onClick={() => changeDivision(1)}
           >
@@ -252,7 +252,7 @@ export function ShowcaseHero() {
                 decoding="async"
               />
             </span>
-            <span className="character-selector__preview-name">{next.shortName}</span>
+            <span className="character-selector__preview-name">{next.name}</span>
           </button>
         </div>
 
@@ -263,7 +263,7 @@ export function ShowcaseHero() {
           data-transitioning={Boolean(transition)}
           key={`division-name-${activeIndex}`}
         >
-          {current.shortName}
+          {current.name}
         </h2>
 
         <div className="character-selector__footer">
@@ -272,8 +272,10 @@ export function ShowcaseHero() {
             <p className="character-selector__status">
               {current.level} · Kategori resmi JRC XIV
             </p>
-            <p className="character-selector__status">
-              {current.fee} · {current.contact.name} · {current.contact.phone}
+            <p className="character-selector__status">{current.fee}</p>
+            <p className="character-selector__status contact-lines">
+              <span>{current.contact.name}</span>
+              <a href={`tel:${current.contact.phone.replace(/-/g, '')}`}>{current.contact.phone}</a>
             </p>
           </div>
 
@@ -300,7 +302,7 @@ export function ShowcaseHero() {
         />
 
         <p className="sr-only" role="status" aria-live="polite" aria-atomic="true">
-          {current.shortName}, {current.discipline}, divisi {activeIndex + 1} dari {competitions.length}
+          {current.name}, {current.discipline}, divisi {activeIndex + 1} dari {competitions.length}
         </p>
       </div>
     </section>

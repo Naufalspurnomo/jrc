@@ -92,7 +92,7 @@ export function HeroSection({ startupReady = true }: { startupReady?: boolean })
             aria-label={remaining.complete ? 'Pendaftaran telah ditutup' : 'Hitung mundur penutupan pendaftaran'}
             data-complete={remaining.complete ? 'true' : 'false'}
           >
-            <p className="hero-section__countdown-label">Pendaftaran berakhir · 15 Oktober 2026</p>
+            <p className="hero-section__countdown-label">Pendaftaran berakhir · 21 November 2026</p>
             {remaining.complete ? (
               <p className="hero-section__countdown-complete">Pendaftaran telah ditutup.</p>
             ) : (

@@ -259,6 +259,7 @@ describe('competition serialization', () => {
       fee: 250000,
       currency: 'IDR',
       active: true,
+      registrationOpenAt: new Date('2026-09-30T01:00:00.000Z'),
       registrationDeadline: new Date('2026-12-01T00:00:00.000Z'),
       createdAt: new Date('2026-01-01T00:00:00.000Z'),
       updatedAt: new Date('2026-01-02T00:00:00.000Z'),
@@ -275,8 +276,11 @@ describe('competition serialization', () => {
       eventName: 'JRC XIV 2026',
       fee: 250000,
       currency: 'IDR',
+      registrationOpenAt: '2026-09-30T01:00:00.000Z',
       registrationDeadline: '2026-12-01T00:00:00.000Z',
+      serverTime: expect.any(String),
     });
+    expect(Number.isNaN(Date.parse(competition.serverTime))).toBe(false);
     expect(JSON.stringify(competition)).not.toMatch(/active|createdAt|updatedAt/);
   });
 });

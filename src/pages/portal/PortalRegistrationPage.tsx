@@ -22,7 +22,7 @@ import {
   formatBytes,
   isAcceptedDocumentType,
 } from '../../features/registration/documentErrors';
-import { registrationGaps, REQUIRED_DOCUMENT_CATEGORIES } from '../../features/registration/readiness';
+import { deriveRegistrationWindow, registrationGaps, requiredDocumentCategories } from '../../features/registration/readiness';
 import { calculateCropSource, canvasToJpegFile, loadCropImage } from '../../features/registration/photoCrop';
 import { useAutosave, type AutosaveState } from '../../hooks/useAutosave';
 
@@ -44,6 +44,7 @@ const editableStatuses: RegistrationState[] = ['DRAFT', 'REVISION_REQUESTED'];
 const MAX_UPLOAD_BYTES = 5 * 1024 * 1024;
 const UPLOAD_LIMIT_LABEL = '5 MiB (5.242.880 byte)';
 const MAX_TEAM_MEMBERS = 3;
+const TUTORIAL_ACK_KEY = 'jrc-registration-flow-acknowledged';
 
 const documentCategoryLabels: Record<string, string> = {
   RECOMMENDATION_LETTER: 'Surat rekomendasi',
@@ -136,6 +137,9 @@ export default function PortalRegistrationPage({ api = registrationApi }: Portal
   const [creatingDraft, setCreatingDraft] = useState(false);
   const [created, setCreated] = useState(Boolean(existingRegistrationId));
   const [highlightedGaps, setHighlightedGaps] = useState<string[]>([]);
+  const [tutorialAcknowledged, setTutorialAcknowledged] = useState(() => Boolean(existingRegistrationId) || sessionStorage.getItem(TUTORIAL_ACK_KEY) === 'true');
+  const [now, setNow] = useState(() => Date.now());
+  const serverClockBaseline = useRef(Date.now());
 
   const competitionCardRefs = useRef<Array<HTMLButtonElement | null>>([]);
   const documentInputRef = useRef<HTMLInputElement | null>(null);
@@ -159,6 +163,11 @@ export default function PortalRegistrationPage({ api = registrationApi }: Portal
   const editable = editableStatuses.includes(status);
 
   useEffect(() => {
+    const timer = window.setInterval(() => setNow(Date.now()), 1_000);
+    return () => window.clearInterval(timer);
+  }, []);
+
+  useEffect(() => {
     let active = true;
 
     const load = async () => {
@@ -178,6 +187,8 @@ export default function PortalRegistrationPage({ api = registrationApi }: Portal
         ]);
 
         if (!active) return;
+        serverClockBaseline.current = Date.now();
+        setNow(serverClockBaseline.current);
         setCompetitions(competitionRecords);
 
         if (existingRegistration) {
@@ -381,6 +392,19 @@ export default function PortalRegistrationPage({ api = registrationApi }: Portal
         ?? competitionCatalog.find((competition) => competition.name === selectedCompetition.name)
       )
     : undefined;
+  const windowSource = selectedCompetition ?? competitions[0];
+  const registrationWindow = deriveRegistrationWindow(windowSource, now, serverClockBaseline.current);
+  const requiredCategories = requiredDocumentCategories(selectedCompetition?.level);
+  const countdown = registrationWindow.remainingMs > 0
+    ? `${Math.floor(registrationWindow.remainingMs / 86_400_000)} hari ${Math.floor((registrationWindow.remainingMs % 86_400_000) / 3_600_000)} jam ${Math.floor((registrationWindow.remainingMs % 3_600_000) / 60_000)} menit`
+    : '';
+
+  useEffect(() => {
+    if (!requiredCategories.includes(documentCategory) && documentCategory !== 'MEMBER_PHOTO') {
+      setDocumentCategory(requiredCategories[0]);
+      setDocumentFile(null);
+    }
+  }, [documentCategory, requiredCategories]);
 
   const handleCompetitionKeyDown = (
     event: KeyboardEvent<HTMLButtonElement>,
@@ -628,6 +652,7 @@ export default function PortalRegistrationPage({ api = registrationApi }: Portal
     leaderName: leader.name,
     leaderStudentId: leader.studentId,
     documentCategories: documents.map((document) => document.category),
+    competitionLevel: selectedCompetition?.level,
     hasSupervisor: Boolean(supervisor.name.trim()),
   });
   const missingPhotoPeople = roster.filter((person) => !hasMemberPhoto(person));
@@ -635,6 +660,7 @@ export default function PortalRegistrationPage({ api = registrationApi }: Portal
     ? [...baseGaps, {
       key: 'memberPhotos',
       label: `Foto formal 3x4: ${missingPhotoPeople.map((person) => person.name).join(', ')}`,
+      detail: 'Unggah foto formal 3x4 untuk setiap anggota tim dan pembina.',
       targetId: 'registration-documents-panel',
     }]
     : baseGaps;
@@ -680,7 +706,11 @@ export default function PortalRegistrationPage({ api = registrationApi }: Portal
       showToast('Pendaftaran berhasil dikirim.', 'success');
       navigate('/portal');
     } catch (submitError) {
-      if (submitError instanceof ApiError && submitError.status === 403) {
+      if (submitError instanceof ApiError && submitError.code === 'REGISTRATION_NOT_OPEN') {
+        setError('Pendaftaran belum dibuka. Pengiriman dapat dilakukan mulai 30 September 2026 pukul 08.00 WIB.');
+      } else if (submitError instanceof ApiError && submitError.code === 'REGISTRATION_CLOSED') {
+        setError('Pendaftaran telah ditutup. Draft tetap tersimpan, tetapi tidak dapat dikirim.');
+      } else if (submitError instanceof ApiError && submitError.status === 403) {
         setError('Verifikasi email Anda terlebih dahulu sebelum mengirim pendaftaran.');
       } else if (submitError instanceof ApiError && submitError.status === 400) {
         setError('Pendaftaran belum lengkap menurut server. Periksa kembali data tim dan dokumen.');
@@ -734,6 +764,15 @@ export default function PortalRegistrationPage({ api = registrationApi }: Portal
           </section>
         ) : (
           <>
+            <section className="portal-registration-guide" aria-labelledby="registration-guide-title">
+              <details open={!tutorialAcknowledged}>
+                <summary><h2 id="registration-guide-title">Tata cara pendaftaran</h2></summary>
+                <ol><li><strong>Buat akun atau masuk, lalu verifikasi email.</strong></li><li><strong>Pilih kompetisi dan simpan draft.</strong> Draft dapat dilengkapi sebelum periode kirim dibuka.</li><li><strong>Lengkapi tim dan dokumen.</strong></li><li><strong>Kirim selama periode pendaftaran.</strong> Dibuka 30 September 2026 pukul 08.00 WIB.</li><li><strong>Tunggu peninjauan.</strong> Bayar hanya setelah invoice diterbitkan panitia.</li></ol>
+                {!tutorialAcknowledged && <button className="portal-button portal-button--primary" type="button" onClick={() => { sessionStorage.setItem(TUTORIAL_ACK_KEY, 'true'); setTutorialAcknowledged(true); }}>Saya sudah memahami alur pendaftaran</button>}
+              </details>
+            </section>
+            <section className={`portal-window-status portal-window-status--${registrationWindow.status.toLowerCase()}`} role="status" aria-live="polite"><strong>{registrationWindow.status === 'UPCOMING' ? 'Pengiriman belum dibuka' : registrationWindow.status === 'OPEN' ? 'Pengiriman sedang dibuka' : 'Pendaftaran telah ditutup'}</strong><p>{registrationWindow.status === 'UPCOMING' ? `Draft dapat dibuat dan dilengkapi sekarang. Tombol kirim aktif 30 September 2026 pukul 08.00 WIB (${countdown} lagi).` : registrationWindow.status === 'OPEN' ? `Kirim sebelum tenggat (${countdown} tersisa).` : 'Draft tetap dapat dilihat. Penyuntingan mengikuti izin server; pengiriman tidak lagi tersedia.'}</p></section>
+            {(tutorialAcknowledged || Boolean(existingRegistrationId)) && <>
             <section className="portal-form-panel" aria-labelledby="competition-selection-title">
               <div className="portal-fieldset">
                 <h2 id="competition-selection-title" tabIndex={-1}>Tentukan arena tim</h2>
@@ -989,10 +1028,10 @@ export default function PortalRegistrationPage({ api = registrationApi }: Portal
                       </div>
                     )}
                     <p>
-                      Unggah lima dokumen wajib. Format PDF, JPEG, atau PNG, maksimal {formatBytes(MAX_UPLOAD_BYTES)} per berkas.
+                      Unggah {requiredCategories.length} dokumen wajib. Format PDF, JPEG, atau PNG, maksimal {formatBytes(MAX_UPLOAD_BYTES)} per berkas.
                     </p>
                     <ul className="portal-document-checklist" aria-label="Kelengkapan dokumen wajib">
-                      {REQUIRED_DOCUMENT_CATEGORIES.map((category) => {
+                      {requiredCategories.map((category) => {
                         const complete = documents.some((document) => document.category === category);
                         return <li key={category} className={complete ? 'is-complete' : 'is-missing'}>
                           <span aria-hidden="true">{complete ? '✓' : '!'}</span>
@@ -1009,7 +1048,7 @@ export default function PortalRegistrationPage({ api = registrationApi }: Portal
                         value={documentCategory}
                         onChange={(event) => setDocumentCategory(event.target.value)}
                       >
-                        {Object.entries(documentCategoryLabels).map(([category, label]) => (
+                        {Object.entries(documentCategoryLabels).filter(([category]) => category === 'MEMBER_PHOTO' || requiredCategories.includes(category)).map(([category, label]) => (
                           <option key={category} value={category}>{label}</option>
                         ))}
                       </select>
@@ -1197,12 +1236,13 @@ export default function PortalRegistrationPage({ api = registrationApi }: Portal
                       </button>
                       <button
                         className="portal-button portal-button--primary"
-                        disabled={submitting}
+                        disabled={submitting || registrationWindow.status !== 'OPEN'}
                         type="button"
                         onClick={() => void submitRegistration()}
                       >
                         {submitting ? 'Mengirim…' : 'Kirim pendaftaran'}
                       </button>
+                      {registrationWindow.status !== 'OPEN' && <p className="portal-submit-reason" role="status">{registrationWindow.status === 'UPCOMING' ? 'Belum dapat dikirim sebelum 30 September 2026 pukul 08.00 WIB. Draft tetap dapat disimpan.' : 'Tidak dapat dikirim karena periode pendaftaran telah ditutup.'}</p>}
                     </div>
                   )}
                 </form>
@@ -1224,7 +1264,8 @@ export default function PortalRegistrationPage({ api = registrationApi }: Portal
                       leaderName: leader.name,
                       leaderStudentId: leader.studentId,
                       documentCategories: documents.map((document) => document.category),
-    hasSupervisor: Boolean(supervisor.name.trim()),
+                      competitionLevel: selectedCompetition?.level,
+                      hasSupervisor: Boolean(supervisor.name.trim()),
                     }).length === 0 && (
                       <li className="portal-checklist__item portal-checklist__item--done">
                         <span aria-hidden="true">✓</span> Data pendaftaran
@@ -1272,6 +1313,7 @@ export default function PortalRegistrationPage({ api = registrationApi }: Portal
                 </div>
               </section>
             )}
+            </>}
           </>
         )}
       </main>

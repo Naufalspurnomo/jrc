@@ -83,6 +83,7 @@ suite('registration system e2e', () => {
         eventId: 'JRC-XIV-2026',
         eventName: 'JRC XIV 2026',
         fee: 250000,
+        registrationOpenAt: new Date('2020-01-01T00:00:00.000Z'),
         registrationDeadline: new Date('2026-12-01T00:00:00.000Z'),
       },
     });
@@ -277,7 +278,7 @@ suite('registration system e2e', () => {
       .expect(400)
       .expect(({ body }: Response) =>
         expect(body.message).toBe(
-          'All five required document categories must be uploaded before submission',
+          'All required document categories must be uploaded before submission',
         ),
       );
 

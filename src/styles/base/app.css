@@ -743,7 +743,16 @@ h3 {
 .faq-item__trigger:hover { background: rgb(139 58 48 / 5%); }
 .faq-item__answer { display: grid; grid-template-rows: 0fr; transition: grid-template-rows .35s var(--ease-out), opacity .25s; opacity: 0; }
 .faq-item--open .faq-item__answer { grid-template-rows: 1fr; opacity: 1; }
-.faq-item__answer > p { overflow: hidden; max-width: 37rem; margin: 0 0 0 3rem; padding-bottom: 2rem; color: #725d4e; line-height: 1.8; }
+.faq-item__answer-content { overflow: hidden; min-width: 0; max-width: 37rem; margin: 0 0 0 3rem; padding-bottom: 2rem; color: #725d4e; line-height: 1.8; }
+.faq-item__answer-content > p { margin: 0; }
+.faq-item__contacts { display: grid; gap: .8rem; margin: 1rem 0 0; padding: 0; list-style: none; }
+.faq-item__contacts li { display: grid; min-width: 0; }
+.faq-item__contacts strong,
+.faq-item__contacts span,
+.faq-item__contacts a { overflow-wrap: anywhere; }
+.faq-item__contacts a { width: fit-content; color: inherit; }
+.contact-lines { display: grid; min-width: 0; gap: .15rem; }
+.contact-lines a { width: fit-content; color: inherit; overflow-wrap: anywhere; }
 .faq-item--open .faq-item__trigger { color: #5a2018; }
 
 /* CTA */

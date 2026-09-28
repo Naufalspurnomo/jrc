@@ -285,7 +285,10 @@ export interface CompetitionRecord {
   eventName?: string;
   fee?: number;
   currency?: string;
+  registrationOpenAt?: string;
   registrationDeadline?: string;
+  serverTime?: string;
+  registrationStatus?: 'UPCOMING' | 'OPEN' | 'CLOSED';
   active?: boolean;
 }
 

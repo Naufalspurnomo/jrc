@@ -1,6 +1,7 @@
 export const pendingAnnouncement = 'Akan diumumkan' as const;
-export const registrationPeriod = '15 September–15 Oktober 2026' as const;
-export const registrationDeadline = '2026-10-15T23:59:59+07:00' as const;
+export const registrationPeriod = '30 September–21 November 2026' as const;
+export const registrationOpenAt = '2026-09-30T08:00:00+07:00' as const;
+export const registrationDeadline = '2026-11-21T23:59:59+07:00' as const;
 export const competitionFee = 'Rp 250.000 per tim' as const;
 
 export type CompetitionLevel = 'SD' | 'SMP' | 'SMA' | 'Umum';
@@ -90,7 +91,7 @@ export const competitions: readonly Competition[] = [
     guidebook: { label: 'Guidebook', status: pendingAnnouncement, href: null },
     provocation: 'Angkut, bidik, tuntaskan.',
     description:
-      'Duel strategi yang menuntut perpaduan mekanisme pengangkut, sistem pelontar, dan kendali yang matang.',
+      'Terdapat dua robot, yaitu Robot Transporter dan Line Follower Transporter. Kedua robot memulai perjalanan dari titik yang sama dan bekerja sama membangun kembali jalur irigasi kota pasca perang dengan saling mengoper objek material pembangunan. Robot Transporter bertugas mengangkut dan menyusun balok untuk membangun jalur irigasi serta membuka palang air. Sementara itu, Line Follower Transporter juga bertugas mengangkut dan menyusun balok secara estafet bersama Robot Transporter hingga jalur irigasi selesai dibangun.',
     objective: 'Membangun robot multi-mekanisme yang tetap presisi di bawah tekanan waktu.',
     accent: 'crimson',
   },
@@ -325,7 +326,7 @@ export const partnerTiers = [
 export const faqItems = [
   {
     question: 'Kapan pendaftaran dibuka?',
-    answer: 'Pendaftaran JRC XIV dibuka pada 15 September dan ditutup pada 15 Oktober 2026.',
+    answer: 'Pendaftaran JRC XIV dibuka pada 30 September 2026 pukul 08.00 WIB dan ditutup pada 21 November 2026 pukul 23.59 WIB.',
   },
   {
     question: 'Apa saja kategori resmi JRC XIV?',
@@ -343,8 +344,12 @@ export const faqItems = [
   },
   {
     question: 'Bagaimana menghubungi panitia?',
-    answer:
-      'Hubungi narahubung sesuai kategori: SD — Naya 0878-4132-4886; SMP — Manda 0857-5540-9648; SMA — Aisyah 0881-0360-87367; Line Follower — Alzar 0813-3002-5557; SumoBot — Nadjwa 0888-5454-111; Soccer — Rissa 0851-1954-6428.',
+    answer: 'Hubungi narahubung sesuai kategori:',
+    contacts: competitions.map(({ name: category, contact: { name, phone } }) => ({
+      category,
+      name,
+      phone,
+    })),
   },
 ] as const;
 

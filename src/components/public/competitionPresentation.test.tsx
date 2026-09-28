@@ -4,6 +4,7 @@ import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import CompetitionPage from '../../pages/CompetitionPage';
+import { FAQSection } from './FAQSection';
 import { ShowcaseHero } from './ShowcaseHero';
 
 vi.mock('../../hooks/useScrollReveal', () => ({
@@ -27,9 +28,11 @@ describe('arena presentation', () => {
       </MemoryRouter>,
     );
 
-    expect(screen.getByRole('heading', { name: 'CASTRA' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Castra — Transporter' })).toBeInTheDocument();
     expect(screen.getByText('Transporter')).toBeInTheDocument();
-    expect(screen.getByText('Rp 250.000 per tim · Naya · 0878-4132-4886')).toBeInTheDocument();
+    expect(screen.getByText('Rp 250.000 per tim')).toBeInTheDocument();
+    expect(screen.getByText('Naya')).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: '0878-4132-4886' })).toHaveAttribute('href', 'tel:087841324886');
     expect(screen.getByAltText('Lambang CASTRA')).toHaveAttribute(
       'src',
       '/assets/arena-emblems/castra-guardian.webp',
@@ -37,11 +40,12 @@ describe('arena presentation', () => {
 
     await user.click(screen.getByRole('button', { name: 'Lihat divisi' }));
 
-    const dialog = screen.getByRole('dialog', { name: /CASTRA/ });
+    const dialog = screen.getByRole('dialog', { name: 'Castra — Transporter' });
     expect(dialog).toHaveTextContent('CASTRA');
     expect(dialog).toHaveTextContent('Castra — Transporter');
     expect(dialog).toHaveTextContent('Rp 250.000 per tim');
-    expect(dialog).toHaveTextContent('Naya · 0878-4132-4886');
+    expect(within(dialog).getByText('Naya')).toBeInTheDocument();
+    expect(within(dialog).getByRole('link', { name: '0878-4132-4886' })).toHaveAttribute('href', 'tel:087841324886');
     expect(within(dialog).getByAltText('Lambang CASTRA')).toHaveAttribute(
       'src',
       '/assets/arena-emblems/castra-guardian.webp',
@@ -57,13 +61,29 @@ describe('arena presentation', () => {
       </MemoryRouter>,
     );
 
-    expect(screen.getByRole('heading', { level: 1, name: 'COLOSSEUM' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { level: 1, name: 'Colosseum — Sumo' })).toBeInTheDocument();
     expect(screen.getByText('Sumo')).toBeInTheDocument();
     expect(screen.getByText('Rp 250.000 per tim')).toBeInTheDocument();
-    expect(screen.getByText('Nadjwa · 0888-5454-111')).toBeInTheDocument();
+    expect(screen.getByText('Nadjwa')).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: '0888-5454-111' })).toHaveAttribute('href', 'tel:08885454111');
     expect(screen.getByAltText('Lambang COLOSSEUM')).toHaveAttribute(
       'src',
       '/assets/arena-emblems/colosseum-clash.webp',
     );
+  });
+
+  it('renders every FAQ category contact as its own semantic row', async () => {
+    const user = userEvent.setup();
+    render(<FAQSection />);
+
+    await user.click(screen.getByRole('button', { name: 'Bagaimana menghubungi panitia?' }));
+    const region = screen.getByRole('region', { name: 'Bagaimana menghubungi panitia?' });
+    const rows = within(region).getAllByRole('listitem');
+
+    expect(rows).toHaveLength(6);
+    expect(rows[0]).toHaveTextContent('Castra — Transporter');
+    expect(within(rows[0]).getByText('Naya')).toBeInTheDocument();
+    expect(within(rows[0]).getByRole('link', { name: '0878-4132-4886' })).toHaveAttribute('href', 'tel:087841324886');
+    expect(rows[5]).toHaveTextContent('Harpastum — Soccer');
   });
 });

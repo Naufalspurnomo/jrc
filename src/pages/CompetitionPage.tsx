@@ -58,7 +58,7 @@ export default function CompetitionPage() {
                 <p>
                   <span>{competition.level}</span> · <span>{competition.discipline}</span>
                 </p>
-                <h1>{competition.shortName}</h1>
+                <h1>{competition.name}</h1>
               </div>
             </div>
             <p className="competition-hero__provocation">{competition.provocation}</p>
@@ -96,7 +96,10 @@ export default function CompetitionPage() {
               </div>
               <div>
                 <dt>Narahubung</dt>
-                <dd>{competition.contact.name} · {competition.contact.phone}</dd>
+                <dd className="contact-lines">
+                  <span>{competition.contact.name}</span>
+                  <a href={`tel:${competition.contact.phone.replace(/-/g, '')}`}>{competition.contact.phone}</a>
+                </dd>
               </div>
               <div>
                 <dt>Guidebook</dt>

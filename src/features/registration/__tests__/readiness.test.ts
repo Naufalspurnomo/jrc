@@ -6,11 +6,12 @@ import {
   formatBytes,
   isAcceptedDocumentType,
 } from '../documentErrors';
-import { describeGaps, registrationGaps, type RegistrationReadinessInput } from '../readiness';
+import { deriveRegistrationWindow, describeGaps, registrationGaps, requiredDocumentCategories, type RegistrationReadinessInput } from '../readiness';
 
 const complete: RegistrationReadinessInput = {
   emailVerified: true,
   competitionId: 'competition-1',
+  competitionLevel: 'SMA',
   teamName: 'Garuda Robotika',
   institution: 'PENS',
   phone: '081234567890',
@@ -76,6 +77,23 @@ describe('registrationGaps', () => {
     ]);
   });
 
+  it('excludes recommendation letters for Umum from requirements and gaps', () => {
+    expect(requiredDocumentCategories('Umum')).toEqual([
+      'IDENTITY_CARD', 'REGISTRATION_FORM', 'TEAM_PHOTO', 'TWIBBON_PROOF',
+    ]);
+    expect(registrationGaps({
+      ...complete,
+      competitionLevel: 'Umum',
+      documentCategories: ['IDENTITY_CARD', 'REGISTRATION_FORM', 'TEAM_PHOTO', 'TWIBBON_PROOF'],
+    })).toEqual([]);
+  });
+
+  it('does not require recommendation letters for an unknown future level', () => {
+    expect(requiredDocumentCategories('Mahasiswa')).toEqual([
+      'IDENTITY_CARD', 'REGISTRATION_FORM', 'TEAM_PHOTO', 'TWIBBON_PROOF',
+    ]);
+  });
+
   it('treats whitespace-only values as missing', () => {
     const gaps = registrationGaps({
       ...complete,
@@ -105,6 +123,18 @@ describe('describeGaps', () => {
     expect(describeGaps(build(1))).toBe('Nama tim');
     expect(describeGaps(build(2))).toBe('Nama tim dan Institusi');
     expect(describeGaps(build(3))).toBe('Nama tim, Institusi, dan Nomor WhatsApp tim');
+  });
+});
+
+describe('deriveRegistrationWindow', () => {
+  const competition = { registrationOpenAt: '2026-09-30T01:00:00.000Z', registrationDeadline: '2026-11-21T16:59:59.000Z', serverTime: '2026-09-30T00:59:50.000Z' };
+
+  it('uses elapsed client time from the server-time baseline', () => {
+    expect(deriveRegistrationWindow(competition, Date.parse('2026-09-30T00:00:10.000Z'), Date.parse('2026-09-30T00:00:00.000Z'))).toMatchObject({ status: 'OPEN' });
+  });
+
+  it('closes at the exact deadline', () => {
+    expect(deriveRegistrationWindow(competition, Date.parse('2026-11-21T16:59:59.000Z'), Date.parse('2026-09-30T00:59:50.000Z')).status).toBe('CLOSED');
   });
 });
 

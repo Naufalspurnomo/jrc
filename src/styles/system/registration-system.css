@@ -388,6 +388,25 @@
   line-height: .9;
 }
 
+/* Registration orientation and server-synchronised submission window. */
+.portal-shell .portal-registration-guide,
+.portal-shell .portal-window-status {
+  min-width: 0;
+  margin-top: 1.5rem;
+  padding: clamp(1.25rem, 3vw, 2rem);
+  border: 1px solid #8d735e;
+  background: #f5ecda;
+}
+.portal-shell .portal-registration-guide summary { cursor: pointer; }
+.portal-shell .portal-registration-guide summary h2 { display: inline; font-size: clamp(1.6rem, 4vw, 2.6rem); }
+.portal-shell .portal-registration-guide ol { display: grid; gap: .75rem; padding-left: 1.5rem; line-height: 1.55; }
+.portal-shell .portal-window-status { border-left: .4rem solid #9b6419; }
+.portal-shell .portal-window-status--open { border-left-color: #246343; }
+.portal-shell .portal-window-status--closed { border-left-color: #8b211d; }
+.portal-shell .portal-window-status p,
+.portal-shell .portal-submit-reason { margin: .45rem 0 0; line-height: 1.55; overflow-wrap: anywhere; }
+.portal-shell .portal-submit-reason { flex-basis: 100%; color: #6f211f; font-weight: 650; }
+
 /* Registration forms and the six-competition selector. */
 .portal-shell .portal-form-panel {
   min-width: 0;

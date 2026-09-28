@@ -203,11 +203,19 @@ export class CompetitionsController {
         fee: true,
         currency: true,
         active: true,
+        registrationOpenAt: true,
         registrationDeadline: true,
       },
     });
 
-    return competitions.sort(compareCompetitions);
+    const serverTime = new Date();
+    return competitions.sort(compareCompetitions).map((competition) => ({
+      ...competition,
+      serverTime: serverTime.toISOString(),
+      registrationStatus: serverTime < competition.registrationOpenAt
+        ? 'UPCOMING'
+        : serverTime >= competition.registrationDeadline ? 'CLOSED' : 'OPEN',
+    }));
   }
 }
 

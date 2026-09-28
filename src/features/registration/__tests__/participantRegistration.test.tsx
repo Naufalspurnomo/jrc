@@ -1,7 +1,7 @@
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom';
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { AuthProvider } from '../../auth/AuthProvider';
 import PortalRegistrationPage from '../../../pages/portal/PortalRegistrationPage';
@@ -87,7 +87,10 @@ function createApi(overrides: Partial<RegistrationApi['registrations']> = {}): R
   } as unknown as RegistrationApi;
 }
 
-function renderPage(api: RegistrationApi, entry = '/portal/pendaftaran/baru') {
+function renderPage(api: RegistrationApi, entry = '/portal/pendaftaran/baru', acknowledgeTutorial = true) {
+  if (acknowledgeTutorial) {
+    sessionStorage.setItem('jrc-registration-flow-acknowledged', 'true');
+  }
   return render(
     <MemoryRouter initialEntries={[entry]}>
       <AuthProvider api={api}>
@@ -108,6 +111,83 @@ function LocationProbe() {
 }
 
 describe('PortalRegistrationPage', () => {
+  beforeEach(() => sessionStorage.clear());
+
+  it('requires tutorial acknowledgement on /baru before revealing the six competitions', async () => {
+    const user = userEvent.setup();
+    const api = createApi();
+    renderPage(api, '/portal/pendaftaran/baru', false);
+
+    expect(await screen.findByRole('heading', { name: 'Tata cara pendaftaran' })).toBeInTheDocument();
+    expect(screen.queryByRole('radio')).not.toBeInTheDocument();
+    expect(screen.queryByLabelText('Nama tim')).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'Saya sudah memahami alur pendaftaran' }));
+
+    expect(await screen.findAllByRole('radio')).toHaveLength(6);
+    expect(sessionStorage.getItem('jrc-registration-flow-acknowledged')).toBe('true');
+  });
+
+  it('allows draft editing before opening while keeping submission locked', async () => {
+    const user = userEvent.setup();
+    const api = createApi();
+    vi.mocked(api.competitions.list).mockResolvedValue(competitions.map((item) => ({
+      ...item,
+      registrationOpenAt: '2026-09-30T01:00:00.000Z',
+      registrationDeadline: '2026-11-21T16:59:59.000Z',
+      serverTime: '2026-09-29T01:00:00.000Z',
+      registrationStatus: 'UPCOMING' as const,
+    })));
+    renderPage(api);
+
+    await user.click(await screen.findByRole('radio', { name: 'Umum · Colosseum — Sumo' }));
+    const teamName = await screen.findByLabelText('Nama tim');
+    await user.type(teamName, 'Nova');
+    await user.click(screen.getByRole('button', { name: 'Simpan sekarang' }));
+
+    expect(screen.getByText(/Tombol kirim aktif 30 September 2026 pukul 08\.00 WIB/)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Kirim pendaftaran' })).toBeDisabled();
+    await waitFor(() => expect(api.registrations.update).toHaveBeenCalled());
+  });
+
+  it('keeps an existing draft deep link accessible without tutorial acknowledgement', async () => {
+    const api = createApi();
+    renderPage(api, '/portal/pendaftaran/registration-1', false);
+
+    expect(await screen.findByLabelText('Nama tim')).toHaveValue('Garuda Robotika');
+    expect(screen.getAllByRole('radio')).toHaveLength(6);
+    expect(screen.queryByRole('button', { name: 'Saya sudah memahami alur pendaftaran' })).not.toBeInTheDocument();
+    expect(sessionStorage.getItem('jrc-registration-flow-acknowledged')).toBeNull();
+  });
+
+  it('uses level-specific required document categories for Umum and SD', async () => {
+    const umumApi = createApi();
+    const { unmount } = renderPage(umumApi, '/portal/pendaftaran/registration-1', false);
+
+    await screen.findByDisplayValue('Garuda Robotika');
+    const umumChecklist = screen.getByRole('list', { name: 'Kelengkapan dokumen wajib' });
+    expect(umumChecklist.children).toHaveLength(4);
+    expect(umumChecklist).not.toHaveTextContent('Surat rekomendasi');
+    expect(screen.getByLabelText('Kategori dokumen')).not.toHaveDisplayValue('Surat rekomendasi');
+    expect(screen.queryByRole('option', { name: 'Surat rekomendasi' })).not.toBeInTheDocument();
+    unmount();
+
+    const sdCompetition = competitions[0];
+    const sdApi = createApi({
+      get: vi.fn().mockResolvedValue(registration({
+        competitionId: sdCompetition.id,
+        competition: { id: sdCompetition.id, name: sdCompetition.name },
+      })),
+    });
+    renderPage(sdApi, '/portal/pendaftaran/registration-1', false);
+
+    await screen.findByRole('radio', { name: 'SD · Castra — Transporter' });
+    const sdChecklist = screen.getByRole('list', { name: 'Kelengkapan dokumen wajib' });
+    expect(sdChecklist.children).toHaveLength(5);
+    expect(sdChecklist).toHaveTextContent('Surat rekomendasi');
+    expect(screen.getByRole('option', { name: 'Surat rekomendasi' })).toBeInTheDocument();
+  });
+
   it('shows a load alert and retries competition loading without creating a registration', async () => {
     const user = userEvent.setup();
     const api = createApi();
@@ -309,7 +389,9 @@ describe('PortalRegistrationPage', () => {
     await user.click(competitionCard);
 
     await waitFor(() => expect(api.registrations.create).toHaveBeenCalledTimes(1));
-    expect(await screen.findByTestId('location')).toHaveTextContent('/portal/pendaftaran/registration-1');
+    await waitFor(() => expect(screen.getByTestId('location')).toHaveTextContent(
+      '/portal/pendaftaran/registration-1',
+    ));
   });
 
   it('preloads and displays the selected competition when editing a draft', async () => {

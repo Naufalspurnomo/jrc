@@ -118,6 +118,7 @@ model Competition {
   fee                  Int
   currency             String         @default("IDR")
   active               Boolean        @default(true)
+  registrationOpenAt   DateTime       @map("registration_open_at")
   registrationDeadline DateTime       @map("registration_deadline")
   createdAt            DateTime       @default(now()) @map("created_at")
   updatedAt            DateTime       @updatedAt @map("updated_at")

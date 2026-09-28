@@ -96,7 +96,21 @@ describe('JRC XIV competition catalog', () => {
       { level: 'Umum', discipline: 'Soccer', fee: 'Rp 250.000 per tim', contact: { name: 'Rissa', phone: '0851-1954-6428' } },
     ]);
 
-    expect(faqItems.at(-1)?.answer).toContain('Naya 0878-4132-4886');
-    expect(faqItems.at(-1)?.answer).toContain('Rissa 0851-1954-6428');
+    expect(faqItems.at(-1)).toMatchObject({
+      contacts: [
+        { category: 'Castra — Transporter', name: 'Naya', phone: '0878-4132-4886' },
+        { category: 'Robo Chiper — Rescue Transporter', name: 'Manda', phone: '0857-5540-9648' },
+        { category: 'Aquaduct — Transporter Shooter', name: 'Aisyah', phone: '0881-0360-87367' },
+        { category: 'Charion Line — Line Follower Mikro', name: 'Alzar', phone: '0813-3002-5557' },
+        { category: 'Colosseum — Sumo', name: 'Nadjwa', phone: '0888-5454-111' },
+        { category: 'Harpastum — Soccer', name: 'Rissa', phone: '0851-1954-6428' },
+      ],
+    });
+  });
+
+  it('preserves the exact Aquaduct description', () => {
+    expect(competitions[2].description).toBe(
+      'Terdapat dua robot, yaitu Robot Transporter dan Line Follower Transporter. Kedua robot memulai perjalanan dari titik yang sama dan bekerja sama membangun kembali jalur irigasi kota pasca perang dengan saling mengoper objek material pembangunan. Robot Transporter bertugas mengangkut dan menyusun balok untuk membangun jalur irigasi serta membuka palang air. Sementara itu, Line Follower Transporter juga bertugas mengangkut dan menyusun balok secara estafet bersama Robot Transporter hingga jalur irigasi selesai dibangun.',
+    );
   });
 });
