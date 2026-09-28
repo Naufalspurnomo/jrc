@@ -8,7 +8,7 @@ const OWNER_ID = '048ed71f-fbf0-414a-96d2-9f625847002e';
 const REGISTRATION_ID = '18a46e52-63ee-439d-8a77-280f126d82e6';
 const COMPETITION_ID = '943ca4f3-5dbf-4510-b5c7-a3309920d637';
 const OPEN_AT = new Date('2026-09-30T01:00:00.000Z'); // 08:00 WIB
-const DEADLINE = new Date('2026-10-31T16:59:59.000Z');
+const DEADLINE = new Date('2026-11-21T16:59:59.000Z');
 const AUDIT = { requestId: 'request-id', ipAddress: '127.0.0.1' };
 const BASE_DOCUMENTS = [
   'IDENTITY_CARD',

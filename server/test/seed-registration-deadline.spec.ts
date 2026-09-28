@@ -2,6 +2,7 @@ import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
 import { describe, expect, it } from 'vitest';
+import { validateRegistrationWindow } from '../prisma/seed';
 
 const serverRoot = resolve(process.cwd());
 
@@ -31,5 +32,16 @@ describe('seed registration deadline contract', () => {
     expect(fallback).toBe(exportedString(frontendContent, 'registrationDeadline'));
     expect(fallback).toBe('2026-11-21T23:59:59+07:00');
     expect(fallback).not.toMatch(/-12-/);
+  });
+
+  it('rejects an opening instant equal to or later than the deadline', () => {
+    const deadline = new Date('2026-11-21T16:59:59.000Z');
+
+    expect(() => validateRegistrationWindow(deadline, deadline)).toThrow(
+      'REGISTRATION_OPEN_AT must be earlier than REGISTRATION_DEADLINE',
+    );
+    expect(() => validateRegistrationWindow(new Date(deadline.getTime() + 1), deadline)).toThrow(
+      'REGISTRATION_OPEN_AT must be earlier than REGISTRATION_DEADLINE',
+    );
   });
 });

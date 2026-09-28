@@ -97,6 +97,12 @@ function dateTimeEnv(name: string, fallback: string): Date {
   return value;
 }
 
+export function validateRegistrationWindow(registrationOpenAt: Date, registrationDeadline: Date): void {
+  if (registrationOpenAt.getTime() >= registrationDeadline.getTime()) {
+    throw new Error('REGISTRATION_OPEN_AT must be earlier than REGISTRATION_DEADLINE');
+  }
+}
+
 function normalizeEmail(raw: string): string {
   return raw.trim().toLowerCase();
 }
@@ -184,6 +190,7 @@ async function main(): Promise<void> {
     throw new Error('REGISTRATION_DEADLINE must be later than the current time');
   }
   const registrationOpenAt = dateTimeEnv('REGISTRATION_OPEN_AT', '2026-09-30T08:00:00+07:00');
+  validateRegistrationWindow(registrationOpenAt, registrationDeadline);
   const currency = nonEmptyEnv('CURRENCY', 'IDR').toUpperCase();
   if (!/^[A-Z]{3}$/.test(currency)) throw new Error('CURRENCY must be a three-letter currency code');
 
@@ -252,12 +259,14 @@ async function main(): Promise<void> {
   });
 }
 
-main()
-  .catch((error: unknown) => {
-    const message = error instanceof Error ? error.message : 'Unknown seed error';
-    console.error(`Seed failed: ${message}`);
-    process.exitCode = 1;
-  })
-  .finally(async () => {
-    await prisma.$disconnect();
-  });
+if (require.main === module) {
+  void main()
+    .catch((error: unknown) => {
+      const message = error instanceof Error ? error.message : 'Unknown seed error';
+      console.error(`Seed failed: ${message}`);
+      process.exitCode = 1;
+    })
+    .finally(async () => {
+      await prisma.$disconnect();
+    });
+}
