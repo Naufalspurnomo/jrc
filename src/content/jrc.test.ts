@@ -19,7 +19,7 @@ describe('JRC XIV competition catalog', () => {
         level: 'SD',
         discipline: 'Transporter',
         emblem: {
-          src: '/assets/arena-emblems/aquaduct-romana.webp',
+          src: '/assets/arena-emblems/castra-guardian.webp',
           alt: 'Lambang CASTRA',
         },
       },
@@ -30,7 +30,7 @@ describe('JRC XIV competition catalog', () => {
         level: 'SMP',
         discipline: 'Rescue Transporter',
         emblem: {
-          src: '/assets/arena-emblems/castra-guardian.webp',
+          src: '/assets/arena-emblems/robo-chiper.webp',
           alt: 'Lambang ROBO CHIPER',
         },
       },
@@ -41,7 +41,7 @@ describe('JRC XIV competition catalog', () => {
         level: 'SMA',
         discipline: 'Transporter Shooter',
         emblem: {
-          src: '/assets/arena-emblems/robo-chiper.webp',
+          src: '/assets/arena-emblems/aquaduct-romana.webp',
           alt: 'Lambang AQUADUCT',
         },
       },

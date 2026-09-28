@@ -37,7 +37,7 @@ export const competitions: readonly Competition[] = [
     name: 'Castra — Transporter',
     shortName: 'CASTRA',
     emblem: {
-      src: '/assets/arena-emblems/aquaduct-romana.webp',
+      src: '/assets/arena-emblems/castra-guardian.webp',
       alt: 'Lambang CASTRA',
     },
     level: 'SD',
@@ -58,7 +58,7 @@ export const competitions: readonly Competition[] = [
     name: 'Robo Chiper — Rescue Transporter',
     shortName: 'ROBO CHIPER',
     emblem: {
-      src: '/assets/arena-emblems/castra-guardian.webp',
+      src: '/assets/arena-emblems/robo-chiper.webp',
       alt: 'Lambang ROBO CHIPER',
     },
     level: 'SMP',
@@ -79,7 +79,7 @@ export const competitions: readonly Competition[] = [
     name: 'Aquaduct — Transporter Shooter',
     shortName: 'AQUADUCT',
     emblem: {
-      src: '/assets/arena-emblems/robo-chiper.webp',
+      src: '/assets/arena-emblems/aquaduct-romana.webp',
       alt: 'Lambang AQUADUCT',
     },
     level: 'SMA',
@@ -203,89 +203,98 @@ export const eventSchedule: readonly ScheduleItem[] = [
 
 export interface HistoryChapter {
   numeral: string;
+  year: number;
+  theme: string;
   eyebrow: string;
   title: string;
   copy: string;
-  image?: {
-    src: string;
-    srcMobile: string;
-    alt: string;
-    caption: string;
-  };
+  image: { src: string; srcMobile: string; alt: string; caption: string };
 }
 
 export const historyChapters: readonly HistoryChapter[] = [
   {
-    numeral: 'I',
-    eyebrow: 'JRC I · 2009',
-    title: 'Satu arena mulai dibangun',
-    copy: 'JRC lahir sebagai ruang bagi pelajar dan perancang muda untuk menguji robot di hadapan tantangan nyata.',
-    image: {
-      src: '/assets/history-archive/jrc-01.webp',
-      srcMobile: '/assets/history-archive/jrc-01-mobile.webp',
-      alt: 'Dokumentasi awal Java Robot Contest',
-      caption: 'Arsip Java Robot Contest',
-    },
+    numeral: 'I', year: 2009, theme: 'Jatim Robot Contest pertama', eyebrow: 'JRC I · 2009',
+    title: 'Jatim Robot Contest pertama',
+    copy: 'JRC lahir di Hall D4 PENS dengan nama Jatim Robot Contest, digagas HIMA ELKA sebagai awal kompetisi robotika ini.',
+    image: { src: '/assets/history-archive/jrc-01-first-jatim-robot-contest-desktop.webp', srcMobile: '/assets/history-archive/jrc-01-first-jatim-robot-contest-mobile.webp', alt: 'Dokumentasi JRC I tahun 2009', caption: 'Dokumentasi JRC I tahun 2009' },
   },
   {
-    numeral: 'III',
-    eyebrow: 'JRC III · 2012',
-    title: 'JRC III kembali setelah jeda',
-    copy: 'Arena maze menjadi panggung kebangkitan setelah jeda, menegaskan JRC sebagai agenda tahunan yang dinanti.',
-    image: {
-      src: '/assets/history-archive/jrc-03.webp',
-      srcMobile: '/assets/history-archive/jrc-03-mobile.webp',
-      alt: 'Arena maze Java Robot Contest III',
-      caption: 'Arsip Java Robot Contest',
-    },
+    numeral: 'II', year: 2010, theme: 'Resmi menjadi Java Robot Contest', eyebrow: 'JRC II · 2010',
+    title: 'Resmi menjadi Java Robot Contest',
+    copy: 'Nama Java Robot Contest mulai digunakan. Edisi kedua berlangsung di Gedung Robotika ITS dan memperluas jangkauan kegiatan.',
+    image: { src: '/assets/history-archive/jrc-02-renamed-java-robot-contest-desktop.webp', srcMobile: '/assets/history-archive/jrc-02-renamed-java-robot-contest-mobile.webp', alt: 'Dokumentasi JRC II tahun 2010', caption: 'Dokumentasi JRC II tahun 2010' },
   },
   {
-    numeral: 'V',
-    eyebrow: 'JRC V · 2014',
-    title: 'Disiplin baru, lawan baru',
-    copy: 'Kompetisi berkembang menjadi pertemuan lintas jenjang yang merayakan proses, bukan sekadar podium.',
-    image: {
-      src: '/assets/history-archive/jrc-05.webp',
-      srcMobile: '/assets/history-archive/jrc-05-mobile.webp',
-      alt: 'Suasana arena Java Robot Contest',
-      caption: 'Arsip Java Robot Contest',
-    },
+    numeral: 'III', year: 2012, theme: 'Kembali setelah satu tahun jeda', eyebrow: 'JRC III · 2012',
+    title: 'Kembali setelah satu tahun jeda',
+    copy: 'Setelah tidak digelar pada 2011, JRC III kembali pada 2012 dan melanjutkan perjalanan kompetisi robotika ini.',
+    image: { src: '/assets/history-archive/jrc-03-return-after-hiatus-desktop.webp', srcMobile: '/assets/history-archive/jrc-03-return-after-hiatus-mobile.webp', alt: 'Dokumentasi JRC III tahun 2012', caption: 'Dokumentasi JRC III tahun 2012' },
   },
   {
-    numeral: 'VIII',
-    eyebrow: 'JRC VIII · 2017',
-    title: 'Arena yang makin ramai',
-    copy: 'Dari satu panggung kecil, JRC tumbuh menjadi perhelatan yang memenuhi ruang publik dengan robot dan penonton.',
-    image: {
-      src: '/assets/history-archive/jrc-08.webp',
-      srcMobile: '/assets/history-archive/jrc-08-mobile.webp',
-      alt: 'JRC VIII di ruang publik',
-      caption: 'Arsip Java Robot Contest',
-    },
+    numeral: 'IV', year: 2013, theme: 'Rescue', eyebrow: 'JRC IV · 2013',
+    title: 'Rescue',
+    copy: 'Tema Rescue memperkenalkan konsep Corporate Auto Manual Robot, langkah awal menuju ragam divisi pada edisi berikutnya.',
+    image: { src: '/assets/history-archive/jrc-04-rescue-desktop.webp', srcMobile: '/assets/history-archive/jrc-04-rescue-mobile.webp', alt: 'Dokumentasi JRC IV bertema Rescue', caption: 'Dokumentasi JRC IV bertema Rescue' },
   },
   {
-    numeral: 'XIII',
-    eyebrow: 'JRC XIII · 2023',
-    title: 'Edisi sebelumnya',
-    copy: 'Pengalaman dari JRC XIII menjadi acuan panitia dalam menyiapkan pelaksanaan JRC XIV.',
-    image: {
-      src: '/assets/history-archive/jrc-11.webp',
-      srcMobile: '/assets/history-archive/jrc-11-mobile.webp',
-      alt: 'Dokumentasi Java Robot Contest XIII',
-      caption: 'Dokumentasi resmi JRC XIII',
-    },
+    numeral: 'V', year: 2014, theme: 'Play', eyebrow: 'JRC V · 2014',
+    title: 'Play',
+    copy: 'Tema Play menghadirkan AMRC Basic, AMRC Advance, dan Corporate sebagai tiga divisi utama kompetisi.',
+    image: { src: '/assets/history-archive/jrc-05-play-desktop.webp', srcMobile: '/assets/history-archive/jrc-05-play-mobile.webp', alt: 'Dokumentasi JRC V bertema Play', caption: 'Dokumentasi JRC V bertema Play' },
   },
   {
-    numeral: 'XIV',
-    eyebrow: 'JRC XIV · 2026',
+    numeral: 'VI', year: 2015, theme: 'Surabaya — Sinau Robot lan Budaya', eyebrow: 'JRC VI · 2015',
+    title: 'Surabaya — Sinau Robot lan Budaya',
+    copy: 'Robotika bertemu budaya lokal melalui tema Surabaya, dilengkapi JRC Food Festival dan Techno Park.',
+    image: { src: '/assets/history-archive/jrc-06-surabaya-culture-desktop.webp', srcMobile: '/assets/history-archive/jrc-06-surabaya-culture-mobile.webp', alt: 'Dokumentasi JRC VI bertema Surabaya', caption: 'Dokumentasi JRC VI bertema Surabaya' },
+  },
+  {
+    numeral: 'VII', year: 2016, theme: 'Aerospace', eyebrow: 'JRC VII · 2016',
+    title: 'Aerospace',
+    copy: 'Tema Aerospace mengenalkan dunia kedirgantaraan melalui divisi Milky Way, Galaxy, Space Shuttle, Rocket Booster, dan Satellite System.',
+    image: { src: '/assets/history-archive/jrc-07-aerospace-desktop.webp', srcMobile: '/assets/history-archive/jrc-07-aerospace-mobile.webp', alt: 'Dokumentasi JRC VII bertema Aerospace', caption: 'Dokumentasi JRC VII bertema Aerospace' },
+  },
+  {
+    numeral: 'VIII', year: 2017, theme: 'Marine — Maritim for Indonesia', eyebrow: 'JRC VIII · 2017',
+    title: 'Marine — Maritim for Indonesia',
+    copy: 'Tema Marine mengangkat pentingnya sektor kelautan Indonesia dan teknologi untuk negeri maritim.',
+    image: { src: '/assets/history-archive/jrc-08-marine-indonesia-desktop.webp', srcMobile: '/assets/history-archive/jrc-08-marine-indonesia-mobile.webp', alt: 'Dokumentasi JRC VIII bertema Marine', caption: 'Dokumentasi JRC VIII bertema Marine' },
+  },
+  {
+    numeral: 'IX', year: 2018, theme: 'Zamrud Katulistiwa', eyebrow: 'JRC IX · 2018',
+    title: 'Zamrud Katulistiwa',
+    copy: 'Empat divisi mengajak peserta mengeksplorasi teknologi sekaligus menjaga kelestarian hutan Indonesia.',
+    image: { src: '/assets/history-archive/jrc-09-zamrud-katulistiwa-desktop.webp', srcMobile: '/assets/history-archive/jrc-09-zamrud-katulistiwa-mobile.webp', alt: 'Dokumentasi JRC IX bertema Zamrud Katulistiwa', caption: 'Dokumentasi JRC IX bertema Zamrud Katulistiwa' },
+  },
+  {
+    numeral: 'X', year: 2019, theme: 'Fourth Industrial Revolution — FUSION', eyebrow: 'JRC X · 2019',
+    title: 'Fourth Industrial Revolution — FUSION',
+    copy: 'Sebanyak 150 tim berkompetisi pada 6–7 Juli 2019 dalam edisi satu dekade bertema Fourth Industrial Revolution (FUSION).',
+    image: { src: '/assets/history-archive/jrc-10-fusion-industrial-revolution-desktop.webp', srcMobile: '/assets/history-archive/jrc-10-fusion-industrial-revolution-mobile.webp', alt: 'Dokumentasi JRC X bertema FUSION', caption: 'Dokumentasi JRC X bertema FUSION' },
+  },
+  {
+    numeral: 'XI', year: 2023, theme: 'SWASA — Spectacular of Pewayangan Indonesia', eyebrow: 'JRC XI · 2023',
+    title: 'SWASA — Spectacular of Pewayangan Indonesia',
+    copy: 'JRC kembali melalui SWASA, memadukan perlombaan robot dan kekayaan budaya pewayangan Indonesia.',
+    image: { src: '/assets/history-archive/jrc-11-swasa-pewayangan-desktop.webp', srcMobile: '/assets/history-archive/jrc-11-swasa-pewayangan-mobile.webp', alt: 'Dokumentasi JRC XI bertema SWASA', caption: 'Dokumentasi JRC XI bertema SWASA' },
+  },
+  {
+    numeral: 'XII', year: 2024, theme: 'Ranger — Robot Antargalaksi Menjelajahi Negeri Baru', eyebrow: 'JRC XII · 2024',
+    title: 'Ranger — Robot Antargalaksi Menjelajahi Negeri Baru',
+    copy: 'Tema Ranger membawa imajinasi penjelajahan antargalaksi melalui divisi Rescuers, Puzzlaris, Gauntlet, dan Wormhole.',
+    image: { src: '/assets/history-archive/jrc-12-ranger-antargalaksi-desktop.webp', srcMobile: '/assets/history-archive/jrc-12-ranger-antargalaksi-mobile.webp', alt: 'Dokumentasi JRC XII bertema Ranger', caption: 'Dokumentasi JRC XII bertema Ranger' },
+  },
+  {
+    numeral: 'XIII', year: 2025, theme: 'TECHNOCARNIVAL', eyebrow: 'JRC XIII · 2025',
+    title: 'TECHNOCARNIVAL',
+    copy: 'Pacu Robotmu, Tunjukkan Atraksimu menjadi semangat JRC XIII: kompetisi robotika dalam suasana karnaval teknologi.',
+    image: { src: '/assets/history-archive/jrc-13-technocarnival-desktop.webp', srcMobile: '/assets/history-archive/jrc-13-technocarnival-mobile.webp', alt: 'Dokumentasi JRC XIII tahun 2025', caption: 'Dokumentasi JRC XIII tahun 2025' },
+  },
+  {
+    numeral: 'XIV', year: 2026, theme: 'Imperium Machina', eyebrow: 'JRC XIV · 2026',
     title: 'Imperium Machina',
-    copy: 'Enam kategori resmi hadir dalam satu tema baru, mempertemukan peserta dari jenjang SD, SMP, SMA, dan umum.',
-    image: {
-      src: '/assets/history-archive/jrc-12.webp',
-      srcMobile: '/assets/history-archive/jrc-12-mobile.webp',
-      alt: 'Dokumentasi Java Robot Contest XIV',
-      caption: 'Dokumentasi resmi JRC XIV',
-    },
+    copy: 'Edisi terkini mempertemukan enam kategori robotika dalam identitas arena Romawi bertema Imperium Machina.',
+    image: { src: '/assets/history-archive/jrc-14-imperium-machina-artwork-desktop.webp', srcMobile: '/assets/history-archive/jrc-14-imperium-machina-artwork-mobile.webp', alt: 'Artwork Imperium Machina untuk JRC XIV', caption: 'Identitas visual JRC XIV · 2026' },
   },
 ] as const;
 

@@ -32,7 +32,7 @@ describe('arena presentation', () => {
     expect(screen.getByText('Rp 250.000 per tim · Naya · 0878-4132-4886')).toBeInTheDocument();
     expect(screen.getByAltText('Lambang CASTRA')).toHaveAttribute(
       'src',
-      '/assets/arena-emblems/aquaduct-romana.webp',
+      '/assets/arena-emblems/castra-guardian.webp',
     );
 
     await user.click(screen.getByRole('button', { name: 'Lihat divisi' }));
@@ -44,7 +44,7 @@ describe('arena presentation', () => {
     expect(dialog).toHaveTextContent('Naya · 0878-4132-4886');
     expect(within(dialog).getByAltText('Lambang CASTRA')).toHaveAttribute(
       'src',
-      '/assets/arena-emblems/aquaduct-romana.webp',
+      '/assets/arena-emblems/castra-guardian.webp',
     );
   });
 

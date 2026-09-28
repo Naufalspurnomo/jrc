@@ -11,15 +11,16 @@ function ArchivePlate({
   return (
     <figure
       className={`archive-plate archive-plate--${index % 2 === 0 ? 'left' : 'right'}`}
-      aria-label={chapter.image.alt}
     >
       <picture>
         <source media="(max-width: 48rem)" srcSet={chapter.image.srcMobile} />
         <img
           src={chapter.image.src}
-          alt=""
+          alt={chapter.image.alt}
           loading="lazy"
           decoding="async"
+          width={1400}
+          height={875}
         />
       </picture>
       <span className="archive-plate__stamp">{chapter.numeral}</span>
