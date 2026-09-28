@@ -71,6 +71,14 @@ url=${JRC_PUBLIC_URL:-}
 [[ "$url" =~ ^https://([A-Za-z0-9]([A-Za-z0-9.-]*[A-Za-z0-9])?)(:([0-9]{1,5}))?$ ]] || alert_and_exit 'JRC_PUBLIC_URL must be an HTTPS origin without credentials, path, query, or fragment'
 host=${BASH_REMATCH[1]}; port=${BASH_REMATCH[4]:-443}
 [[ "$host" != *..* && "$host" != .* && "$host" != *. && "$port" -ge 1 && "$port" -le 65535 ]] || alert_and_exit 'JRC_PUBLIC_URL is invalid'
+api_url=${JRC_API_URL:-$url}
+[[ "$api_url" =~ ^https://([A-Za-z0-9]([A-Za-z0-9.-]*[A-Za-z0-9])?)(:([0-9]{1,5}))?$ ]] || alert_and_exit 'JRC_API_URL must be an HTTPS origin without credentials, path, query, or fragment'
+api_host=${BASH_REMATCH[1]}; api_port=${BASH_REMATCH[4]:-443}
+[[ "$api_host" != *..* && "$api_host" != .* && "$api_host" != *. && "$api_port" -ge 1 && "$api_port" -le 65535 ]] || alert_and_exit 'JRC_API_URL is invalid'
+IFS=. read -ra api_labels <<<"$api_host"
+for api_label in "${api_labels[@]}"; do
+  [[ -n "$api_label" && "$api_label" != -* && "$api_label" != *- ]] || alert_and_exit 'JRC_API_URL is invalid'
+done
 http_origin=${JRC_HTTP_ORIGIN:-http://$host}
 [[ "$http_origin" =~ ^http://([A-Za-z0-9]([A-Za-z0-9.-]*[A-Za-z0-9])?)(:([0-9]{1,5}))?$ ]] || alert_and_exit 'JRC_HTTP_ORIGIN must be an HTTP origin'
 http_host=${BASH_REMATCH[1]}; http_port=${BASH_REMATCH[4]:-80}
@@ -120,13 +128,13 @@ redirect_status=$(curl --silent --show-error --max-time "$probe_timeout" --conne
 redirect_location=$(header_value Location "$redirect_headers") || alert_and_exit 'HTTP origin missing or duplicated Location header'
 [[ "$redirect_location" == "$url" || "$redirect_location" == "$url/" ]] || alert_and_exit 'HTTP origin redirect target mismatch'
 
-request 'live health' "$url/api/health/live" 'application/json'
+request 'live health' "$api_url/api/health/live" 'application/json'
 live=$(tr -d ' \t\r\n' <"$work/live health.body")
 case "$live" in
   '{"status":"ok"}'|'{"status":"up"}'|'{"status":"healthy"}') ;;
   *) alert_and_exit 'live health response is not healthy JSON' ;;
 esac
-request 'ready health' "$url/api/health/ready" 'application/json'
+request 'ready health' "$api_url/api/health/ready" 'application/json'
 ready=$(tr -d ' \t\r\n' <"$work/ready health.body")
 case "$ready" in
   '{"status":"ok"}'|'{"status":"up"}'|'{"status":"healthy"}') ;;

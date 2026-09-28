@@ -14,6 +14,7 @@ beforeEach(async () => {
   const curl = `#!/usr/bin/env bash
 set -eu
 url="\${!#}"; headers=''; body=''; data='';
+[[ -z "\${FAKE_REQUEST_LOG:-}" ]] || printf '%s\n' "$url" >>"$FAKE_REQUEST_LOG"
 while (($#)); do case "$1" in -D) headers=$2; shift 2;; -o) body=$2; shift 2;; -w) shift 2;; --data-binary) data=$2; shift 2;; *) shift;; esac; done
 if [[ "$url" == https://alerts.invalid/* ]]; then
   [[ \${FAKE_WEBHOOK_FAIL:-0} == 0 ]] || exit 22
@@ -53,6 +54,8 @@ describe('runtime monitor', () => {
   it.each([`junk{"sha":"${sha}"}`,`{"nested":{"sha":"${sha}"}}`,`{"sha":"${sha}","commit":"${sha}"}`,`{"sha":"${sha}","sha":"${sha}"}`,`{"sha":"${sha.toUpperCase()}"}`,`{"sha":"${sha}","extra":1}`])('strictly rejects release JSON %s', body => fails({FAKE_RELEASE_BODY:body}));
   it('requires expected release SHA', () => fails({JRC_EXPECTED_RELEASE_SHA:''}));
   it.each(['https://bad_host','https://-bad.test','https://bad-.test','https://example..test','https://example.test:0','https://example.test:65536','https://user@example.test','https://example.test/path','https://example.test?q=x','https://example.test#x'])('rejects invalid public origin %s', value => fails({JRC_PUBLIC_URL:value}));
+  it('probes health on a separate API origin only', async () => { const log=join(dir,'requests'); const r=run({JRC_API_URL:'https://api.example.test',FAKE_REQUEST_LOG:log}); expect(r.status).toBe(0); const urls=(await readFile(log,'utf8')).trim().split('\n'); expect(urls).toContain('https://api.example.test/api/health/live'); expect(urls).toContain('https://api.example.test/api/health/ready'); expect(urls).not.toContain('https://api.example.test'); expect(urls).toContain('https://example.test'); expect(urls).toContain(`https://example.test/release.json`); });
+  it.each(['http://api.example.test','https://bad_host','https://-bad.test','https://bad-.test','https://example..test','https://api.example.test:0','https://api.example.test:65536','https://user@api.example.test','https://api.example.test/path','https://api.example.test?q=x','https://api.example.test#x'])('rejects invalid API origin %s', value => fails({JRC_API_URL:value}));
   it('supports separate HTTP origin with custom HTTPS port', () => { const r=run({JRC_PUBLIC_URL:'https://example.test:8443',JRC_HTTP_ORIGIN:'http://example.test:8080',FAKE_REDIRECT:'https://example.test:8443'}); expect(r.status).toBe(0); });
   it('accepts the equivalent root-slash redirect only', () => { expect(run({FAKE_REDIRECT:'https://example.test/'}).status).toBe(0); fails({FAKE_REDIRECT:'https://example.test/path'}); });
   it('allows same-origin camera while denying microphone and geolocation', () => { const r=run({FAKE_ROOT_HEADERS:"Strict-Transport-Security: max-age=31536000; includeSubDomains\nContent-Security-Policy: default-src 'self'; object-src 'none'; frame-ancestors 'none'\nPermissions-Policy: camera=(self), microphone=(), geolocation=()\nX-Content-Type-Options: nosniff\nX-Frame-Options: DENY\nReferrer-Policy: no-referrer"}); expect(r.status).toBe(0); });
