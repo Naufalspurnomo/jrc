@@ -3,6 +3,8 @@ export const registrationPeriod = '30 September–21 November 2026' as const;
 export const registrationOpenAt = '2026-09-30T08:00:00+07:00' as const;
 export const registrationDeadline = '2026-11-21T23:59:59+07:00' as const;
 export const competitionFee = 'Rp 250.000 per tim' as const;
+export const eventDate = '19–20 Desember 2026' as const;
+export const guidebookAvailable = 'Tersedia' as const;
 
 export type CompetitionLevel = 'SD' | 'SMP' | 'SMA' | 'Umum';
 
@@ -21,9 +23,9 @@ export interface Competition {
   fee: typeof competitionFee;
   contact: { name: string; phone: string };
   guidebook: {
-    label: 'Guidebook';
-    status: typeof pendingAnnouncement;
-    href: null;
+    label: 'Buka guidebook';
+    status: typeof guidebookAvailable;
+    href: string;
   };
   provocation: string;
   description: string;
@@ -46,7 +48,11 @@ export const competitions: readonly Competition[] = [
     fixtureLabel: 'Kategori resmi JRC XIV',
     fee: competitionFee,
     contact: { name: 'Naya', phone: '0878-4132-4886' },
-    guidebook: { label: 'Guidebook', status: pendingAnnouncement, href: null },
+    guidebook: {
+      label: 'Buka guidebook',
+      status: guidebookAvailable,
+      href: 'https://drive.google.com/drive/folders/1ga6EzB4Fs7FbC56KvpoAc2xyp9IRjjEP?usp=drive_link',
+    },
     provocation: 'Bawa misi sampai garis akhir.',
     description:
       'Arena pemula yang menguji logika rute, ketelitian mekanik, dan keberanian tim muda dalam satu lintasan.',
@@ -67,7 +73,11 @@ export const competitions: readonly Competition[] = [
     fixtureLabel: 'Kategori resmi JRC XIV',
     fee: competitionFee,
     contact: { name: 'Manda', phone: '0857-5540-9648' },
-    guidebook: { label: 'Guidebook', status: pendingAnnouncement, href: null },
+    guidebook: {
+      label: 'Buka guidebook',
+      status: guidebookAvailable,
+      href: 'https://drive.google.com/drive/folders/1isBUIQuWeNMO0Tsl_Rcs3Kt_PvS6Ce9v?usp=drive_link',
+    },
     provocation: 'Temukan jalan ketika arena menggelap.',
     description:
       'Lintasan penyelamatan yang menggabungkan navigasi, keputusan cepat, dan presisi saat membawa objek misi.',
@@ -84,12 +94,16 @@ export const competitions: readonly Competition[] = [
       alt: 'Lambang AQUADUCT',
     },
     level: 'SMA',
-    discipline: 'Transporter Shooter',
+    discipline: 'Transporter Line Follower',
     fixtureLabel: 'Kategori resmi JRC XIV',
     fee: competitionFee,
     contact: { name: 'Aisyah', phone: '0881-0360-87367' },
-    guidebook: { label: 'Guidebook', status: pendingAnnouncement, href: null },
-    provocation: 'Angkut, bidik, tuntaskan.',
+    guidebook: {
+      label: 'Buka guidebook',
+      status: guidebookAvailable,
+      href: 'https://drive.google.com/drive/folders/16BcdtUUSv1JQzueG_RLt0G_fX7SDFu1t?usp=drive_link',
+    },
+    provocation: 'Angkut · Oper · Bangun',
     description:
       'Terdapat dua robot, yaitu Robot Transporter dan Line Follower Transporter. Kedua robot memulai perjalanan dari titik yang sama dan bekerja sama membangun kembali jalur irigasi kota pasca perang dengan saling mengoper objek material pembangunan. Robot Transporter bertugas mengangkut dan menyusun balok untuk membangun jalur irigasi serta membuka palang air. Sementara itu, Line Follower Transporter juga bertugas mengangkut dan menyusun balok secara estafet bersama Robot Transporter hingga jalur irigasi selesai dibangun.',
     objective: 'Membangun robot multi-mekanisme yang tetap presisi di bawah tekanan waktu.',
@@ -109,7 +123,11 @@ export const competitions: readonly Competition[] = [
     fixtureLabel: 'Kategori resmi JRC XIV',
     fee: competitionFee,
     contact: { name: 'Alzar', phone: '0813-3002-5557' },
-    guidebook: { label: 'Guidebook', status: pendingAnnouncement, href: null },
+    guidebook: {
+      label: 'Buka guidebook',
+      status: guidebookAvailable,
+      href: 'https://drive.google.com/drive/folders/1Dfo_NUpS7oO5WBK_gwnMKaxGDl3BV7Xu?usp=drive_link',
+    },
     provocation: 'Kecepatan lahir dari kendali.',
     description:
       'Balapan mikro yang menguji pembacaan sensor, tuning algoritma, dan konsistensi pada setiap tikungan.',
@@ -130,7 +148,11 @@ export const competitions: readonly Competition[] = [
     fixtureLabel: 'Kategori resmi JRC XIV',
     fee: competitionFee,
     contact: { name: 'Nadjwa', phone: '0888-5454-111' },
-    guidebook: { label: 'Guidebook', status: pendingAnnouncement, href: null },
+    guidebook: {
+      label: 'Buka guidebook',
+      status: guidebookAvailable,
+      href: 'https://drive.google.com/drive/folders/1UUCJARZMEVRgnwYlAMoY192raxNUARuM?usp=drive_link',
+    },
     provocation: 'Satu ring. Tidak ada ruang untuk ragu.',
     description:
       'Pertarungan robot sumo yang menempatkan traksi, deteksi lawan, konstruksi, dan strategi dalam satu lingkar arena.',
@@ -151,7 +173,11 @@ export const competitions: readonly Competition[] = [
     fixtureLabel: 'Kategori resmi JRC XIV',
     fee: competitionFee,
     contact: { name: 'Rissa', phone: '0851-1954-6428' },
-    guidebook: { label: 'Guidebook', status: pendingAnnouncement, href: null },
+    guidebook: {
+      label: 'Buka guidebook',
+      status: guidebookAvailable,
+      href: 'https://drive.google.com/drive/folders/1WhtUwkVA6A00Lvykjly-30VBb6uAwT0e?usp=drive_link',
+    },
     provocation: 'Baca arena. Rebut bola. Cetak sejarah.',
     description:
       'Sepak bola robot sebagai ujian integrasi gerak, pembacaan situasi, dan eksekusi strategi di arena dinamis.',
@@ -163,7 +189,7 @@ export const competitions: readonly Competition[] = [
 export const eventFacts = {
   edition: '14',
   registration: registrationPeriod,
-  eventDate: pendingAnnouncement,
+  eventDate,
   venue: 'Politeknik Elektronika Negeri Surabaya',
   theme: 'Imperium Machina',
 } as const;
@@ -197,7 +223,7 @@ export const eventSchedule: readonly ScheduleItem[] = [
   {
     numeral: 'IV',
     title: 'Hari arena',
-    date: pendingAnnouncement,
+    date: eventDate,
     description: 'Enam disiplin bertemu dalam satu perayaan rekayasa, keberanian, dan sportivitas.',
   },
 ] as const;
@@ -335,7 +361,12 @@ export const faqItems = [
   },
   {
     question: 'Di mana guidebook dapat diunduh?',
-    answer: 'Guidebook belum tersedia. Tautan unduhan akan ditampilkan di halaman kategori setelah dirilis.',
+    answer: 'Guidebook tersedia per kategori. Pilih arena berikut untuk membuka folder resmi berisi rules dan track.',
+    guidebooks: competitions.map(({ name, guidebook }) => ({
+      name,
+      label: guidebook.label,
+      href: guidebook.href,
+    })),
   },
   {
     question: 'Siapa yang dapat mengikuti JRC XIV?',

@@ -50,6 +50,18 @@ export function FAQSection() {
                 >
                   <div className="faq-item__answer-content">
                     <p>{item.answer}</p>
+                    {'guidebooks' in item ? (
+                      <ul className="faq-item__guidebooks" aria-label="Guidebook enam arena">
+                        {item.guidebooks.map((guidebook) => (
+                          <li key={guidebook.name}>
+                            <span>{guidebook.name}</span>
+                            <a href={guidebook.href} target="_blank" rel="noopener noreferrer">
+                              {guidebook.label} <span aria-hidden="true">↗</span>
+                            </a>
+                          </li>
+                        ))}
+                      </ul>
+                    ) : null}
                     {'contacts' in item ? (
                       <ul className="faq-item__contacts">
                         {item.contacts.map((contact) => (

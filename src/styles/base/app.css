@@ -841,6 +841,10 @@ h3 {
 .competition-intel dl > div:last-child { border-right: 0; }
 .competition-intel dt { color: #81362e; font-family: var(--font-mono); font-size: .6rem; letter-spacing: .1em; text-transform: uppercase; }
 .competition-intel dd { margin: 3rem 0 0; font-family: var(--font-display); font-size: 1.55rem; }
+.guidebook-link { display: inline-flex; width: fit-content; min-height: 2.75rem; align-items: center; gap: .45rem; font-family: var(--font-mono); font-size: .72rem; font-weight: 700; letter-spacing: .06em; text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: .28rem; text-transform: uppercase; }
+.guidebook-link:focus-visible { outline: 2px solid currentColor; outline-offset: .3rem; }
+.competition-intel .guidebook-link { color: #6d241b; font-size: .7rem; line-height: 1.35; }
+.competition-intel .guidebook-link:hover { color: #9a3125; }
 .competition-cta { padding: 8rem 0; background: radial-gradient(circle at 80% 50%, rgb(124 38 31 / 36%), transparent 25rem), #1b1110; }
 .competition-cta__inner { display: grid; grid-template-columns: 1fr auto; gap: 2rem 5rem; align-items: end; }
 .competition-cta__inner .site-kicker { grid-column: 1 / -1; }
@@ -1819,6 +1823,8 @@ h3 {
   text-transform: uppercase;
 }
 .arena-modal__meta div dd { margin: .3rem 0 0; color: var(--paper); font-size: .9rem; font-weight: 600; }
+.arena-modal__meta .guidebook-link { color: var(--arena-accent-text); font-size: .68rem; }
+.arena-modal__meta .guidebook-link:hover { color: var(--paper); }
 .arena-modal__actions {
   display: flex;
   flex-wrap: wrap;

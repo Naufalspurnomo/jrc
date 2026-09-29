@@ -31,4 +31,19 @@ describe('final competition display names', () => {
 
     expect(seed).not.toMatch(/name:\s*['"][^'"]+ — (?:Transporter|Rescue Transporter|Transporter Shooter|Line Follower Mikro|Sumo|Soccer)['"]/);
   });
+
+  it('keeps the final SMA discipline synchronized with the pending production migration', () => {
+    const seed = readFileSync(resolve(process.cwd(), 'prisma/seed.ts'), 'utf8');
+    const migration = readFileSync(
+      resolve(
+        process.cwd(),
+        'prisma/migrations/20260929203000_sma_transporter_line_follower/migration.sql',
+      ),
+      'utf8',
+    );
+
+    expect(seed).toContain("discipline: 'Transporter Line Follower'");
+    expect(migration).toContain("'Transporter Line Follower'");
+    expect(migration).toContain("'Aquaduct Romana'");
+  });
 });

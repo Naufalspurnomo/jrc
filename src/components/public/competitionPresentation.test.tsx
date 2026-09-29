@@ -72,6 +72,39 @@ describe('arena presentation', () => {
     );
   });
 
+  it('exposes each guidebook as an accessible external action', async () => {
+    const user = userEvent.setup();
+    render(
+      <MemoryRouter>
+        <ShowcaseHero />
+      </MemoryRouter>,
+    );
+
+    await user.click(screen.getByRole('button', { name: 'Lihat divisi' }));
+    expect(within(screen.getByRole('dialog', { name: 'Castra Guardian' })).getByRole('link', { name: 'Buka guidebook' })).toHaveAttribute(
+      'href',
+      'https://drive.google.com/drive/folders/1ga6EzB4Fs7FbC56KvpoAc2xyp9IRjjEP?usp=drive_link',
+    );
+  });
+
+  it('shows the updated SMA discipline, jargon, description, and guidebook', () => {
+    render(
+      <MemoryRouter initialEntries={['/perlombaan/pirate-clash-transporter-shooter']}>
+        <Routes>
+          <Route path="/perlombaan/:slug" element={<CompetitionPage />} />
+        </Routes>
+      </MemoryRouter>,
+    );
+
+    expect(screen.getByText('Transporter Line Follower')).toBeInTheDocument();
+    expect(screen.getByText('Angkut · Oper · Bangun')).toBeInTheDocument();
+    expect(screen.getByText(/Terdapat dua robot, yaitu Robot Transporter dan Line Follower Transporter/)).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Buka guidebook' })).toHaveAttribute(
+      'href',
+      'https://drive.google.com/drive/folders/16BcdtUUSv1JQzueG_RLt0G_fX7SDFu1t?usp=drive_link',
+    );
+  });
+
   it('renders every FAQ category contact as its own semantic row', async () => {
     const user = userEvent.setup();
     render(<FAQSection />);
@@ -85,5 +118,25 @@ describe('arena presentation', () => {
     expect(within(rows[0]).getByText('Naya')).toBeInTheDocument();
     expect(within(rows[0]).getByRole('link', { name: '0878-4132-4886' })).toHaveAttribute('href', 'tel:087841324886');
     expect(rows[5]).toHaveTextContent('Harpastum Arena');
+  });
+
+  it('renders the six guidebook folders as responsive external actions', async () => {
+    const user = userEvent.setup();
+    render(<FAQSection />);
+
+    await user.click(screen.getByRole('button', { name: 'Di mana guidebook dapat diunduh?' }));
+    const region = screen.getByRole('region', { name: 'Di mana guidebook dapat diunduh?' });
+    const list = within(region).getByRole('list', { name: 'Guidebook enam arena' });
+    const links = within(list).getAllByRole('link', { name: /Buka guidebook/ });
+
+    expect(links).toHaveLength(6);
+    expect(links[0]).toHaveAttribute(
+      'href',
+      'https://drive.google.com/drive/folders/1ga6EzB4Fs7FbC56KvpoAc2xyp9IRjjEP?usp=drive_link',
+    );
+    expect(links[5]).toHaveAttribute(
+      'href',
+      'https://drive.google.com/drive/folders/1WhtUwkVA6A00Lvykjly-30VBb6uAwT0e?usp=drive_link',
+    );
   });
 });

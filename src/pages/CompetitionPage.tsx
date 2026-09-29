@@ -103,7 +103,16 @@ export default function CompetitionPage() {
               </div>
               <div>
                 <dt>Guidebook</dt>
-                <dd>{competition.guidebook.status}</dd>
+                <dd>
+                  <a
+                    className="guidebook-link"
+                    href={competition.guidebook.href}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    {competition.guidebook.label} <span aria-hidden="true">↗</span>
+                  </a>
+                </dd>
               </div>
               <div>
                 <dt>Status kategori</dt>

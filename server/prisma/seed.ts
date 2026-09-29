@@ -34,7 +34,7 @@ const COMPETITION_DEFINITIONS = [
     slug: 'pirate-clash-transporter-shooter',
     name: 'Aquaduct Romana',
     level: 'SMA',
-    discipline: 'Transporter Shooter',
+    discipline: 'Transporter Line Follower',
     feeEnv: 'SHOOTER_SMA_FEE',
     defaultFee: 250_000,
   },
