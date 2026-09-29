@@ -14,7 +14,7 @@ describe('JRC XIV competition catalog', () => {
     }))).toEqual([
       {
         slug: 'donatopia-transporter',
-        name: 'Castra — Transporter',
+        name: 'Castra Guardian',
         shortName: 'CASTRA',
         level: 'SD',
         discipline: 'Transporter',
@@ -25,7 +25,7 @@ describe('JRC XIV competition catalog', () => {
       },
       {
         slug: 'nightmaze-rescue-transporter',
-        name: 'Robo Chiper — Rescue Transporter',
+        name: 'Robo Chiper',
         shortName: 'ROBO CHIPER',
         level: 'SMP',
         discipline: 'Rescue Transporter',
@@ -36,7 +36,7 @@ describe('JRC XIV competition catalog', () => {
       },
       {
         slug: 'pirate-clash-transporter-shooter',
-        name: 'Aquaduct — Transporter Shooter',
+        name: 'Aquaduct Romana',
         shortName: 'AQUADUCT',
         level: 'SMA',
         discipline: 'Transporter Shooter',
@@ -47,7 +47,7 @@ describe('JRC XIV competition catalog', () => {
       },
       {
         slug: 'wacky-rally-line-follower-mikro',
-        name: 'Charion Line — Line Follower Mikro',
+        name: 'Charion Line',
         shortName: 'CHARION LINE',
         level: 'Umum',
         discipline: 'Line Follower Mikro',
@@ -58,7 +58,7 @@ describe('JRC XIV competition catalog', () => {
       },
       {
         slug: 'ring-rumble-sumo',
-        name: 'Colosseum — Sumo',
+        name: 'Colosseum Clash',
         shortName: 'COLOSSEUM',
         level: 'Umum',
         discipline: 'Sumo',
@@ -69,7 +69,7 @@ describe('JRC XIV competition catalog', () => {
       },
       {
         slug: 'goal-rush-soccer',
-        name: 'Harpastum — Soccer',
+        name: 'Harpastum Arena',
         shortName: 'HARPASTUM',
         level: 'Umum',
         discipline: 'Soccer',
@@ -98,12 +98,12 @@ describe('JRC XIV competition catalog', () => {
 
     expect(faqItems.at(-1)).toMatchObject({
       contacts: [
-        { category: 'Castra — Transporter', name: 'Naya', phone: '0878-4132-4886' },
-        { category: 'Robo Chiper — Rescue Transporter', name: 'Manda', phone: '0857-5540-9648' },
-        { category: 'Aquaduct — Transporter Shooter', name: 'Aisyah', phone: '0881-0360-87367' },
-        { category: 'Charion Line — Line Follower Mikro', name: 'Alzar', phone: '0813-3002-5557' },
-        { category: 'Colosseum — Sumo', name: 'Nadjwa', phone: '0888-5454-111' },
-        { category: 'Harpastum — Soccer', name: 'Rissa', phone: '0851-1954-6428' },
+        { category: 'Castra Guardian', name: 'Naya', phone: '0878-4132-4886' },
+        { category: 'Robo Chiper', name: 'Manda', phone: '0857-5540-9648' },
+        { category: 'Aquaduct Romana', name: 'Aisyah', phone: '0881-0360-87367' },
+        { category: 'Charion Line', name: 'Alzar', phone: '0813-3002-5557' },
+        { category: 'Colosseum Clash', name: 'Nadjwa', phone: '0888-5454-111' },
+        { category: 'Harpastum Arena', name: 'Rissa', phone: '0851-1954-6428' },
       ],
     });
   });

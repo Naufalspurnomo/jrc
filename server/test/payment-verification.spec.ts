@@ -60,7 +60,7 @@ describe('participant ticket response', () => {
       teamName: 'Garuda Robotika',
       registrationNumber: 'JRC14-2026-0001',
       competition: {
-        name: 'Colosseum — Sumo',
+        name: 'Colosseum Clash',
         eventId: 'JRC-XIV-2026',
         eventName: 'JRC XIV 2026',
       },
@@ -96,7 +96,7 @@ describe('participant ticket response', () => {
       status: TicketStatus.ACTIVE,
       teamName: 'Garuda Robotika',
       registrationNumber: 'JRC14-2026-0001',
-      competitionName: 'Colosseum — Sumo',
+      competitionName: 'Colosseum Clash',
       eventName: 'JRC XIV 2026',
       issuedAt: '2026-09-07T12:34:56.000Z',
     });
@@ -117,7 +117,7 @@ describe('participant ticket response', () => {
       teamName: 'Garuda Robotika',
       registrationNumber: 'JRC14-2026-0001',
       competition: {
-        name: 'Colosseum — Sumo',
+        name: 'Colosseum Clash',
         eventId: 'JRC-XIV-2026',
         eventName: 'JRC XIV 2026',
       },
@@ -144,7 +144,7 @@ describe('participant ticket response', () => {
       teamName: 'Garuda Robotika',
       registrationNumber: 'JRC14-2026-0001',
       competition: {
-        name: 'Colosseum — Sumo',
+        name: 'Colosseum Clash',
         eventId: 'JRC-XIV-2026',
         eventName: 'JRC XIV 2026',
       },
@@ -176,7 +176,7 @@ describe('participant ticket response', () => {
       teamName: 'Garuda Robotika',
       registrationNumber: 'JRC14-2026-0001',
       competition: {
-        name: 'Colosseum — Sumo',
+        name: 'Colosseum Clash',
         eventId: 'JRC-XIV-2026',
         eventName: 'JRC XIV 2026',
       },

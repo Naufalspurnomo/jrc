@@ -13,12 +13,12 @@ import type {
 } from '../api';
 
 const competitions: CompetitionRecord[] = [
-  { id: 'competition-1', name: 'Castra — Transporter', level: 'SD' },
-  { id: 'competition-2', name: 'Robo Chiper — Rescue Transporter', level: 'SMP' },
-  { id: 'competition-3', name: 'Aquaduct — Transporter Shooter', level: 'SMA' },
-  { id: 'competition-4', name: 'Charion Line — Line Follower Mikro', level: 'Umum' },
-  { id: 'competition-5', name: 'Colosseum — Sumo', level: 'Umum' },
-  { id: 'competition-6', name: 'Harpastum — Soccer', level: 'Umum' },
+  { id: 'competition-1', name: 'Castra Guardian', level: 'SD' },
+  { id: 'competition-2', name: 'Robo Chiper', level: 'SMP' },
+  { id: 'competition-3', name: 'Aquaduct Romana', level: 'SMA' },
+  { id: 'competition-4', name: 'Charion Line', level: 'Umum' },
+  { id: 'competition-5', name: 'Colosseum Clash', level: 'Umum' },
+  { id: 'competition-6', name: 'Harpastum Arena', level: 'Umum' },
 ];
 const competition = competitions[4];
 
@@ -140,7 +140,7 @@ describe('PortalRegistrationPage', () => {
     })));
     renderPage(api);
 
-    await user.click(await screen.findByRole('radio', { name: 'Umum · Colosseum — Sumo' }));
+    await user.click(await screen.findByRole('radio', { name: 'Umum · Colosseum Clash' }));
     const teamName = await screen.findByLabelText('Nama tim');
     await user.type(teamName, 'Nova');
     await user.click(screen.getByRole('button', { name: 'Simpan sekarang' }));
@@ -181,7 +181,7 @@ describe('PortalRegistrationPage', () => {
     });
     renderPage(sdApi, '/portal/pendaftaran/registration-1', false);
 
-    await screen.findByRole('radio', { name: 'SD · Castra — Transporter' });
+    await screen.findByRole('radio', { name: 'SD · Castra Guardian' });
     const sdChecklist = screen.getByRole('list', { name: 'Kelengkapan dokumen wajib' });
     expect(sdChecklist.children).toHaveLength(5);
     expect(sdChecklist).toHaveTextContent('Surat rekomendasi');
@@ -268,19 +268,19 @@ describe('PortalRegistrationPage', () => {
     })));
     renderPage(api);
 
-    await user.click(await screen.findByRole('radio', { name: 'Umum · Colosseum — Sumo' }));
+    await user.click(await screen.findByRole('radio', { name: 'Umum · Colosseum Clash' }));
 
-    const details = await screen.findByRole('region', { name: 'Detail kompetisi Colosseum — Sumo' });
-    expect(details).toHaveTextContent('Umum · Colosseum — Sumo');
+    const details = await screen.findByRole('region', { name: 'Detail kompetisi Colosseum Clash' });
+    expect(details).toHaveTextContent('Umum · Colosseum Clash');
     expect(details).toHaveTextContent('Jenis lomba');
     expect(details).toHaveTextContent('Sumo');
     expect(details).toHaveTextContent('Pertarungan robot sumo yang menempatkan traksi, deteksi lawan, konstruksi, dan strategi dalam satu lingkar arena.');
     expect(details).toHaveTextContent('Tantangan utama');
     expect(details).toHaveTextContent('Mendorong lawan keluar ring melalui desain tangguh dan strategi kendali yang disiplin.');
 
-    await user.click(screen.getByRole('radio', { name: 'Umum · Harpastum — Soccer' }));
+    await user.click(screen.getByRole('radio', { name: 'Umum · Harpastum Arena' }));
 
-    expect(await screen.findByRole('region', { name: 'Detail kompetisi Harpastum — Soccer' })).toHaveTextContent(
+    expect(await screen.findByRole('region', { name: 'Detail kompetisi Harpastum Arena' })).toHaveTextContent(
       'Sepak bola robot sebagai ujian integrasi gerak, pembacaan situasi, dan eksekusi strategi di arena dinamis.',
     );
     expect(screen.queryByText('Mendorong lawan keluar ring melalui desain tangguh dan strategi kendali yang disiplin.')).not.toBeInTheDocument();
@@ -345,7 +345,7 @@ describe('PortalRegistrationPage', () => {
     const api = createApi();
     renderPage(api);
 
-    const competitionCard = await screen.findByRole('radio', { name: 'Umum · Colosseum — Sumo' });
+    const competitionCard = await screen.findByRole('radio', { name: 'Umum · Colosseum Clash' });
     await user.click(competitionCard);
 
     // The draft is created by the choice alone, before any typing.
@@ -385,7 +385,7 @@ describe('PortalRegistrationPage', () => {
     const api = createApi();
     renderPage(api);
 
-    const competitionCard = await screen.findByRole('radio', { name: 'Umum · Colosseum — Sumo' });
+    const competitionCard = await screen.findByRole('radio', { name: 'Umum · Colosseum Clash' });
     await user.click(competitionCard);
 
     await waitFor(() => expect(api.registrations.create).toHaveBeenCalledTimes(1));
@@ -400,7 +400,7 @@ describe('PortalRegistrationPage', () => {
     });
     renderPage(api, '/portal/pendaftaran/registration-1');
 
-    const selectedCompetition = await screen.findByRole('radio', { name: 'Umum · Colosseum — Sumo' });
+    const selectedCompetition = await screen.findByRole('radio', { name: 'Umum · Colosseum Clash' });
     expect(selectedCompetition).toHaveAttribute('aria-checked', 'true');
     expect(selectedCompetition).toHaveAttribute('tabindex', '0');
     expect(screen.getAllByRole('radio').filter((card) => card.tabIndex === 0)).toEqual([selectedCompetition]);

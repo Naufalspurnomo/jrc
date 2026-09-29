@@ -28,7 +28,7 @@ describe('arena presentation', () => {
       </MemoryRouter>,
     );
 
-    expect(screen.getByRole('heading', { name: 'Castra — Transporter' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Castra Guardian' })).toBeInTheDocument();
     expect(screen.getByText('Transporter')).toBeInTheDocument();
     expect(screen.getByText('Rp 250.000 per tim')).toBeInTheDocument();
     expect(screen.getByText('Naya')).toBeInTheDocument();
@@ -40,9 +40,9 @@ describe('arena presentation', () => {
 
     await user.click(screen.getByRole('button', { name: 'Lihat divisi' }));
 
-    const dialog = screen.getByRole('dialog', { name: 'Castra — Transporter' });
+    const dialog = screen.getByRole('dialog', { name: 'Castra Guardian' });
     expect(dialog).toHaveTextContent('CASTRA');
-    expect(dialog).toHaveTextContent('Castra — Transporter');
+    expect(dialog).toHaveTextContent('Castra Guardian');
     expect(dialog).toHaveTextContent('Rp 250.000 per tim');
     expect(within(dialog).getByText('Naya')).toBeInTheDocument();
     expect(within(dialog).getByRole('link', { name: '0878-4132-4886' })).toHaveAttribute('href', 'tel:087841324886');
@@ -61,7 +61,7 @@ describe('arena presentation', () => {
       </MemoryRouter>,
     );
 
-    expect(screen.getByRole('heading', { level: 1, name: 'Colosseum — Sumo' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { level: 1, name: 'Colosseum Clash' })).toBeInTheDocument();
     expect(screen.getByText('Sumo')).toBeInTheDocument();
     expect(screen.getByText('Rp 250.000 per tim')).toBeInTheDocument();
     expect(screen.getByText('Nadjwa')).toBeInTheDocument();
@@ -81,9 +81,9 @@ describe('arena presentation', () => {
     const rows = within(region).getAllByRole('listitem');
 
     expect(rows).toHaveLength(6);
-    expect(rows[0]).toHaveTextContent('Castra — Transporter');
+    expect(rows[0]).toHaveTextContent('Castra Guardian');
     expect(within(rows[0]).getByText('Naya')).toBeInTheDocument();
     expect(within(rows[0]).getByRole('link', { name: '0878-4132-4886' })).toHaveAttribute('href', 'tel:087841324886');
-    expect(rows[5]).toHaveTextContent('Harpastum — Soccer');
+    expect(rows[5]).toHaveTextContent('Harpastum Arena');
   });
 });

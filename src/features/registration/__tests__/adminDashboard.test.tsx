@@ -26,7 +26,7 @@ function registration(
     id,
     registrationNumber: `JRC-${id}`,
     competitionId: 'competition-1',
-    competition: { id: 'competition-1', name: 'Colosseum — Sumo' },
+    competition: { id: 'competition-1', name: 'Colosseum Clash' },
     teamName,
     institution: 'PENS',
     status,

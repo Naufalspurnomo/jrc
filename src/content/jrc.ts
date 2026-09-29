@@ -35,7 +35,7 @@ export const competitions: readonly Competition[] = [
   {
     slug: 'donatopia-transporter',
     romanNumeral: 'I',
-    name: 'Castra — Transporter',
+    name: 'Castra Guardian',
     shortName: 'CASTRA',
     emblem: {
       src: '/assets/arena-emblems/castra-guardian.webp',
@@ -56,7 +56,7 @@ export const competitions: readonly Competition[] = [
   {
     slug: 'nightmaze-rescue-transporter',
     romanNumeral: 'II',
-    name: 'Robo Chiper — Rescue Transporter',
+    name: 'Robo Chiper',
     shortName: 'ROBO CHIPER',
     emblem: {
       src: '/assets/arena-emblems/robo-chiper.webp',
@@ -77,7 +77,7 @@ export const competitions: readonly Competition[] = [
   {
     slug: 'pirate-clash-transporter-shooter',
     romanNumeral: 'III',
-    name: 'Aquaduct — Transporter Shooter',
+    name: 'Aquaduct Romana',
     shortName: 'AQUADUCT',
     emblem: {
       src: '/assets/arena-emblems/aquaduct-romana.webp',
@@ -98,7 +98,7 @@ export const competitions: readonly Competition[] = [
   {
     slug: 'wacky-rally-line-follower-mikro',
     romanNumeral: 'IV',
-    name: 'Charion Line — Line Follower Mikro',
+    name: 'Charion Line',
     shortName: 'CHARION LINE',
     emblem: {
       src: '/assets/arena-emblems/chariot-line.webp',
@@ -119,7 +119,7 @@ export const competitions: readonly Competition[] = [
   {
     slug: 'ring-rumble-sumo',
     romanNumeral: 'V',
-    name: 'Colosseum — Sumo',
+    name: 'Colosseum Clash',
     shortName: 'COLOSSEUM',
     emblem: {
       src: '/assets/arena-emblems/colosseum-clash.webp',
@@ -140,7 +140,7 @@ export const competitions: readonly Competition[] = [
   {
     slug: 'goal-rush-soccer',
     romanNumeral: 'VI',
-    name: 'Harpastum — Soccer',
+    name: 'Harpastum Arena',
     shortName: 'HARPASTUM',
     emblem: {
       src: '/assets/arena-emblems/harpastum-arena.webp',
@@ -331,7 +331,7 @@ export const faqItems = [
   {
     question: 'Apa saja kategori resmi JRC XIV?',
     answer:
-      'JRC XIV memiliki enam kategori resmi: Castra — Transporter, Robo Chiper — Rescue Transporter, Aquaduct — Transporter Shooter, Charion Line — Line Follower Mikro, Colosseum — Sumo, dan Harpastum — Soccer.',
+      'JRC XIV memiliki enam kategori resmi: Castra Guardian, Robo Chiper, Aquaduct Romana, Charion Line, Colosseum Clash, dan Harpastum Arena.',
   },
   {
     question: 'Di mana guidebook dapat diunduh?',
