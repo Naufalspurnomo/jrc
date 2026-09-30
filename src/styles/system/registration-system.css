@@ -101,6 +101,38 @@
   line-height: 1.55;
 }
 
+.portal-auth .portal-auth__registration-guide {
+  display: flex;
+  width: min(100%, 32rem);
+  margin-top: 1rem;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: .8rem .9rem;
+  border: 1px solid rgb(244 213 141 / 48%);
+  background: rgb(10 8 8 / 72%);
+}
+
+.portal-auth .portal-auth__registration-guide p {
+  max-width: 24rem;
+  margin: 0;
+  color: #eee1ca;
+  font-size: .78rem;
+  line-height: 1.45;
+}
+
+.portal-auth .portal-auth__registration-guide .portal-button {
+  flex: 0 0 auto;
+  min-height: 2.75rem;
+  border-color: #e5b84e;
+  color: #fff3d4;
+  white-space: nowrap;
+}
+
+.portal-auth .portal-auth__registration-guide .portal-button:hover {
+  background: rgb(229 184 78 / 14%);
+}
+
 .portal-auth .portal-auth__form {
   width: min(100%, 32rem);
   gap: .3rem;
@@ -1378,6 +1410,17 @@
   .portal-auth h1 {
     margin-block: .35rem .65rem;
     font-size: clamp(2.8rem, 13vw, 4.2rem);
+  }
+
+  .portal-auth .portal-auth__registration-guide {
+    width: 100%;
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .portal-auth .portal-auth__registration-guide .portal-button {
+    width: 100%;
+    justify-content: center;
   }
 
   .portal-auth .portal-auth__form {
