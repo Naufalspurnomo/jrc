@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { apiUrl, normalizeApiOrigin } from '../apiOrigin';
+import { apiUrl, normalizeApiOrigin, resolveApiOrigin } from '../apiOrigin';
 
 describe('normalizeApiOrigin', () => {
   it.each([undefined, '', '   '])('preserves relative API URLs for blank value %j', (value) => {
@@ -18,6 +18,21 @@ describe('normalizeApiOrigin', () => {
     'https://user:password@api.example.com',
   ])('rejects a value that is not an exact HTTPS origin: %s', (value) => {
     expect(() => normalizeApiOrigin(value)).toThrow('VITE_API_ORIGIN must be an exact HTTPS origin');
+  });
+});
+
+describe('resolveApiOrigin', () => {
+  it('uses the configured origin when one is provided', () => {
+    expect(resolveApiOrigin('https://api.example.com', 'https://jrc.pens.ac.id')).toBe('https://api.example.com');
+  });
+
+  it('uses the public production API on the official JRC host when the build value is blank', () => {
+    expect(resolveApiOrigin(undefined, 'https://jrc.pens.ac.id')).toBe('https://api.jrc.pens.ac.id');
+  });
+
+  it('keeps relative API URLs for non-official hosts when the build value is blank', () => {
+    expect(resolveApiOrigin(undefined, 'https://jrc.46.250.238.167.nip.io')).toBe('');
+    expect(resolveApiOrigin(undefined, 'http://localhost:5173')).toBe('');
   });
 });
 
