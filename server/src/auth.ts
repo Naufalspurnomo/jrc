@@ -102,6 +102,25 @@ export class LoginDto {
   password!: string;
 }
 
+export class ForgotPasswordDto {
+  @Transform(normalizeEmailValue)
+  @IsEmail()
+  @MaxLength(254)
+  email!: string;
+}
+
+export class ResetPasswordDto {
+  @Transform(trim)
+  @IsString()
+  @MaxLength(128)
+  token!: string;
+
+  @IsString()
+  @MinLength(8)
+  @MaxLength(128)
+  password!: string;
+}
+
 interface IssuedAuth {
   user: AuthPrincipal;
   sessionToken: string;
@@ -110,7 +129,34 @@ interface IssuedAuth {
 }
 
 const VERIFICATION_TOKEN_TTL_MS = 24 * 60 * 60 * 1_000;
+const PASSWORD_RESET_TOKEN_TTL_MS = 60 * 60 * 1_000;
+const PASSWORD_RESET_COOLDOWN_MS = 60 * 1_000;
+const PASSWORD_RESET_MIN_RESPONSE_MS = 250;
 const RESEND_COOLDOWN_MS = 60 * 1_000;
+
+function passwordResetBaseUrl(): string {
+  const configured = process.env.PUBLIC_PASSWORD_RESET_URL?.trim();
+  if (configured) {
+    const url = new URL(configured);
+    if (url.protocol !== 'http:' && url.protocol !== 'https:') {
+      throw new Error('PUBLIC_PASSWORD_RESET_URL must use http or https');
+    }
+    if (url.username || url.password) {
+      throw new Error('PUBLIC_PASSWORD_RESET_URL must not contain credentials');
+    }
+    return configured;
+  }
+  if (process.env.NODE_ENV === 'production') {
+    throw new Error('PUBLIC_PASSWORD_RESET_URL is required in production');
+  }
+  return 'http://localhost:5173/portal/reset-kata-sandi';
+}
+
+function buildPasswordResetLink(token: string): string {
+  const url = new URL(passwordResetBaseUrl());
+  url.searchParams.set('token', token);
+  return url.toString();
+}
 
 function verificationBaseUrl(): string {
   const configured = process.env.PUBLIC_EMAIL_VERIFICATION_URL?.trim();
@@ -346,13 +392,26 @@ export class AuthService {
     }
 
     const material = this.createSessionMaterial();
-    await this.prisma.session.create({
-      data: {
-        userId: user.id,
-        tokenHash: hashToken(material.sessionToken),
-        csrfHash: hashToken(material.csrfToken),
-        expiresAt: material.expiresAt,
-      },
+    await this.prisma.$transaction(async (transaction) => {
+      const unchanged = await transaction.$queryRaw<Array<{ id: string }>>(Prisma.sql`
+        SELECT "id"
+        FROM "users"
+        WHERE "id" = ${user.id}::uuid
+          AND "password_hash" = ${user.passwordHash}
+          AND "active" = TRUE
+        FOR UPDATE
+      `);
+      if (unchanged.length !== 1) {
+        throw new UnauthorizedException('Invalid email or password');
+      }
+      await transaction.session.create({
+        data: {
+          userId: user.id,
+          tokenHash: hashToken(material.sessionToken),
+          csrfHash: hashToken(material.csrfToken),
+          expiresAt: material.expiresAt,
+        },
+      });
     });
 
     return { user: sanitizeUser(user), ...material };
@@ -424,6 +483,145 @@ export class AuthService {
         })),
       },
     });
+  }
+
+  async requestPasswordReset(
+    dto: ForgotPasswordDto,
+  ): Promise<{ success: true }> {
+    const responseNotBefore = Date.now() + PASSWORD_RESET_MIN_RESPONSE_MS;
+    const finish = async (): Promise<{ success: true }> => {
+      const remaining = responseNotBefore - Date.now();
+      if (remaining > 0) {
+        await new Promise((resolve) => setTimeout(resolve, remaining));
+      }
+      return { success: true };
+    };
+    const user = await this.prisma.user.findUnique({
+      where: { email: normalizeEmail(dto.email) },
+    });
+    if (
+      !user ||
+      !user.active ||
+      user.role !== Role.PARTICIPANT ||
+      !user.emailVerifiedAt
+    ) {
+      return finish();
+    }
+
+    await this.prisma.$transaction(async (transaction) => {
+      const token = randomToken();
+      const now = new Date();
+      const tokenHash = hashToken(token);
+      const updated = await transaction.passwordResetToken.updateMany({
+        where: {
+          userId: user.id,
+          createdAt: {
+            lte: new Date(now.getTime() - PASSWORD_RESET_COOLDOWN_MS),
+          },
+        },
+        data: {
+          tokenHash,
+          expiresAt: new Date(now.getTime() + PASSWORD_RESET_TOKEN_TTL_MS),
+          consumedAt: null,
+          createdAt: now,
+        },
+      });
+      if (updated.count === 0) {
+        const existing = await transaction.passwordResetToken.findUnique({
+          where: { userId: user.id },
+          select: { id: true },
+        });
+        if (existing) return;
+        await transaction.passwordResetToken.create({
+          data: {
+            userId: user.id,
+            tokenHash,
+            expiresAt: new Date(now.getTime() + PASSWORD_RESET_TOKEN_TTL_MS),
+          },
+        });
+      }
+      await transaction.emailOutbox.create({
+        data: {
+          to: user.email,
+          subject: 'Reset kata sandi akun JRC XIV',
+          body: encryptRichEmail(
+            renderTransactionalEmail({
+              title: 'Reset kata sandi',
+              greetingName: user.displayName,
+              intro:
+                'Kami menerima permintaan untuk mengganti kata sandi akun peserta JRC XIV Anda.',
+              paragraphs: [
+                'Tautan berlaku selama 1 jam dan hanya dapat digunakan satu kali. Jika Anda tidak meminta perubahan ini, abaikan email ini.',
+              ],
+              cta: {
+                label: 'Atur kata sandi baru',
+                url: buildPasswordResetLink(token),
+              },
+            }),
+          ),
+          expiresAt: new Date(now.getTime() + PASSWORD_RESET_TOKEN_TTL_MS),
+        },
+      });
+    }).catch((error: unknown) => {
+      if (
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        error.code === 'P2002'
+      ) {
+        return;
+      }
+      throw error;
+    });
+    return finish();
+  }
+
+  async resetPassword(dto: ResetPasswordDto): Promise<{ success: true }> {
+    const token = dto.token.trim();
+    if (!/^[A-Za-z0-9_-]{43}$/.test(token)) {
+      throw new BadRequestException('Password reset link is invalid or expired');
+    }
+
+    const record = await this.prisma.passwordResetToken.findUnique({
+      where: { tokenHash: hashToken(token) },
+      include: { user: true },
+    });
+    if (
+      !record ||
+      record.consumedAt ||
+      record.expiresAt.getTime() <= Date.now() ||
+      !record.user.active ||
+      record.user.role !== Role.PARTICIPANT
+    ) {
+      throw new BadRequestException('Password reset link is invalid or expired');
+    }
+
+    const passwordHash = await argon2.hash(dto.password, {
+      type: argon2.argon2id,
+    });
+    await this.prisma.$transaction(async (transaction) => {
+      const now = new Date();
+      const claimed = await transaction.passwordResetToken.updateMany({
+        where: {
+          id: record.id,
+          tokenHash: hashToken(token),
+          consumedAt: null,
+          expiresAt: { gt: now },
+          user: { active: true, role: Role.PARTICIPANT },
+        },
+        data: { consumedAt: now },
+      });
+      if (claimed.count !== 1) {
+        throw new BadRequestException('Password reset link is invalid or expired');
+      }
+      await transaction.user.update({
+        where: { id: record.userId },
+        data: { passwordHash },
+      });
+      await transaction.session.updateMany({
+        where: { userId: record.userId, revokedAt: null },
+        data: { revokedAt: now },
+      });
+    });
+    return { success: true };
   }
 
   async requestResend(principal: AuthPrincipal): Promise<{ success: true }> {
@@ -667,6 +865,22 @@ export class AuthController {
       sessionCookieOptions(issued.expiresAt.getTime() - Date.now()),
     );
     return { user: issued.user, csrfToken: issued.csrfToken };
+  }
+
+  @Public()
+  @Throttle({ default: { limit: 3, ttl: 60_000, blockDuration: 60_000 } })
+  @Post('password/forgot')
+  @HttpCode(HttpStatus.OK)
+  forgotPassword(@Body() dto: ForgotPasswordDto): Promise<{ success: true }> {
+    return this.auth.requestPasswordReset(dto);
+  }
+
+  @Public()
+  @Throttle({ default: { limit: 5, ttl: 60_000, blockDuration: 60_000 } })
+  @Post('password/reset')
+  @HttpCode(HttpStatus.OK)
+  resetPassword(@Body() dto: ResetPasswordDto): Promise<{ success: true }> {
+    return this.auth.resetPassword(dto);
   }
 
   @Public()

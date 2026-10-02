@@ -11,6 +11,7 @@ const VALID_PRODUCTION_ENV = {
   STORAGE_PATH: '/srv/jrc/private',
   PUBLIC_VERIFICATION_URL: 'https://jrc.example.test/ticket/verify',
   PUBLIC_EMAIL_VERIFICATION_URL: 'https://jrc.example.test/portal/verifikasi-email',
+  PUBLIC_PASSWORD_RESET_URL: 'https://jrc.example.test/portal/reset-kata-sandi',
   PUBLIC_FRONTEND_URL: 'https://jrc.example.test',
   DATABASE_URL: 'postgresql://jrc@example.test:5432/jrc',
 };
@@ -32,6 +33,14 @@ describe('RuntimeConfigValidator', () => {
 
   it('accepts a complete safe production configuration', () => {
     expect(() => new RuntimeConfigValidator().onModuleInit()).not.toThrow();
+  });
+
+  it('requires a safe password reset URL in production', () => {
+    delete process.env.PUBLIC_PASSWORD_RESET_URL;
+
+    expect(() => new RuntimeConfigValidator().onModuleInit()).toThrowError(
+      /PUBLIC_PASSWORD_RESET_URL/,
+    );
   });
 
   it.each(['strict', 'lax', 'none'])(
@@ -94,6 +103,7 @@ describe('RuntimeConfigValidator', () => {
       STORAGE_PATH: '   ',
       PUBLIC_VERIFICATION_URL: 'not-a-secret-value',
       PUBLIC_EMAIL_VERIFICATION_URL: 'not-an-email-verification-url',
+      PUBLIC_PASSWORD_RESET_URL: 'not-a-password-reset-url',
       DATABASE_URL: '',
     };
 
@@ -111,6 +121,7 @@ describe('RuntimeConfigValidator', () => {
     expect(message).toMatch(/STORAGE_PATH/);
     expect(message).toMatch(/PUBLIC_VERIFICATION_URL/);
     expect(message).toMatch(/PUBLIC_EMAIL_VERIFICATION_URL/);
+    expect(message).toMatch(/PUBLIC_PASSWORD_RESET_URL/);
     expect(message).toMatch(/DATABASE_URL/);
     expect(message).not.toContain('replace-me-secret-value');
     expect(message).not.toContain('not-a-secret-value');

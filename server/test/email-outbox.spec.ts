@@ -27,6 +27,7 @@ function record(overrides: Record<string, unknown> = {}) {
     attempts: 0,
     maxAttempts: 8,
     availableAt: new Date('2026-09-07T11:59:00.000Z'),
+    expiresAt: null,
     lockedUntil: null,
     workerToken: null,
     lastError: null,
@@ -176,6 +177,34 @@ describe('EmailOutboxService processing', () => {
     await expect(service.processOnce()).resolves.toBe(0);
 
     expect(emailOutbox.updateMany).not.toHaveBeenCalled();
+  });
+
+  it('expires password reset email before delivering a token older than one hour', async () => {
+    configureSmtp();
+    const expired = record({
+      expiresAt: new Date('2026-09-07T11:59:59.000Z'),
+    });
+    const { emailOutbox, service } = harness([expired]);
+
+    await expect(service.processOnce()).resolves.toBe(0);
+
+    expect(mailer.sendMail).not.toHaveBeenCalled();
+    expect(emailOutbox.updateMany).toHaveBeenCalledWith({
+      where: {
+        id: expired.id,
+        status: OutboxStatus.PENDING,
+        attempts: 0,
+        availableAt: { lte: NOW },
+      },
+      data: {
+        status: OutboxStatus.FAILED,
+        attempts: expired.maxAttempts,
+        body: '[EXPIRED]',
+        lastError: 'Email expired before delivery',
+        lockedUntil: null,
+        workerToken: null,
+      },
+    });
   });
 });
 

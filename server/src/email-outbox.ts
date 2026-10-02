@@ -208,6 +208,21 @@ export class EmailOutboxService implements OnModuleInit, OnModuleDestroy {
         continue;
       }
 
+      if (row.expiresAt && row.expiresAt.getTime() <= now.getTime()) {
+        await this.prisma.emailOutbox.updateMany({
+          where: this.claimGuard(row, now),
+          data: {
+            status: OutboxStatus.FAILED,
+            attempts: row.maxAttempts,
+            body: '[EXPIRED]',
+            lastError: 'Email expired before delivery',
+            lockedUntil: null,
+            workerToken: null,
+          },
+        });
+        continue;
+      }
+
       const workerToken = randomUUID();
       const claim = await this.prisma.emailOutbox.updateMany({
         where: this.claimGuard(row, now),

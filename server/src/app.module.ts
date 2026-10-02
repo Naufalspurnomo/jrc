@@ -20,6 +20,10 @@ import {
   InvoiceController,
 } from './admin-registrations';
 import {
+  AdminParticipantsController,
+  AdminParticipantsService,
+} from './admin-participants';
+import {
   AuthController,
   AuthGuard,
   AuthService,
@@ -280,6 +284,7 @@ export class HealthController {
   ],
   controllers: [
     AdminDocumentsController,
+    AdminParticipantsController,
     AdminRegistrationsController,
     AuthController,
     CompetitionsController,
@@ -299,6 +304,7 @@ export class HealthController {
     PrismaService,
     PrivateStorageService,
     AuthService,
+    AdminParticipantsService,
     AdminRegistrationsService,
     DocumentsService,
     DocumentUploadInterceptor,
