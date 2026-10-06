@@ -38,10 +38,6 @@ export const API_PATHS = {
     kit: '/api/gate/kit',
   },
   admin: {
-    participants: {
-      root: '/api/admin/participants',
-      byId: (participantId: string) => `/api/admin/participants/${encodeURIComponent(participantId)}`,
-    },
     registrations: {
       root: '/api/admin/registrations',
       exportXlsx: '/api/admin/registrations/export.xlsx',
@@ -475,33 +471,6 @@ export interface RegistrationDeletionOutcome {
   cleanupWarnings: string[];
 }
 
-export interface AdminParticipantRecord {
-  id: string;
-  email: string;
-  displayName: string;
-  active: boolean;
-  emailVerified: boolean;
-  createdAt: string;
-  updatedAt: string;
-  sessionCount: number;
-  registration: {
-    id: string;
-    registrationNumber: string;
-    teamName: string;
-    status: RegistrationState;
-    paymentStatus: PaymentState | null;
-    ticketStatus: 'INACTIVE' | 'ACTIVE' | 'CHECKED_IN' | 'REVOKED' | null;
-    updatedAt: string;
-  } | null;
-  deletionBlocked: boolean;
-}
-
-export interface AdminParticipantListInput {
-  query?: string;
-  page?: number;
-  pageSize?: number;
-}
-
 export interface PaidTeamRecord {
   registrationNumber: string;
   teamName: string;
@@ -561,8 +530,6 @@ export interface RegistrationApi {
     handoverKit(input: TicketRequest): Promise<TicketVerification>;
   };
   admin: {
-    listParticipants(input?: AdminParticipantListInput): Promise<AdminParticipantRecord[]>;
-    deleteParticipant(participantId: string): Promise<{ deleted: true }>;
     listRegistrations(): Promise<RegistrationRecord[]>;
     getRegistration(registrationId: string): Promise<RegistrationRecord>;
     deleteRegistration(registrationId: string): Promise<RegistrationDeletionOutcome>;
@@ -674,20 +641,6 @@ export function createRegistrationApi(client = new ApiClient()): RegistrationApi
       handoverKit: (input) => client.request<TicketVerification>(API_PATHS.gate.kit, { method: 'POST', body: input }),
     },
     admin: {
-      listParticipants: (input = {}) => {
-        const params = new URLSearchParams();
-        if (input.query?.trim()) params.set('query', input.query.trim());
-        if (input.page !== undefined) params.set('page', String(input.page));
-        if (input.pageSize !== undefined) params.set('pageSize', String(input.pageSize));
-        const query = params.toString();
-        return client.request<AdminParticipantRecord[]>(
-          `${API_PATHS.admin.participants.root}${query ? `?${query}` : ''}`,
-        );
-      },
-      deleteParticipant: (participantId) => client.request<{ deleted: true }>(
-        API_PATHS.admin.participants.byId(participantId),
-        { method: 'DELETE' },
-      ),
       listRegistrations: () => client.request<RegistrationRecord[]>(API_PATHS.admin.registrations.root),
       getRegistration: (registrationId) => client.request<RegistrationRecord>(API_PATHS.admin.registrations.byId(registrationId)),
       deleteRegistration: (registrationId) => client.request<RegistrationDeletionOutcome>(

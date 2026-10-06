@@ -66,7 +66,6 @@ export function AdminShell({ children }: AdminShellProps) {
           {role && registrationRoles.has(role) && (
             <NavLink end to="/admin">Pendaftaran</NavLink>
           )}
-          {role === 'SUPER_ADMIN' && <NavLink to="/admin/peserta">Akun peserta</NavLink>}
           {role && financeRoles.has(role) && (
             <NavLink to="/admin/finance">Keuangan</NavLink>
           )}

@@ -33,7 +33,6 @@ const PublicTicketVerificationPage = lazy(
 );
 const AdminLoginPage = lazy(() => import('../pages/admin/AdminLoginPage'));
 const AdminDashboardPage = lazy(() => import('../pages/admin/AdminDashboardPage'));
-const AdminParticipantsPage = lazy(() => import('../pages/admin/AdminParticipantsPage'));
 const AdminRegistrationDetailPage = lazy(
   () => import('../pages/admin/AdminRegistrationDetailPage'),
 );
@@ -107,9 +106,6 @@ export function AppRoutes({ homeStartupReady = true }: { homeStartupReady?: bool
             path="/admin/pendaftaran/:registrationId"
             element={<AdminRegistrationDetailPage />}
           />
-        </Route>
-        <Route element={<RequireAuth roles={['SUPER_ADMIN']} redirectTo="/admin/masuk" />}>
-          <Route path="/admin/peserta" element={<AdminParticipantsPage />} />
         </Route>
         <Route
           element={<RequireAuth roles={['SUPER_ADMIN', 'FINANCE']} redirectTo="/admin/masuk" />}
