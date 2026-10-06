@@ -79,10 +79,15 @@ export class PaidTeamsService {
       },
       orderBy: [{ verifiedAt: 'desc' }, { id: 'asc' }],
       skip: (page - 1) * pageSize,
-      take: pageSize,
+      take: pageSize + 1,
       select: paidTeamSelect,
     });
-    return invoices.map(serializePaidTeam);
+    return {
+      items: invoices.slice(0, pageSize).map(serializePaidTeam),
+      page,
+      pageSize,
+      hasNextPage: invoices.length > pageSize,
+    };
   }
 }
 

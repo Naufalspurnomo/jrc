@@ -5,7 +5,7 @@ import { describe, expect, it, vi } from 'vitest';
 
 import { AuthProvider } from '../../auth/AuthProvider';
 import AdminPaidTeamsPage from '../../../pages/admin/AdminPaidTeamsPage';
-import type { AuthSession, PaidTeamRecord, RegistrationApi } from '../api';
+import type { AuthSession, PaidTeamListResult, PaidTeamRecord, RegistrationApi } from '../api';
 
 const viewerSession: AuthSession = {
   user: {
@@ -29,7 +29,14 @@ const paidTeam: PaidTeamRecord = {
   verifiedAt: '2026-10-05T08:30:00.000Z',
 };
 
-function createApi(records: PaidTeamRecord[] = [paidTeam]): RegistrationApi {
+function pageResult(
+  items: PaidTeamRecord[] = [paidTeam],
+  hasNextPage = false,
+): PaidTeamListResult {
+  return { items, page: 1, pageSize: 50, hasNextPage };
+}
+
+function createApi(result: PaidTeamListResult = pageResult()): RegistrationApi {
   return {
     auth: {
       me: vi.fn().mockResolvedValue(viewerSession),
@@ -38,7 +45,7 @@ function createApi(records: PaidTeamRecord[] = [paidTeam]): RegistrationApi {
       logout: vi.fn().mockResolvedValue(undefined),
     },
     admin: {
-      listPaidTeams: vi.fn().mockResolvedValue(records),
+      listPaidTeams: vi.fn().mockResolvedValue(result),
     },
   } as unknown as RegistrationApi;
 }
@@ -61,7 +68,7 @@ describe('AdminPaidTeamsPage', () => {
       phone: '+628123456789',
       proofStorageKey: 'hidden-proof',
     } as PaidTeamRecord;
-    const api = createApi([unsafe]);
+    const api = createApi(pageResult([unsafe]));
     renderPage(api);
 
     const row = await screen.findByRole('row', { name: /Garuda Robotika/ });
@@ -75,11 +82,11 @@ describe('AdminPaidTeamsPage', () => {
   });
 
   it('searches on the server and offers retry after a load failure', async () => {
-    const api = createApi([]);
+    const api = createApi(pageResult([]));
     vi.mocked(api.admin.listPaidTeams)
       .mockRejectedValueOnce(new Error('offline'))
-      .mockResolvedValueOnce([])
-      .mockResolvedValueOnce([]);
+      .mockResolvedValueOnce(pageResult([]))
+      .mockResolvedValueOnce(pageResult([]));
     const user = userEvent.setup();
     renderPage(api);
 
@@ -90,5 +97,17 @@ describe('AdminPaidTeamsPage', () => {
     await user.type(screen.getByLabelText('Cari tim'), 'Garuda');
     await new Promise((resolve) => window.setTimeout(resolve, 350));
     expect(api.admin.listPaidTeams).toHaveBeenLastCalledWith(expect.objectContaining({ query: 'Garuda' }));
+  });
+
+  it('uses explicit pagination metadata at the exact page-size boundary', async () => {
+    const boundary = Array.from({ length: 50 }, (_, index) => ({
+      ...paidTeam,
+      registrationNumber: `JRC-XIV-${String(index + 1).padStart(4, '0')}`,
+    }));
+    const api = createApi(pageResult(boundary, false));
+    renderPage(api);
+
+    expect(await screen.findAllByRole('row')).toHaveLength(51);
+    expect(screen.getByRole('button', { name: 'Berikutnya' })).toBeDisabled();
   });
 });

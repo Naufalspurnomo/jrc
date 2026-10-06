@@ -88,7 +88,9 @@ describe('ApiClient', () => {
   });
 
   it('loads the read-only paid-team list with encoded filters', async () => {
-    const fetcher = vi.fn<typeof fetch>().mockResolvedValue(new Response('[]', {
+    const fetcher = vi.fn<typeof fetch>().mockResolvedValue(new Response(JSON.stringify({
+      items: [], page: 2, pageSize: 25, hasNextPage: false,
+    }), {
       status: 200,
       headers: { 'Content-Type': 'application/json' },
     }));

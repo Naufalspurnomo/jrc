@@ -399,20 +399,25 @@ suite('registration system e2e', () => {
       .get('/api/admin/paid-teams')
       .expect('Cache-Control', 'private, no-store')
       .expect(200);
-    expect(response.body).toEqual([
-      {
-        registrationNumber: expect.any(String),
-        teamName: '=CMD()',
-        institution: 'PENS',
-        competition: {
-          id: competitionId,
-          name: 'Charion Line',
-          level: 'Umum',
-          discipline: 'Line Follower Mikro',
+    expect(response.body).toEqual({
+      items: [
+        {
+          registrationNumber: expect.any(String),
+          teamName: '=CMD()',
+          institution: 'PENS',
+          competition: {
+            id: competitionId,
+            name: 'Charion Line',
+            level: 'Umum',
+            discipline: 'Line Follower Mikro',
+          },
+          verifiedAt: expect.any(String),
         },
-        verifiedAt: expect.any(String),
-      },
-    ]);
+      ],
+      page: 1,
+      pageSize: 50,
+      hasNextPage: false,
+    });
     expect(JSON.stringify(response.body)).not.toMatch(
       /email|phone|member|proof|amount|invoice|owner|studentId/i,
     );

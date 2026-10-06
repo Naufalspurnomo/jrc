@@ -31,21 +31,41 @@ describe('Paid team read-only list', () => {
     };
     const service = new PaidTeamsService(prisma as never);
 
-    await expect(service.list({ query: ' garuda ', page: 1, pageSize: 25 })).resolves.toEqual([
-      {
-        registrationNumber: 'JRC-XIV-0015',
-        teamName: 'Garuda Robotika',
-        institution: 'PENS',
-        competition: paidInvoice.registration.competition,
-        verifiedAt: '2026-10-05T08:30:00.000Z',
-      },
-    ]);
+    await expect(service.list({ query: ' garuda ', page: 1, pageSize: 25 })).resolves.toEqual({
+      items: [
+        {
+          registrationNumber: 'JRC-XIV-0015',
+          teamName: 'Garuda Robotika',
+          institution: 'PENS',
+          competition: paidInvoice.registration.competition,
+          verifiedAt: '2026-10-05T08:30:00.000Z',
+        },
+      ],
+      page: 1,
+      pageSize: 25,
+      hasNextPage: false,
+    });
     expect(prisma.invoice.findMany).toHaveBeenCalledWith(expect.objectContaining({
       where: expect.objectContaining({ paymentStatus: PaymentStatus.PAID }),
       skip: 0,
-      take: 25,
+      take: 26,
     }));
     const payload = JSON.stringify(await service.list({}));
     expect(payload).not.toMatch(/invoice-1|proof|amount|verificationReason|owner|phone|email|member/i);
+  });
+
+  it('reports a next page without returning the look-ahead record', async () => {
+    const prisma = {
+      invoice: { findMany: vi.fn().mockResolvedValue([paidInvoice, paidInvoice, paidInvoice]) },
+    };
+    const service = new PaidTeamsService(prisma as never);
+
+    const result = await service.list({ page: 2, pageSize: 2 });
+
+    expect(result.page).toBe(2);
+    expect(result.pageSize).toBe(2);
+    expect(result.hasNextPage).toBe(true);
+    expect(result.items).toHaveLength(2);
+    expect(prisma.invoice.findMany).toHaveBeenCalledWith(expect.objectContaining({ skip: 2, take: 3 }));
   });
 });

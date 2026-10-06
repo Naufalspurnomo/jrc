@@ -490,6 +490,13 @@ export interface PaidTeamListInput {
   pageSize?: number;
 }
 
+export interface PaidTeamListResult {
+  items: PaidTeamRecord[];
+  page: number;
+  pageSize: number;
+  hasNextPage: boolean;
+}
+
 export interface RegistrationApi {
   auth: {
     me(): Promise<AuthProbe>;
@@ -538,7 +545,7 @@ export interface RegistrationApi {
     exportAttendance(): Promise<Blob>;
     listFinanceInvoices(): Promise<FinanceInvoiceRecord[]>;
     verifyPayment(invoiceId: string, input: PaymentReviewInput): Promise<InvoiceRecord>;
-    listPaidTeams(input?: PaidTeamListInput): Promise<PaidTeamRecord[]>;
+    listPaidTeams(input?: PaidTeamListInput): Promise<PaidTeamListResult>;
   };
 }
 
@@ -664,7 +671,7 @@ export function createRegistrationApi(client = new ApiClient()): RegistrationApi
         if (input.page !== undefined) params.set('page', String(input.page));
         if (input.pageSize !== undefined) params.set('pageSize', String(input.pageSize));
         const query = params.toString();
-        return client.request<PaidTeamRecord[]>(`${API_PATHS.admin.paidTeams}${query ? `?${query}` : ''}`);
+        return client.request<PaidTeamListResult>(`${API_PATHS.admin.paidTeams}${query ? `?${query}` : ''}`);
       },
     },
   };

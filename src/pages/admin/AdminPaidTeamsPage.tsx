@@ -32,6 +32,7 @@ export default function AdminPaidTeamsPage({ api = registrationApi }: AdminPaidT
   const [query, setQuery] = useState('');
   const [serverQuery, setServerQuery] = useState('');
   const [page, setPage] = useState(1);
+  const [hasNextPage, setHasNextPage] = useState(false);
 
   useEffect(() => {
     const timer = window.setTimeout(() => {
@@ -50,7 +51,11 @@ export default function AdminPaidTeamsPage({ api = registrationApi }: AdminPaidT
       page,
       pageSize: PAGE_SIZE,
     })
-      .then((records) => { if (active) setTeams(Array.isArray(records) ? records : []); })
+      .then((result) => {
+        if (!active) return;
+        setTeams(Array.isArray(result.items) ? result.items : []);
+        setHasNextPage(result.hasNextPage === true);
+      })
       .catch(() => { if (active) setLoadError(true); })
       .finally(() => { if (active) setLoading(false); });
     return () => { active = false; };
@@ -114,7 +119,7 @@ export default function AdminPaidTeamsPage({ api = registrationApi }: AdminPaidT
             <nav className="admin-pagination" aria-label="Halaman daftar tim lunas">
               <button className="admin-action" type="button" disabled={page === 1 || loading} onClick={() => setPage((value) => Math.max(1, value - 1))}>Sebelumnya</button>
               <span>Halaman {page}</span>
-              <button className="admin-action" type="button" disabled={teams.length < PAGE_SIZE || loading} onClick={() => setPage((value) => value + 1)}>Berikutnya</button>
+              <button className="admin-action" type="button" disabled={!hasNextPage || loading} onClick={() => setPage((value) => value + 1)}>Berikutnya</button>
             </nav>
           </section>
         )}
