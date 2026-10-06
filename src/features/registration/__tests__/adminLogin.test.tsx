@@ -37,6 +37,7 @@ function renderLogin(api: RegistrationApi) {
           <Route path="/admin/masuk" element={<AdminLoginPage />} />
           <Route path="/admin" element={<h1>Dashboard admin</h1>} />
           <Route path="/admin/finance" element={<h1>Dashboard finance</h1>} />
+          <Route path="/admin/tim-lunas" element={<h1>Daftar tim lunas</h1>} />
           <Route path="/admin/scanner" element={<h1>Scanner gerbang</h1>} />
         </Routes>
       </AuthProvider>
@@ -68,6 +69,7 @@ describe('AdminLoginPage', () => {
     ['REGISTRATION_REVIEWER', 'Dashboard admin'],
     ['SUPPORT', 'Dashboard admin'],
     ['FINANCE', 'Dashboard finance'],
+    ['PAID_TEAM_VIEWER', 'Daftar tim lunas'],
     ['GATE_STAFF', 'Scanner gerbang'],
   ] as const)('accepts the %s staff role', async (role, destination) => {
     const api = createApi(role);

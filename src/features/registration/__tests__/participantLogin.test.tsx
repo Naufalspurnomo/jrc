@@ -59,6 +59,15 @@ describe('PortalLoginPage', () => {
     expect(await screen.findByRole('heading', { name: 'Portal peserta' })).toBeInTheDocument();
   });
 
+  it('links to participant password recovery', async () => {
+    renderLogin(createApi(vi.fn()));
+
+    expect(await screen.findByRole('link', { name: 'Lupa kata sandi?' })).toHaveAttribute(
+      'href',
+      '/portal/lupa-kata-sandi',
+    );
+  });
+
   it('shows the server error and keeps the form available', async () => {
     const login = vi.fn().mockRejectedValue(new Error('Email atau kata sandi salah.'));
     const user = userEvent.setup();

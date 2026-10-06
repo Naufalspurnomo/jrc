@@ -17,14 +17,16 @@ Preserve these invariants:
 
 ## Role matrix
 
-| Capability | Participant | Registration Reviewer | Finance | Gate Staff | Support | Super Admin |
-|---|---:|---:|---:|---:|---:|---:|
-| Manage own registrations and files | Yes | No | No | No | No | No |
-| Review and decide registrations | No | Yes | No | No | Read only | Yes |
-| Export safe registration CSV | No | Yes | No | No | Yes | Yes |
-| View payment proof and mark payment | No | No | Yes | No | No | Yes |
-| Inspect and redeem QR tickets | No | No | No | Yes | No | Yes |
-| Access private registration documents | Own only | Yes | No | No | Yes | Yes |
+| Capability | Participant | Registration Reviewer | Finance | Paid Team Viewer | Gate Staff | Support | Super Admin |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| Manage own registrations and files | Yes | No | No | No | No | No | No |
+| Review and decide registrations | No | Yes | No | No | No | Read only | Yes |
+| Review payment proofs and decide payment | No | No | Yes | No | No | No | Yes |
+| View minimal list of teams with accepted payment | No | No | No | Yes | No | No | Yes |
+| Export safe registration CSV | No | Yes | No | No | No | Yes | Yes |
+| View payment proof and mark payment | No | No | Yes | No | No | No | Yes |
+| Inspect and redeem QR tickets | No | No | No | No | Yes | No | Yes |
+| Access private registration documents | Own only | Yes | No | No | No | Yes | Yes |
 
 ## Local setup, environment, migrate, seed
 

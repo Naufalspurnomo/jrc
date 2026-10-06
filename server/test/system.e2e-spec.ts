@@ -25,6 +25,8 @@ suite('registration system e2e', () => {
   let participantB: SuperAgentTest;
   let reviewer: SuperAgentTest;
   let finance: SuperAgentTest;
+  let paidTeamViewer: SuperAgentTest;
+  let superAdmin: SuperAgentTest;
   let gate: SuperAgentTest;
   let csrfA: string;
   let csrfB: string;
@@ -92,6 +94,8 @@ suite('registration system e2e', () => {
 
     await createStaff('reviewer@example.test', Role.REGISTRATION_REVIEWER);
     await createStaff('finance@example.test', Role.FINANCE);
+    await createStaff('paid-teams@example.test', Role.PAID_TEAM_VIEWER);
+    await createStaff('super-admin@example.test', Role.SUPER_ADMIN);
     await createStaff('gate@example.test', Role.GATE_STAFF);
 
     const moduleRef = await Test.createTestingModule({ imports: [AppModule] }).compile();
@@ -104,6 +108,8 @@ suite('registration system e2e', () => {
     participantB = request.agent(app.getHttpServer());
     reviewer = request.agent(app.getHttpServer());
     finance = request.agent(app.getHttpServer());
+    paidTeamViewer = request.agent(app.getHttpServer());
+    superAdmin = request.agent(app.getHttpServer());
     gate = request.agent(app.getHttpServer());
 
     csrfA = (
@@ -124,6 +130,8 @@ suite('registration system e2e', () => {
     });
     csrfReviewer = await login(reviewer, 'reviewer@example.test');
     csrfFinance = await login(finance, 'finance@example.test');
+    await login(paidTeamViewer, 'paid-teams@example.test');
+    await login(superAdmin, 'super-admin@example.test');
     csrfGate = await login(gate, 'gate@example.test');
   }, 60_000);
 
@@ -384,6 +392,36 @@ suite('registration system e2e', () => {
       where: { subject: { contains: 'terverifikasi' } },
     });
     expect(paidNotice.body).toMatch(/^jrc-email-v1\./);
+  });
+
+  it('limits the paid-team viewer to the minimal paid-team list', async () => {
+    const response = await paidTeamViewer
+      .get('/api/admin/paid-teams')
+      .expect('Cache-Control', 'private, no-store')
+      .expect(200);
+    expect(response.body).toEqual([
+      {
+        registrationNumber: expect.any(String),
+        teamName: '=CMD()',
+        institution: 'PENS',
+        competition: {
+          id: competitionId,
+          name: 'Charion Line',
+          level: 'Umum',
+          discipline: 'Line Follower Mikro',
+        },
+        verifiedAt: expect.any(String),
+      },
+    ]);
+    expect(JSON.stringify(response.body)).not.toMatch(
+      /email|phone|member|proof|amount|invoice|owner|studentId/i,
+    );
+
+    await finance.get('/api/admin/paid-teams').expect(403);
+    await reviewer.get('/api/admin/paid-teams').expect(403);
+    await paidTeamViewer.get('/api/admin/finance/invoices').expect(403);
+    await paidTeamViewer.get('/api/admin/registrations').expect(403);
+    await superAdmin.get('/api/admin/paid-teams').expect(200);
   });
 
   it('rejects forged tokens and minimizes public verification output', async () => {

@@ -9,6 +9,7 @@ const STAFF_ROLES = [
   Role.SUPER_ADMIN,
   Role.REGISTRATION_REVIEWER,
   Role.FINANCE,
+  Role.PAID_TEAM_VIEWER,
   Role.GATE_STAFF,
   Role.SUPPORT,
 ] as const;

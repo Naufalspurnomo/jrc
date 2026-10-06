@@ -87,6 +87,21 @@ describe('ApiClient', () => {
     );
   });
 
+  it('loads the read-only paid-team list with encoded filters', async () => {
+    const fetcher = vi.fn<typeof fetch>().mockResolvedValue(new Response('[]', {
+      status: 200,
+      headers: { 'Content-Type': 'application/json' },
+    }));
+    const api = createRegistrationApi(new ApiClient(fetcher));
+
+    await api.admin.listPaidTeams({ query: 'Garuda & PENS', page: 2, pageSize: 25 });
+
+    expect(fetcher).toHaveBeenCalledWith(
+      '/api/admin/paid-teams?query=Garuda+%26+PENS&page=2&pageSize=25',
+      expect.objectContaining({ credentials: 'include', method: 'GET' }),
+    );
+  });
+
   it('deletes an admin registration with CSRF protection', async () => {
     const fetcher = vi.fn<typeof fetch>()
       .mockResolvedValueOnce(new Response(JSON.stringify({ csrfToken: 'csrf-123' }), {

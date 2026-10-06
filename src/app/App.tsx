@@ -19,6 +19,8 @@ import HomePage from '../pages/HomePage';
 const CompetitionPage = lazy(() => import('../pages/CompetitionPage'));
 const PortalDashboardPage = lazy(() => import('../pages/portal/PortalDashboardPage'));
 const PortalLoginPage = lazy(() => import('../pages/portal/PortalLoginPage'));
+const PortalForgotPasswordPage = lazy(() => import('../pages/portal/PortalForgotPasswordPage'));
+const PortalResetPasswordPage = lazy(() => import('../pages/portal/PortalResetPasswordPage'));
 const PortalPaymentPage = lazy(() => import('../pages/portal/PortalPaymentPage'));
 const PortalRegistrationPage = lazy(() => import('../pages/portal/PortalRegistrationPage'));
 const PortalSignupPage = lazy(() => import('../pages/portal/PortalSignupPage'));
@@ -31,10 +33,12 @@ const PublicTicketVerificationPage = lazy(
 );
 const AdminLoginPage = lazy(() => import('../pages/admin/AdminLoginPage'));
 const AdminDashboardPage = lazy(() => import('../pages/admin/AdminDashboardPage'));
+const AdminParticipantsPage = lazy(() => import('../pages/admin/AdminParticipantsPage'));
 const AdminRegistrationDetailPage = lazy(
   () => import('../pages/admin/AdminRegistrationDetailPage'),
 );
 const AdminFinancePage = lazy(() => import('../pages/admin/AdminFinancePage'));
+const AdminPaidTeamsPage = lazy(() => import('../pages/admin/AdminPaidTeamsPage'));
 const AdminScannerPage = lazy(() => import('../pages/admin/AdminScannerPage'));
 
 function NotFoundPage() {
@@ -61,6 +65,8 @@ export function AppRoutes({ homeStartupReady = true }: { homeStartupReady?: bool
         <Route path="/" element={<HomePage startupReady={homeStartupReady} />} />
         <Route path="/perlombaan/:slug" element={<CompetitionPage />} />
         <Route path="/portal/masuk" element={<PortalLoginPage />} />
+        <Route path="/portal/lupa-kata-sandi" element={<PortalForgotPasswordPage />} />
+        <Route path="/portal/reset-kata-sandi" element={<PortalResetPasswordPage />} />
         <Route path="/portal/daftar" element={<PortalSignupPage />} />
         <Route path="/portal/verifikasi-email" element={<PortalEmailVerificationPage />} />
         <Route path="/ticket/verify" element={<PublicTicketVerificationPage />} />
@@ -102,10 +108,18 @@ export function AppRoutes({ homeStartupReady = true }: { homeStartupReady?: bool
             element={<AdminRegistrationDetailPage />}
           />
         </Route>
+        <Route element={<RequireAuth roles={['SUPER_ADMIN']} redirectTo="/admin/masuk" />}>
+          <Route path="/admin/peserta" element={<AdminParticipantsPage />} />
+        </Route>
         <Route
           element={<RequireAuth roles={['SUPER_ADMIN', 'FINANCE']} redirectTo="/admin/masuk" />}
         >
           <Route path="/admin/finance" element={<AdminFinancePage />} />
+        </Route>
+        <Route
+          element={<RequireAuth roles={['SUPER_ADMIN', 'PAID_TEAM_VIEWER']} redirectTo="/admin/masuk" />}
+        >
+          <Route path="/admin/tim-lunas" element={<AdminPaidTeamsPage />} />
         </Route>
         <Route
           element={<RequireAuth roles={['SUPER_ADMIN', 'GATE_STAFF']} redirectTo="/admin/masuk" />}

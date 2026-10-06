@@ -15,6 +15,7 @@ const registrationRoles = new Set<AuthRole>([
   'SUPPORT',
 ]);
 const financeRoles = new Set<AuthRole>(['SUPER_ADMIN', 'FINANCE']);
+const paidTeamRoles = new Set<AuthRole>(['SUPER_ADMIN', 'PAID_TEAM_VIEWER']);
 const scannerRoles = new Set<AuthRole>(['SUPER_ADMIN', 'GATE_STAFF']);
 
 const roleLabels: Record<AuthRole, string> = {
@@ -22,6 +23,7 @@ const roleLabels: Record<AuthRole, string> = {
   SUPER_ADMIN: 'Super Admin',
   REGISTRATION_REVIEWER: 'Peninjau Pendaftaran',
   FINANCE: 'Keuangan',
+  PAID_TEAM_VIEWER: 'Pemantau Tim Lunas',
   GATE_STAFF: 'Petugas Gerbang',
   SUPPORT: 'Dukungan',
 };
@@ -64,8 +66,12 @@ export function AdminShell({ children }: AdminShellProps) {
           {role && registrationRoles.has(role) && (
             <NavLink end to="/admin">Pendaftaran</NavLink>
           )}
+          {role === 'SUPER_ADMIN' && <NavLink to="/admin/peserta">Akun peserta</NavLink>}
           {role && financeRoles.has(role) && (
             <NavLink to="/admin/finance">Keuangan</NavLink>
+          )}
+          {role && paidTeamRoles.has(role) && (
+            <NavLink to="/admin/tim-lunas">Tim lunas</NavLink>
           )}
           {role && scannerRoles.has(role) && (
             <NavLink to="/admin/scanner">Pemindai</NavLink>

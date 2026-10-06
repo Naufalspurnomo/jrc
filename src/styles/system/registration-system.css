@@ -163,10 +163,38 @@
   margin-top: .55rem;
 }
 
+.portal-auth .portal-auth__forgot-link {
+  justify-self: end;
+  min-height: 2.75rem;
+  display: inline-flex;
+  align-items: center;
+  color: #e5b84e;
+  font-size: .78rem;
+  font-weight: 700;
+}
+
+.portal-auth .portal-auth__notice {
+  width: min(100%, 32rem);
+  margin-top: 1.5rem;
+  padding: 1.25rem;
+  border: 1px solid rgb(229 184 78 / 40%);
+  background: rgb(229 184 78 / 8%);
+}
+
+.portal-auth .portal-auth__notice p { margin-top: 0; }
+.portal-auth .portal-auth__notice .portal-button { min-height: 2.75rem; }
+
 .portal-auth .portal-form-error {
   color: #ffd2c8;
   font-size: .75rem;
   line-height: 1.35;
+}
+
+.portal-auth .portal-form-success {
+  margin: 0 0 .5rem;
+  color: #c8f0d7;
+  font-size: .78rem;
+  line-height: 1.45;
 }
 
 .portal-auth .portal-auth__account-link {
@@ -842,6 +870,22 @@
 .admin-shell .admin-filters {
   grid-template-columns: minmax(14rem, 1.4fr) minmax(11rem, 1fr) minmax(0, 1fr);
   gap: 1rem;
+}
+
+.admin-shell .admin-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 1rem;
+  margin-top: 1.5rem;
+}
+
+.admin-shell .admin-pagination span {
+  color: #665244;
+  font-family: var(--font-mono);
+  font-size: .62rem;
+  letter-spacing: .07em;
+  text-transform: uppercase;
 }
 
 .admin-shell .admin-filters label,

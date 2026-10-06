@@ -8,12 +8,14 @@ const STAFF_ROLES: readonly AuthRole[] = [
   'SUPER_ADMIN',
   'REGISTRATION_REVIEWER',
   'FINANCE',
+  'PAID_TEAM_VIEWER',
   'GATE_STAFF',
   'SUPPORT',
 ];
 
 function destinationForRole(role: AuthRole): string {
   if (role === 'FINANCE') return '/admin/finance';
+  if (role === 'PAID_TEAM_VIEWER') return '/admin/tim-lunas';
   if (role === 'GATE_STAFF') return '/admin/scanner';
   return '/admin';
 }

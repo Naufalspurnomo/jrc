@@ -7,6 +7,7 @@ interface RedirectState {
   from?: {
     pathname?: string;
   };
+  passwordReset?: boolean;
 }
 
 function getErrorMessage(error: unknown): string {
@@ -58,6 +59,9 @@ export default function PortalLoginPage() {
         </p>
 
         <form className="portal-auth__form" onSubmit={submit}>
+          {(location.state as RedirectState | null)?.passwordReset && (
+            <p className="portal-form-success" role="status">Kata sandi berhasil diganti. Silakan masuk kembali.</p>
+          )}
           <label htmlFor="portal-login-email">Email</label>
           <input
             id="portal-login-email"
@@ -76,6 +80,7 @@ export default function PortalLoginPage() {
             value={password}
             onChange={(event) => setPassword(event.target.value)}
           />
+          <Link className="portal-auth__forgot-link" to="/portal/lupa-kata-sandi">Lupa kata sandi?</Link>
           {error && <p className="portal-form-error" role="alert">{error}</p>}
           <button className="portal-button portal-button--primary" type="submit" disabled={submitting}>
             {submitting ? 'Memproses…' : 'Masuk'}

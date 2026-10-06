@@ -18,6 +18,9 @@ vi.mock('../pages/admin/AdminRegistrationDetailPage', () => ({
 vi.mock('../pages/admin/AdminFinancePage', () => ({
   default: () => <h1>Finance admin</h1>,
 }));
+vi.mock('../pages/admin/AdminPaidTeamsPage', () => ({
+  default: () => <h1>Tim lunas admin</h1>,
+}));
 vi.mock('../pages/admin/AdminScannerPage', () => ({
   default: () => <h1>Scanner admin</h1>,
 }));
@@ -57,10 +60,14 @@ describe('admin route authorization', () => {
     ['/admin', 'REGISTRATION_REVIEWER', 'Pendaftaran admin'],
     ['/admin/pendaftaran/registration-1', 'SUPPORT', 'Detail pendaftaran admin'],
     ['/admin/finance', 'FINANCE', 'Finance admin'],
+    ['/admin/tim-lunas', 'PAID_TEAM_VIEWER', 'Tim lunas admin'],
+    ['/admin/tim-lunas', 'SUPER_ADMIN', 'Tim lunas admin'],
     ['/admin/scanner', 'GATE_STAFF', 'Scanner admin'],
     ['/admin/finance', 'SUPER_ADMIN', 'Finance admin'],
     ['/admin/scanner', 'REGISTRATION_REVIEWER', 'Masuk admin'],
     ['/admin', 'FINANCE', 'Masuk admin'],
+    ['/admin/finance', 'PAID_TEAM_VIEWER', 'Masuk admin'],
+    ['/admin', 'PAID_TEAM_VIEWER', 'Masuk admin'],
     ['/admin/finance', 'GATE_STAFF', 'Masuk admin'],
     ['/admin', 'PARTICIPANT', 'Masuk admin'],
   ] as const)('routes %s for %s to %s', async (path, role, heading) => {

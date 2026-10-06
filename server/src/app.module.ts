@@ -40,6 +40,7 @@ import {
 import { EmailOutboxService } from './email-outbox';
 import { FinanceController, FinanceService } from './finance';
 import { ManualPaymentProvider } from './payments/manual-payment.provider';
+import { PaidTeamsController, PaidTeamsService } from './paid-teams';
 import {
   FinanceVerificationController,
   ParticipantTicketController,
@@ -296,6 +297,7 @@ export class HealthController {
     ParticipantTicketController,
     PaymentProofController,
     ParticipantDocumentsController,
+    PaidTeamsController,
     RegistrationsController,
     TicketVerificationController,
   ],
@@ -316,6 +318,7 @@ export class HealthController {
     },
     PaymentProofUploadInterceptor,
     PaymentVerificationService,
+    PaidTeamsService,
     RegistrationsService,
     TicketGateService,
     { provide: APP_GUARD, useClass: ThrottlerGuard },

@@ -9,6 +9,8 @@ export const API_PATHS = {
     logout: '/api/auth/logout',
     verifyEmail: '/api/auth/email-verification/verify',
     resendEmailVerification: '/api/auth/email-verification/resend',
+    forgotPassword: '/api/auth/password/forgot',
+    resetPassword: '/api/auth/password/reset',
   },
   competitions: '/api/competitions',
   registrations: {
@@ -36,6 +38,10 @@ export const API_PATHS = {
     kit: '/api/gate/kit',
   },
   admin: {
+    participants: {
+      root: '/api/admin/participants',
+      byId: (participantId: string) => `/api/admin/participants/${encodeURIComponent(participantId)}`,
+    },
     registrations: {
       root: '/api/admin/registrations',
       exportXlsx: '/api/admin/registrations/export.xlsx',
@@ -52,6 +58,7 @@ export const API_PATHS = {
         proof: (invoiceId: string) => `/api/admin/finance/invoices/${encodeURIComponent(invoiceId)}/proof`,
       },
     },
+    paidTeams: '/api/admin/paid-teams',
   },
 } as const;
 
@@ -200,6 +207,7 @@ export type AuthRole =
   | 'SUPER_ADMIN'
   | 'REGISTRATION_REVIEWER'
   | 'FINANCE'
+  | 'PAID_TEAM_VIEWER'
   | 'GATE_STAFF'
   | 'SUPPORT';
 
@@ -467,6 +475,52 @@ export interface RegistrationDeletionOutcome {
   cleanupWarnings: string[];
 }
 
+export interface AdminParticipantRecord {
+  id: string;
+  email: string;
+  displayName: string;
+  active: boolean;
+  emailVerified: boolean;
+  createdAt: string;
+  updatedAt: string;
+  sessionCount: number;
+  registration: {
+    id: string;
+    registrationNumber: string;
+    teamName: string;
+    status: RegistrationState;
+    paymentStatus: PaymentState | null;
+    ticketStatus: 'INACTIVE' | 'ACTIVE' | 'CHECKED_IN' | 'REVOKED' | null;
+    updatedAt: string;
+  } | null;
+  deletionBlocked: boolean;
+}
+
+export interface AdminParticipantListInput {
+  query?: string;
+  page?: number;
+  pageSize?: number;
+}
+
+export interface PaidTeamRecord {
+  registrationNumber: string;
+  teamName: string;
+  institution: string;
+  competition: {
+    id: string;
+    name: string;
+    level: string;
+    discipline: string;
+  };
+  verifiedAt: string | null;
+}
+
+export interface PaidTeamListInput {
+  query?: string;
+  page?: number;
+  pageSize?: number;
+}
+
 export interface RegistrationApi {
   auth: {
     me(): Promise<AuthProbe>;
@@ -475,6 +529,8 @@ export interface RegistrationApi {
     logout(): Promise<void>;
     verifyEmail(token: string): Promise<void>;
     resendEmailVerification(): Promise<void>;
+    forgotPassword(email: string): Promise<void>;
+    resetPassword(token: string, password: string): Promise<void>;
   };
   competitions: {
     list(): Promise<CompetitionRecord[]>;
@@ -505,6 +561,8 @@ export interface RegistrationApi {
     handoverKit(input: TicketRequest): Promise<TicketVerification>;
   };
   admin: {
+    listParticipants(input?: AdminParticipantListInput): Promise<AdminParticipantRecord[]>;
+    deleteParticipant(participantId: string): Promise<{ deleted: true }>;
     listRegistrations(): Promise<RegistrationRecord[]>;
     getRegistration(registrationId: string): Promise<RegistrationRecord>;
     deleteRegistration(registrationId: string): Promise<RegistrationDeletionOutcome>;
@@ -513,6 +571,7 @@ export interface RegistrationApi {
     exportAttendance(): Promise<Blob>;
     listFinanceInvoices(): Promise<FinanceInvoiceRecord[]>;
     verifyPayment(invoiceId: string, input: PaymentReviewInput): Promise<InvoiceRecord>;
+    listPaidTeams(input?: PaidTeamListInput): Promise<PaidTeamRecord[]>;
   };
 }
 
@@ -541,6 +600,17 @@ export function createRegistrationApi(client = new ApiClient()): RegistrationApi
         await client.request<void>(API_PATHS.auth.resendEmailVerification, {
           method: 'POST',
         });
+      },
+      forgotPassword: async (email) => {
+        await client.request<void>(API_PATHS.auth.forgotPassword, {
+          method: 'POST', body: { email }, csrf: false,
+        });
+      },
+      resetPassword: async (token, password) => {
+        await client.request<void>(API_PATHS.auth.resetPassword, {
+          method: 'POST', body: { token, password }, csrf: false,
+        });
+        client.clearCsrfToken();
       },
     },
     competitions: {
@@ -604,6 +674,20 @@ export function createRegistrationApi(client = new ApiClient()): RegistrationApi
       handoverKit: (input) => client.request<TicketVerification>(API_PATHS.gate.kit, { method: 'POST', body: input }),
     },
     admin: {
+      listParticipants: (input = {}) => {
+        const params = new URLSearchParams();
+        if (input.query?.trim()) params.set('query', input.query.trim());
+        if (input.page !== undefined) params.set('page', String(input.page));
+        if (input.pageSize !== undefined) params.set('pageSize', String(input.pageSize));
+        const query = params.toString();
+        return client.request<AdminParticipantRecord[]>(
+          `${API_PATHS.admin.participants.root}${query ? `?${query}` : ''}`,
+        );
+      },
+      deleteParticipant: (participantId) => client.request<{ deleted: true }>(
+        API_PATHS.admin.participants.byId(participantId),
+        { method: 'DELETE' },
+      ),
       listRegistrations: () => client.request<RegistrationRecord[]>(API_PATHS.admin.registrations.root),
       getRegistration: (registrationId) => client.request<RegistrationRecord>(API_PATHS.admin.registrations.byId(registrationId)),
       deleteRegistration: (registrationId) => client.request<RegistrationDeletionOutcome>(
@@ -621,6 +705,14 @@ export function createRegistrationApi(client = new ApiClient()): RegistrationApi
         method: 'POST',
         body: input,
       }),
+      listPaidTeams: (input = {}) => {
+        const params = new URLSearchParams();
+        if (input.query?.trim()) params.set('query', input.query.trim());
+        if (input.page !== undefined) params.set('page', String(input.page));
+        if (input.pageSize !== undefined) params.set('pageSize', String(input.pageSize));
+        const query = params.toString();
+        return client.request<PaidTeamRecord[]>(`${API_PATHS.admin.paidTeams}${query ? `?${query}` : ''}`);
+      },
     },
   };
 }
