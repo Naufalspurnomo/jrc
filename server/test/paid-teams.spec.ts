@@ -172,6 +172,32 @@ describe('Paid team read-only detail and files', () => {
     await expect(service.detail(REGISTRATION_ID)).rejects.toBeInstanceOf(NotFoundException);
   });
 
+  it('does not assign one photo to multiple roster members with the same name', async () => {
+    const duplicateNameInvoice = {
+      ...detailInvoice,
+      registration: {
+        ...detailInvoice.registration,
+        members: [
+          detailInvoice.registration.members[0],
+          {
+            ...detailInvoice.registration.members[0],
+            id: 'member-duplicate',
+            role: 'MEMBER',
+          },
+        ],
+      },
+    };
+    const prisma = { invoice: { findFirst: vi.fn().mockResolvedValue(duplicateNameInvoice) } };
+    const service = new PaidTeamsService(prisma as unknown as PrismaService);
+
+    const result = await service.detail(REGISTRATION_ID);
+
+    expect(result.members).toEqual([
+      expect.objectContaining({ id: 'member-1', photo: null }),
+      expect.objectContaining({ id: 'member-duplicate', photo: null }),
+    ]);
+  });
+
   it('opens only a member photo belonging to a paid registration', async () => {
     const stream = Readable.from('photo');
     const prisma = {

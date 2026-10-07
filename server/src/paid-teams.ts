@@ -150,6 +150,11 @@ function photoOwnerKey(name: string, role: string): string {
 
 function serializePaidTeamDetail(invoice: PaidTeamDetailInvoice) {
   const registration = invoice.registration;
+  const memberKeyCounts = new Map<string, number>();
+  for (const member of registration.members) {
+    const key = photoOwnerKey(member.name, member.role);
+    memberKeyCounts.set(key, (memberKeyCounts.get(key) ?? 0) + 1);
+  }
   const photos = new Map(
     registration.documents
       .filter((document) => document.subjectName && document.subjectRole)
@@ -173,7 +178,8 @@ function serializePaidTeamDetail(invoice: PaidTeamDetailInvoice) {
     owner: registration.owner,
     competition: registration.competition,
     members: registration.members.map((member) => {
-      const photo = photos.get(photoOwnerKey(member.name, member.role));
+      const key = photoOwnerKey(member.name, member.role);
+      const photo = memberKeyCounts.get(key) === 1 ? photos.get(key) : undefined;
       return {
         ...member,
         photo: photo
