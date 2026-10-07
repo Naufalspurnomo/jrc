@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 
 import { AdminShell } from '../../components/portal/AdminShell';
 import {
@@ -104,13 +105,22 @@ export default function AdminPaidTeamsPage({ api = registrationApi }: AdminPaidT
             ) : (
               <div className="admin-table-wrap">
                 <table>
-                  <thead><tr><th>Tim</th><th>Instansi</th><th>Kompetisi</th><th>Terbayar</th></tr></thead>
+                  <thead><tr><th>Tim</th><th>Instansi</th><th>Kompetisi</th><th>Terbayar</th><th>Akses</th></tr></thead>
                   <tbody>{teams.map((team) => (
                     <tr key={team.registrationNumber}>
                       <td><strong>{team.teamName}</strong><span>{team.registrationNumber}</span></td>
                       <td>{team.institution}</td>
                       <td><strong>{team.competition.name}</strong><span>{team.competition.level} · {team.competition.discipline}</span></td>
                       <td>{formatDate(team.verifiedAt)}</td>
+                      <td>
+                        <Link
+                          className="admin-table-link"
+                          to={`/admin/tim-lunas/${encodeURIComponent(team.id)}`}
+                          aria-label={`Lihat detail ${team.teamName}`}
+                        >
+                          Lihat detail
+                        </Link>
+                      </td>
                     </tr>
                   ))}</tbody>
                 </table>

@@ -394,7 +394,7 @@ suite('registration system e2e', () => {
     expect(paidNotice.body).toMatch(/^jrc-email-v1\./);
   });
 
-  it('limits the paid-team viewer to the minimal paid-team list', async () => {
+  it('limits the paid-team viewer to paid details and scoped private files', async () => {
     const response = await paidTeamViewer
       .get('/api/admin/paid-teams')
       .expect('Cache-Control', 'private, no-store')
@@ -402,6 +402,7 @@ suite('registration system e2e', () => {
     expect(response.body).toEqual({
       items: [
         {
+          id: registrationId,
           registrationNumber: expect.any(String),
           teamName: '=CMD()',
           institution: 'PENS',
@@ -422,11 +423,60 @@ suite('registration system e2e', () => {
       /email|phone|member|proof|amount|invoice|owner|studentId/i,
     );
 
+    const detail = await paidTeamViewer
+      .get(`/api/admin/paid-teams/${registrationId}`)
+      .expect('Cache-Control', 'private, no-store')
+      .expect(200);
+    expect(detail.body).toMatchObject({
+      id: registrationId,
+      teamName: '=CMD()',
+      institution: 'PENS',
+      owner: { displayName: 'Participant A', email: 'a@example.test' },
+      members: [
+        expect.objectContaining({ name: 'Alice', photo: expect.objectContaining({ id: expect.any(String) }) }),
+        expect.objectContaining({ name: 'Bob', photo: expect.objectContaining({ id: expect.any(String) }) }),
+        expect.objectContaining({ name: 'Coach', photo: expect.objectContaining({ id: expect.any(String) }) }),
+      ],
+      payment: {
+        invoiceNumber: expect.any(String),
+        amount: 250000,
+        currency: 'IDR',
+        verifiedAt: expect.any(String),
+        proof: expect.objectContaining({ originalName: 'proof.png' }),
+      },
+    });
+    expect(JSON.stringify(detail.body)).not.toMatch(
+      /storageKey|verificationReason|verifiedBy|instructions/i,
+    );
+
+    const photoId = detail.body.members[0].photo.id as string;
+    await paidTeamViewer
+      .get(`/api/admin/paid-teams/${registrationId}/photos/${photoId}`)
+      .expect('Cache-Control', 'private, no-store')
+      .expect('Cross-Origin-Resource-Policy', 'same-site')
+      .expect('Content-Disposition', /^inline;/)
+      .expect(200);
+    await paidTeamViewer
+      .get(`/api/admin/paid-teams/${registrationId}/photos/${photoId}?download=true`)
+      .expect('Content-Disposition', /^attachment;/)
+      .expect(200);
+    await paidTeamViewer
+      .get(`/api/admin/paid-teams/${registrationId}/payment-proof`)
+      .expect('Cache-Control', 'private, no-store')
+      .expect('Cross-Origin-Resource-Policy', 'same-site')
+      .expect('Content-Disposition', /^inline;/)
+      .expect(200);
+    await paidTeamViewer
+      .get(`/api/admin/paid-teams/${registrationId}/payment-proof?download=true`)
+      .expect('Content-Disposition', /^attachment;/)
+      .expect(200);
+
     await finance.get('/api/admin/paid-teams').expect(403);
     await reviewer.get('/api/admin/paid-teams').expect(403);
     await paidTeamViewer.get('/api/admin/finance/invoices').expect(403);
     await paidTeamViewer.get('/api/admin/registrations').expect(403);
     await superAdmin.get('/api/admin/paid-teams').expect(200);
+    await superAdmin.get(`/api/admin/paid-teams/${registrationId}`).expect(200);
   });
 
   it('rejects forged tokens and minimizes public verification output', async () => {

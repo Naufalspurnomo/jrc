@@ -22,9 +22,10 @@ Preserve these invariants:
 | Manage own registrations and files | Yes | No | No | No | No | No | No |
 | Review and decide registrations | No | Yes | No | No | No | Read only | Yes |
 | Review payment proofs and decide payment | No | No | Yes | No | No | No | Yes |
-| View minimal list of teams with accepted payment | No | No | No | Yes | No | No | Yes |
+| View paid-team list and full team/member detail | No | No | No | Yes | No | No | Yes |
+| View/download paid-team member photos and payment proof | No | No | No | Yes | No | No | Yes |
 | Export safe registration CSV | No | Yes | No | No | No | Yes | Yes |
-| View payment proof and mark payment | No | No | Yes | No | No | No | Yes |
+| Decide payment verification | No | No | Yes | No | No | No | Yes |
 | Inspect and redeem QR tickets | No | No | No | No | Yes | No | Yes |
 | Access private registration documents | Own only | Yes | No | No | No | Yes | Yes |
 

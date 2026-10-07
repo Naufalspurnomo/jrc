@@ -933,8 +933,84 @@
 }
 
 .admin-shell .admin-table-wrap td a {
+  display: inline-flex;
   min-height: 2.75rem;
   align-items: center;
+  color: #702522;
+  font-weight: 700;
+  text-decoration: underline;
+  text-underline-offset: .22rem;
+}
+
+.admin-shell .admin-readonly-badge {
+  display: inline-flex;
+  align-items: center;
+  min-height: 2.5rem;
+  padding: .55rem .85rem;
+  border: 1px solid #8d735e;
+  background: #fff8e9;
+  color: #702522;
+  font-family: var(--font-mono);
+  font-size: .65rem;
+  font-weight: 700;
+  letter-spacing: .1em;
+}
+
+.admin-shell .admin-member-list--photos article {
+  display: flex;
+  flex-direction: column;
+  gap: .4rem;
+}
+
+.admin-shell .admin-member-photo {
+  width: min(100%, 11rem);
+  aspect-ratio: 3 / 4;
+  margin-bottom: .75rem;
+  border: 1px solid #9a806a;
+  background: #eee2cc;
+  object-fit: cover;
+}
+
+.admin-shell .admin-member-photo--empty {
+  display: grid;
+  place-items: center;
+  padding: 1rem;
+  color: #665244;
+  font-size: .72rem;
+  text-align: center;
+}
+
+.admin-shell .admin-file-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .75rem 1rem;
+  margin-top: .65rem;
+}
+
+.admin-shell .admin-file-actions a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 2.5rem;
+  color: #702522;
+  font-weight: 700;
+  text-decoration: underline;
+  text-underline-offset: .22rem;
+}
+
+.admin-shell .admin-proof--readonly {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 1rem 2rem;
+  margin-top: 1.5rem;
+  padding: 1.25rem;
+  border: 1px solid #9a806a;
+  background: #fff8e9;
+}
+
+.admin-shell .admin-proof--readonly > div:first-child {
+  display: grid;
+  gap: .35rem;
 }
 
 .admin-shell .portal-status {

@@ -21,6 +21,9 @@ vi.mock('../pages/admin/AdminFinancePage', () => ({
 vi.mock('../pages/admin/AdminPaidTeamsPage', () => ({
   default: () => <h1>Tim lunas admin</h1>,
 }));
+vi.mock('../pages/admin/AdminPaidTeamDetailPage', () => ({
+  default: () => <h1>Detail tim lunas admin</h1>,
+}));
 vi.mock('../pages/admin/AdminScannerPage', () => ({
   default: () => <h1>Scanner admin</h1>,
 }));
@@ -61,7 +64,9 @@ describe('admin route authorization', () => {
     ['/admin/pendaftaran/registration-1', 'SUPPORT', 'Detail pendaftaran admin'],
     ['/admin/finance', 'FINANCE', 'Finance admin'],
     ['/admin/tim-lunas', 'PAID_TEAM_VIEWER', 'Tim lunas admin'],
+    ['/admin/tim-lunas/registration-1', 'PAID_TEAM_VIEWER', 'Detail tim lunas admin'],
     ['/admin/tim-lunas', 'SUPER_ADMIN', 'Tim lunas admin'],
+    ['/admin/tim-lunas/registration-1', 'SUPER_ADMIN', 'Detail tim lunas admin'],
     ['/admin/scanner', 'GATE_STAFF', 'Scanner admin'],
     ['/admin/finance', 'SUPER_ADMIN', 'Finance admin'],
     ['/admin/scanner', 'REGISTRATION_REVIEWER', 'Masuk admin'],

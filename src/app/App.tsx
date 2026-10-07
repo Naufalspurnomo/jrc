@@ -38,6 +38,7 @@ const AdminRegistrationDetailPage = lazy(
 );
 const AdminFinancePage = lazy(() => import('../pages/admin/AdminFinancePage'));
 const AdminPaidTeamsPage = lazy(() => import('../pages/admin/AdminPaidTeamsPage'));
+const AdminPaidTeamDetailPage = lazy(() => import('../pages/admin/AdminPaidTeamDetailPage'));
 const AdminScannerPage = lazy(() => import('../pages/admin/AdminScannerPage'));
 
 function NotFoundPage() {
@@ -116,6 +117,10 @@ export function AppRoutes({ homeStartupReady = true }: { homeStartupReady?: bool
           element={<RequireAuth roles={['SUPER_ADMIN', 'PAID_TEAM_VIEWER']} redirectTo="/admin/masuk" />}
         >
           <Route path="/admin/tim-lunas" element={<AdminPaidTeamsPage />} />
+          <Route
+            path="/admin/tim-lunas/:registrationId"
+            element={<AdminPaidTeamDetailPage />}
+          />
         </Route>
         <Route
           element={<RequireAuth roles={['SUPER_ADMIN', 'GATE_STAFF']} redirectTo="/admin/masuk" />}

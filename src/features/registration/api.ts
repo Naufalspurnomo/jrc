@@ -54,7 +54,11 @@ export const API_PATHS = {
         proof: (invoiceId: string) => `/api/admin/finance/invoices/${encodeURIComponent(invoiceId)}/proof`,
       },
     },
-    paidTeams: '/api/admin/paid-teams',
+    paidTeams: {
+      root: '/api/admin/paid-teams',
+      byId: (registrationId: string) =>
+        `/api/admin/paid-teams/${encodeURIComponent(registrationId)}`,
+    },
   },
 } as const;
 
@@ -472,6 +476,7 @@ export interface RegistrationDeletionOutcome {
 }
 
 export interface PaidTeamRecord {
+  id: string;
   registrationNumber: string;
   teamName: string;
   institution: string;
@@ -495,6 +500,45 @@ export interface PaidTeamListResult {
   page: number;
   pageSize: number;
   hasNextPage: boolean;
+}
+
+export interface PaidTeamFileRecord {
+  originalName: string;
+  mimeType: string;
+  size: number;
+  viewUrl: string;
+  downloadUrl: string;
+}
+
+export interface PaidTeamDetailRecord {
+  id: string;
+  registrationNumber: string;
+  teamName: string;
+  institution: string;
+  phone: string | null;
+  status: RegistrationState;
+  submittedAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+  owner: {
+    displayName: string;
+    email: string;
+  };
+  competition: {
+    id: string;
+    name: string;
+    level: string;
+    discipline: string;
+    eventName: string;
+  };
+  members: Array<TeamMemberRecord & { photo: (PaidTeamFileRecord & { id: string }) | null }>;
+  payment: {
+    invoiceNumber: string;
+    amount: number;
+    currency: string;
+    verifiedAt: string | null;
+    proof: PaidTeamFileRecord | null;
+  };
 }
 
 export interface RegistrationApi {
@@ -546,6 +590,7 @@ export interface RegistrationApi {
     listFinanceInvoices(): Promise<FinanceInvoiceRecord[]>;
     verifyPayment(invoiceId: string, input: PaymentReviewInput): Promise<InvoiceRecord>;
     listPaidTeams(input?: PaidTeamListInput): Promise<PaidTeamListResult>;
+    getPaidTeam(registrationId: string): Promise<PaidTeamDetailRecord>;
   };
 }
 
@@ -671,8 +716,11 @@ export function createRegistrationApi(client = new ApiClient()): RegistrationApi
         if (input.page !== undefined) params.set('page', String(input.page));
         if (input.pageSize !== undefined) params.set('pageSize', String(input.pageSize));
         const query = params.toString();
-        return client.request<PaidTeamListResult>(`${API_PATHS.admin.paidTeams}${query ? `?${query}` : ''}`);
+        return client.request<PaidTeamListResult>(`${API_PATHS.admin.paidTeams.root}${query ? `?${query}` : ''}`);
       },
+      getPaidTeam: (registrationId) => client.request<PaidTeamDetailRecord>(
+        API_PATHS.admin.paidTeams.byId(registrationId),
+      ),
     },
   };
 }

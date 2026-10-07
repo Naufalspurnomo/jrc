@@ -17,6 +17,7 @@ const viewerSession: AuthSession = {
 };
 
 const paidTeam: PaidTeamRecord = {
+  id: 'registration-1',
   registrationNumber: 'JRC-XIV-0015',
   teamName: 'Garuda Robotika',
   institution: 'PENS',
@@ -75,6 +76,10 @@ describe('AdminPaidTeamsPage', () => {
     expect(within(row).getByText('JRC-XIV-0015')).toBeInTheDocument();
     expect(within(row).getByText('PENS')).toBeInTheDocument();
     expect(within(row).getByText('Charion Line')).toBeInTheDocument();
+    expect(within(row).getByRole('link', { name: 'Lihat detail Garuda Robotika' })).toHaveAttribute(
+      'href',
+      '/admin/tim-lunas/registration-1',
+    );
     expect(screen.queryByText('secret@example.test')).not.toBeInTheDocument();
     expect(screen.queryByText('+628123456789')).not.toBeInTheDocument();
     expect(screen.queryByText('hidden-proof')).not.toBeInTheDocument();

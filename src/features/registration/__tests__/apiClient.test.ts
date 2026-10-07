@@ -104,6 +104,21 @@ describe('ApiClient', () => {
     );
   });
 
+  it('loads a paid-team detail from the dedicated read-only route', async () => {
+    const fetcher = vi.fn<typeof fetch>().mockResolvedValue(new Response('{}', {
+      status: 200,
+      headers: { 'Content-Type': 'application/json' },
+    }));
+    const api = createRegistrationApi(new ApiClient(fetcher));
+
+    await api.admin.getPaidTeam('registration/1');
+
+    expect(fetcher).toHaveBeenCalledWith(
+      '/api/admin/paid-teams/registration%2F1',
+      expect.objectContaining({ credentials: 'include', method: 'GET' }),
+    );
+  });
+
   it('deletes an admin registration with CSRF protection', async () => {
     const fetcher = vi.fn<typeof fetch>()
       .mockResolvedValueOnce(new Response(JSON.stringify({ csrfToken: 'csrf-123' }), {
