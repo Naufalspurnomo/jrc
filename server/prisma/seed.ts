@@ -41,7 +41,7 @@ const COMPETITION_DEFINITIONS = [
   },
   {
     slug: 'wacky-rally-line-follower-mikro',
-    name: 'Charion Line',
+    name: 'Chariot Line',
     level: 'Umum',
     discipline: 'Line Follower Mikro',
     feeEnv: 'LINE_FOLLOWER_FEE',

@@ -22,7 +22,7 @@ const paidInvoice = {
     institution: 'PENS',
     competition: {
       id: 'competition-1',
-      name: 'Charion Line',
+      name: 'Chariot Line',
       level: 'Umum',
       discipline: 'Line Follower Mikro',
     },
@@ -103,7 +103,7 @@ describe('Paid team read-only detail and files', () => {
       updatedAt: new Date('2026-10-05T08:30:00.000Z'),
       owner: { displayName: 'Ayu Peserta', email: 'ayu@example.test' },
       competition: {
-        id: 'competition-1', name: 'Charion Line', level: 'Umum',
+        id: 'competition-1', name: 'Chariot Line', level: 'Umum',
         discipline: 'Line Follower Mikro', eventName: 'JRC XIV',
       },
       members: [

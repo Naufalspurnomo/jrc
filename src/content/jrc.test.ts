@@ -47,13 +47,13 @@ describe('JRC XIV competition catalog', () => {
       },
       {
         slug: 'wacky-rally-line-follower-mikro',
-        name: 'Charion Line',
-        shortName: 'CHARION LINE',
+        name: 'Chariot Line',
+        shortName: 'CHARIOT LINE',
         level: 'Umum',
         discipline: 'Line Follower Mikro',
         emblem: {
           src: '/assets/arena-emblems/chariot-line.webp',
-          alt: 'Lambang CHARION LINE',
+          alt: 'Lambang CHARIOT LINE',
         },
       },
       {
@@ -101,7 +101,7 @@ describe('JRC XIV competition catalog', () => {
         { category: 'Castra Guardian', name: 'Naya', phone: '0878-4132-4886' },
         { category: 'Robo Chiper', name: 'Manda', phone: '0857-5540-9648' },
         { category: 'Aquaduct Romana', name: 'Aisyah', phone: '0881-0360-87367' },
-        { category: 'Charion Line', name: 'Alzar', phone: '0813-3002-5557' },
+        { category: 'Chariot Line', name: 'Alzar', phone: '0813-3002-5557' },
         { category: 'Colosseum Clash', name: 'Nadjwa', phone: '0888-5454-111' },
         { category: 'Harpastum Arena', name: 'Rissa', phone: '0851-1954-6428' },
       ],
@@ -119,7 +119,7 @@ describe('JRC XIV competition catalog', () => {
       { name: 'Castra Guardian', guidebook: { label: 'Buka guidebook', status: 'Tersedia', href: 'https://drive.google.com/drive/folders/1ga6EzB4Fs7FbC56KvpoAc2xyp9IRjjEP?usp=drive_link' } },
       { name: 'Robo Chiper', guidebook: { label: 'Buka guidebook', status: 'Tersedia', href: 'https://drive.google.com/drive/folders/1isBUIQuWeNMO0Tsl_Rcs3Kt_PvS6Ce9v?usp=drive_link' } },
       { name: 'Aquaduct Romana', guidebook: { label: 'Buka guidebook', status: 'Tersedia', href: 'https://drive.google.com/drive/folders/16BcdtUUSv1JQzueG_RLt0G_fX7SDFu1t?usp=drive_link' } },
-      { name: 'Charion Line', guidebook: { label: 'Buka guidebook', status: 'Tersedia', href: 'https://drive.google.com/drive/folders/1Dfo_NUpS7oO5WBK_gwnMKaxGDl3BV7Xu?usp=drive_link' } },
+      { name: 'Chariot Line', guidebook: { label: 'Buka guidebook', status: 'Tersedia', href: 'https://drive.google.com/drive/folders/1Dfo_NUpS7oO5WBK_gwnMKaxGDl3BV7Xu?usp=drive_link' } },
       { name: 'Colosseum Clash', guidebook: { label: 'Buka guidebook', status: 'Tersedia', href: 'https://drive.google.com/drive/folders/1UUCJARZMEVRgnwYlAMoY192raxNUARuM?usp=drive_link' } },
       { name: 'Harpastum Arena', guidebook: { label: 'Buka guidebook', status: 'Tersedia', href: 'https://drive.google.com/drive/folders/1WhtUwkVA6A00Lvykjly-30VBb6uAwT0e?usp=drive_link' } },
     ]);

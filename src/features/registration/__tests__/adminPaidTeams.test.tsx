@@ -23,7 +23,7 @@ const paidTeam: PaidTeamRecord = {
   institution: 'PENS',
   competition: {
     id: 'competition-1',
-    name: 'Charion Line',
+    name: 'Chariot Line',
     level: 'Umum',
     discipline: 'Line Follower Mikro',
   },
@@ -75,7 +75,7 @@ describe('AdminPaidTeamsPage', () => {
     const row = await screen.findByRole('row', { name: /Garuda Robotika/ });
     expect(within(row).getByText('JRC-XIV-0015')).toBeInTheDocument();
     expect(within(row).getByText('PENS')).toBeInTheDocument();
-    expect(within(row).getByText('Charion Line')).toBeInTheDocument();
+    expect(within(row).getByText('Chariot Line')).toBeInTheDocument();
     expect(within(row).getByRole('link', { name: 'Lihat detail Garuda Robotika' })).toHaveAttribute(
       'href',
       '/admin/tim-lunas/registration-1',

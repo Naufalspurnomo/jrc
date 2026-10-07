@@ -36,7 +36,7 @@ const detail: PaidTeamDetailRecord = {
   },
   competition: {
     id: 'competition-1',
-    name: 'Charion Line',
+    name: 'Chariot Line',
     level: 'Umum',
     discipline: 'Line Follower Mikro',
     eventName: 'JRC XIV',
@@ -122,7 +122,7 @@ describe('AdminPaidTeamDetailPage', () => {
     expect(screen.getByText('Ayu Peserta')).toBeInTheDocument();
     expect(screen.getByText('ayu@example.test')).toBeInTheDocument();
     expect(screen.getByText('081234567890')).toBeInTheDocument();
-    expect(screen.getByText('Charion Line')).toBeInTheDocument();
+    expect(screen.getByText('Chariot Line')).toBeInTheDocument();
 
     const member = screen.getByRole('article', { name: 'Anggota Budi Ketua' });
     expect(within(member).getByText('NRP-001')).toBeInTheDocument();

@@ -112,11 +112,11 @@ export const competitions: readonly Competition[] = [
   {
     slug: 'wacky-rally-line-follower-mikro',
     romanNumeral: 'IV',
-    name: 'Charion Line',
-    shortName: 'CHARION LINE',
+    name: 'Chariot Line',
+    shortName: 'CHARIOT LINE',
     emblem: {
       src: '/assets/arena-emblems/chariot-line.webp',
-      alt: 'Lambang CHARION LINE',
+      alt: 'Lambang CHARIOT LINE',
     },
     level: 'Umum',
     discipline: 'Line Follower Mikro',
@@ -357,7 +357,7 @@ export const faqItems = [
   {
     question: 'Apa saja kategori resmi JRC XIV?',
     answer:
-      'JRC XIV memiliki enam kategori resmi: Castra Guardian, Robo Chiper, Aquaduct Romana, Charion Line, Colosseum Clash, dan Harpastum Arena.',
+      'JRC XIV memiliki enam kategori resmi: Castra Guardian, Robo Chiper, Aquaduct Romana, Chariot Line, Colosseum Clash, dan Harpastum Arena.',
   },
   {
     question: 'Di mana guidebook dapat diunduh?',

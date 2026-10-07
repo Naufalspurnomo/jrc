@@ -7,7 +7,7 @@ const expectedCatalog = [
   ['donatopia-transporter', 'Castra Guardian'],
   ['nightmaze-rescue-transporter', 'Robo Chiper'],
   ['pirate-clash-transporter-shooter', 'Aquaduct Romana'],
-  ['wacky-rally-line-follower-mikro', 'Charion Line'],
+  ['wacky-rally-line-follower-mikro', 'Chariot Line'],
   ['ring-rumble-sumo', 'Colosseum Clash'],
   ['goal-rush-soccer', 'Harpastum Arena'],
 ] as const;
@@ -15,13 +15,22 @@ const expectedCatalog = [
 describe('final competition display names', () => {
   it('keeps seed and production migration synchronized without discipline suffixes', () => {
     const seed = readFileSync(resolve(process.cwd(), 'prisma/seed.ts'), 'utf8');
-    const migration = readFileSync(
-      resolve(
-        process.cwd(),
-        'prisma/migrations/20260929173000_final_competition_display_names/migration.sql',
+    const migration = [
+      readFileSync(
+        resolve(
+          process.cwd(),
+          'prisma/migrations/20260929173000_final_competition_display_names/migration.sql',
+        ),
+        'utf8',
       ),
-      'utf8',
-    );
+      readFileSync(
+        resolve(
+          process.cwd(),
+          'prisma/migrations/20261007171000_correct_chariot_line_typo/migration.sql',
+        ),
+        'utf8',
+      ),
+    ].join('\n');
 
     for (const [slug, name] of expectedCatalog) {
       expect(seed).toContain(`slug: '${slug}'`);

@@ -16,7 +16,7 @@ const competitions: CompetitionRecord[] = [
   { id: 'competition-1', name: 'Castra Guardian', level: 'SD' },
   { id: 'competition-2', name: 'Robo Chiper', level: 'SMP' },
   { id: 'competition-3', name: 'Aquaduct Romana', level: 'SMA' },
-  { id: 'competition-4', name: 'Charion Line', level: 'Umum' },
+  { id: 'competition-4', name: 'Chariot Line', level: 'Umum' },
   { id: 'competition-5', name: 'Colosseum Clash', level: 'Umum' },
   { id: 'competition-6', name: 'Harpastum Arena', level: 'Umum' },
 ];
