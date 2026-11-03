@@ -121,33 +121,21 @@ describe('PortalPaymentPage', () => {
     await waitFor(() => expect(api.invoices.uploadProof).toHaveBeenCalledTimes(1));
   });
 
-  it('explains an expired invoice instead of offering an upload that the API rejects', async () => {
-    renderPage(createApi({
+  it('allows proof upload after the informational payment due date', async () => {
+    const api = createApi({
       deadline: '2020-09-20T16:59:59.000Z',
-      proofUploadAllowed: false,
-    }));
-    await waitForPage();
-
-    expect(screen.getByRole('alert')).toHaveTextContent(/batas pembayaran invoice telah lewat/i);
-    expect(screen.queryByLabelText('Bukti pembayaran (PDF, JPEG, atau PNG)')).not.toBeInTheDocument();
-  });
-
-  it('shows the API deadline rejection when the deadline passes during upload', async () => {
-    const api = createApi();
-    vi.mocked(api.invoices.uploadProof).mockRejectedValue(
-      new ApiError(400, { message: 'Invoice payment deadline has passed' }),
-    );
+      proofUploadAllowed: true,
+    });
     const user = userEvent.setup();
     renderPage(api);
     await waitForPage();
 
-    await user.upload(
-      screen.getByLabelText('Bukti pembayaran (PDF, JPEG, atau PNG)'),
-      new File(['proof'], 'proof.pdf', { type: 'application/pdf' }),
-    );
+    expect(screen.getByText(/batas pembayaran telah lewat/i)).toBeInTheDocument();
+    const proof = new File(['proof'], 'proof.pdf', { type: 'application/pdf' });
+    await user.upload(screen.getByLabelText('Bukti pembayaran (PDF, JPEG, atau PNG)'), proof);
     await user.click(screen.getByRole('button', { name: 'Unggah bukti' }));
 
-    expect(await screen.findByRole('alert')).toHaveTextContent(/hubungi panitia/i);
+    await waitFor(() => expect(api.invoices.uploadProof).toHaveBeenCalledTimes(1));
   });
 
   it('asks the participant to sign in again on a 401 session expiry', async () => {

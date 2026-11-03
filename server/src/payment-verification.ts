@@ -258,8 +258,7 @@ function serializeInvoice(invoice: InvoiceRecord) {
     deadline: invoice.deadline.toISOString(),
     proofUploadAllowed:
       (invoice.paymentStatus === PaymentStatus.UNPAID ||
-        invoice.paymentStatus === PaymentStatus.REJECTED) &&
-      invoice.deadline.getTime() > Date.now(),
+        invoice.paymentStatus === PaymentStatus.REJECTED),
     proof,
     verificationReason: invoice.verificationReason,
     verifiedAt: invoice.verifiedAt?.toISOString() ?? null,
@@ -349,9 +348,6 @@ export class PaymentVerificationService {
       },
     });
     if (!initial) throw new NotFoundException('Invoice not found');
-    if (initial.deadline.getTime() <= Date.now()) {
-      throw new BadRequestException('Invoice payment deadline has passed');
-    }
     assertPaymentTransition(
       initial.paymentStatus,
       PaymentStatus.PENDING_VERIFICATION,
@@ -380,10 +376,6 @@ export class PaymentVerificationService {
           },
         });
         if (!current) throw new NotFoundException('Invoice not found');
-        const now = new Date();
-        if (current.deadline <= now) {
-          throw new BadRequestException('Invoice payment deadline has passed');
-        }
         assertPaymentTransition(
           current.paymentStatus,
           PaymentStatus.PENDING_VERIFICATION,
@@ -393,7 +385,6 @@ export class PaymentVerificationService {
           where: {
             id: invoiceId,
             paymentStatus: current.paymentStatus,
-            deadline: { gt: now },
             registration: { ownerId },
           },
           data: {

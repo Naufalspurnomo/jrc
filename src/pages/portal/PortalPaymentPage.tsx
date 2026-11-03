@@ -134,8 +134,12 @@ export default function PortalPaymentPage({ api = registrationApi }: PortalPayme
   const qrisImageUrl = invoice ? instruction(invoice, 'qrisImageUrl') : undefined;
   const transferReference = invoice ? instruction(invoice, 'transferReference') : undefined;
   const uploadableStatus = invoice?.paymentStatus === 'UNPAID' || invoice?.paymentStatus === 'REJECTED';
-  const paymentDeadlinePassed = uploadableStatus && invoice?.proofUploadAllowed === false;
-  const canUploadProof = uploadableStatus && invoice?.proofUploadAllowed !== false;
+  const paymentDeadlinePassed = Boolean(
+    uploadableStatus
+    && invoice
+    && new Date(invoice.deadline).getTime() <= Date.now(),
+  );
+  const canUploadProof = uploadableStatus;
 
   return (
     <PortalShell>
@@ -188,8 +192,8 @@ export default function PortalPaymentPage({ api = registrationApi }: PortalPayme
               )}
 
               {uploadableStatus && paymentDeadlinePassed && (
-                <p role="alert">
-                  Batas pembayaran invoice telah lewat. Hubungi panitia untuk memperbarui batas pembayaran.
+                <p>
+                  Batas pembayaran telah lewat, tetapi bukti pembayaran tetap dapat diunggah untuk diverifikasi panitia.
                 </p>
               )}
 

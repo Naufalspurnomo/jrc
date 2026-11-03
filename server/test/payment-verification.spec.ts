@@ -1,4 +1,4 @@
-import { TicketStatus } from '@prisma/client';
+import { PaymentStatus, TicketStatus } from '@prisma/client';
 import QRCode from 'qrcode';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { hashTicketToken, deriveTicketToken } from '../src/common/ticket-token';
@@ -8,6 +8,11 @@ import {
   renderRichTextEmail,
 } from '../src/payment-verification';
 import { PrismaService } from '../src/prisma.service';
+import { PrivateStorageService } from '../src/private-storage';
+
+const INVOICE_ID = '2fb94b45-fc0e-4bda-ab7c-2526a976f1d7';
+const OWNER_ID = '96c73270-62d3-46b7-941a-3ab31788197e';
+const PROOF_STORAGE_KEY = 'a'.repeat(64);
 
 const ORIGINAL_ENV = { ...process.env };
 const qrCodePromiseApi = QRCode as unknown as {
@@ -17,6 +22,95 @@ const qrCodePromiseApi = QRCode as unknown as {
 afterEach(() => {
   process.env = { ...ORIGINAL_ENV };
   vi.restoreAllMocks();
+});
+
+function uploadService(deadline: Date): {
+  service: PaymentVerificationService;
+  storage: { upload: ReturnType<typeof vi.fn> };
+  transaction: { invoice: { updateMany: ReturnType<typeof vi.fn> } };
+} {
+  const invoice = {
+    id: INVOICE_ID,
+    invoiceNumber: 'INV-JRC-0001',
+    amount: 900_000,
+    currency: 'IDR',
+    provider: 'MANUAL_TRANSFER',
+    instructions: {},
+    paymentStatus: PaymentStatus.UNPAID,
+    deadline,
+    proofStorageKey: null,
+    proofOriginalName: null,
+    proofMimeType: null,
+    proofSize: null,
+    verificationReason: null,
+    verifiedAt: null,
+    createdAt: new Date('2026-09-01T00:00:00.000Z'),
+    updatedAt: new Date('2026-09-01T00:00:00.000Z'),
+    registration: {
+      owner: { email: 'participant@example.test', displayName: 'Participant' },
+    },
+  };
+  const transaction = {
+    invoice: {
+      findFirst: vi.fn().mockResolvedValue(invoice),
+      updateMany: vi.fn().mockResolvedValue({ count: 1 }),
+      findUnique: vi.fn().mockResolvedValue({
+        ...invoice,
+        paymentStatus: PaymentStatus.PENDING_VERIFICATION,
+        proofOriginalName: 'proof.pdf',
+        proofMimeType: 'application/pdf',
+        proofSize: 10,
+      }),
+    },
+    emailOutbox: { create: vi.fn().mockResolvedValue({}) },
+    auditLog: { create: vi.fn().mockResolvedValue({}) },
+  };
+  const prisma = {
+    invoice: { findFirst: vi.fn().mockResolvedValue(invoice) },
+    $transaction: vi.fn((operation: (client: typeof transaction) => Promise<unknown>) => operation(transaction)),
+  };
+  const storage = {
+    upload: vi.fn().mockResolvedValue(PROOF_STORAGE_KEY),
+    delete: vi.fn().mockResolvedValue(undefined),
+  };
+  return {
+    service: new PaymentVerificationService(
+      prisma as unknown as PrismaService,
+      storage as unknown as PrivateStorageService,
+    ),
+    storage,
+    transaction,
+  };
+}
+
+const validPdf = {
+  originalname: 'proof.pdf',
+  size: 10,
+  buffer: Buffer.from('%PDF-1.7\n'),
+} as Express.Multer.File;
+
+const audit = { requestId: 'request-id', ipAddress: '127.0.0.1' };
+
+describe('payment proof upload window', () => {
+  it('accepts proof after the invoice deadline while the invoice is still unpaid', async () => {
+    process.env.TICKET_SECRET = 'test-secret-at-least-32-characters-long';
+    const { service, storage, transaction } = uploadService(
+      new Date('2020-01-01T00:00:00.000Z'),
+    );
+
+    const result = await service.uploadProof(OWNER_ID, INVOICE_ID, validPdf, audit);
+
+    expect(result.paymentStatus).toBe(PaymentStatus.PENDING_VERIFICATION);
+    expect(storage.upload).toHaveBeenCalledTimes(1);
+    expect(transaction.invoice.updateMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({
+          id: INVOICE_ID,
+          paymentStatus: PaymentStatus.UNPAID,
+        }),
+      }),
+    );
+  });
 });
 
 describe('paid ticket email rendering', () => {
