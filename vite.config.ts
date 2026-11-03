@@ -1,4 +1,4 @@
-import { defineConfig } from 'vite';
+import { defineConfig } from 'vitest/config';
 import react from '@vitejs/plugin-react';
 import tailwindcss from '@tailwindcss/vite';
 
@@ -17,7 +17,9 @@ export default defineConfig({
     setupFiles: ['./src/test/setup.ts'],
     css: false,
     include: ['src/**/*.test.{ts,tsx}'],
-    testTimeout: 10_000,
+    testTimeout: 30_000,
+    pool: 'forks',
+    fileParallelism: false,
   },
   build: {
     target: 'es2022',

@@ -41,7 +41,7 @@ describe('ToastProvider', () => {
     render(<ToastProvider><ToastHarness /></ToastProvider>);
     for (let index = 0; index < 6; index += 1) await user.click(screen.getByRole('button', { name: index % 2 ? 'Gagal' : 'Sukses' }));
     expect(screen.getAllByRole('group', { name: /Notifikasi:/ })).toHaveLength(4);
-    expect(screen.getAllByLabelText('Pengumuman notifikasi')).toHaveLength(1);
+    expect(screen.getByRole('status').querySelector('span')).toHaveAttribute('aria-label', 'Gagal 6');
     const close = screen.getAllByRole('button', { name: 'Tutup notifikasi' })[0];
     close.focus();
     await user.keyboard('{Escape}');

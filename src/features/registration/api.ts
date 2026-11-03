@@ -340,9 +340,9 @@ export interface RegistrationRecord {
 
 export interface RegistrationPersonInput {
   name: string;
-  studentId?: string;
-  email?: string;
-  phone?: string;
+  studentId?: string | null;
+  email?: string | null;
+  phone?: string | null;
   role?: 'LEADER' | 'MEMBER' | 'SUPERVISOR';
 }
 

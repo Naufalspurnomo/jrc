@@ -8,6 +8,7 @@ import PortalRegistrationPage from '../../../pages/portal/PortalRegistrationPage
 import type {
   CompetitionRecord,
   RegistrationApi,
+  RegistrationDocumentRecord,
   RegistrationRecord,
   TeamMemberRecord,
 } from '../api';
@@ -556,6 +557,117 @@ describe('PortalRegistrationPage', () => {
       email: 'bima.baru@example.test',
       phone: '+62 812 2222 2222',
     });
+  });
+
+  it('clears persisted optional member fields explicitly', async () => {
+    const user = userEvent.setup();
+    const member: TeamMemberRecord = {
+      id: 'member-1',
+      name: 'Bima Putra',
+      studentId: '5025211002',
+      email: 'bima@example.test',
+      phone: '+62 812 2222 2222',
+      role: 'MEMBER',
+    };
+    const api = createApi({
+      get: vi.fn().mockResolvedValue(registration({ members: [member] })),
+    });
+    renderPage(api, '/portal/pendaftaran/registration-1');
+
+    await user.clear(await screen.findByLabelText('NIS/NIM anggota 1'));
+    await user.clear(screen.getByLabelText('Email anggota 1'));
+    await user.clear(screen.getByLabelText('Nomor telepon anggota 1'));
+
+    await waitFor(() => expect(api.registrations.updateMember).toHaveBeenCalledWith(
+      'registration-1',
+      'member-1',
+      { name: 'Bima Putra', studentId: null, email: null, phone: null },
+    ));
+  });
+
+  it('waits for a competition change before submitting', async () => {
+    const user = userEvent.setup();
+    let resolveCompetitionUpdate: (() => void) | undefined;
+    const update = vi.fn().mockImplementation((_registrationId, input) => {
+      if ('competitionId' in input) {
+        return new Promise<RegistrationRecord>((resolve) => {
+          resolveCompetitionUpdate = () => resolve(registration({ competitionId: input.competitionId }));
+        });
+      }
+      return Promise.resolve(registration());
+    });
+    let resolveSubmit: (() => void) | undefined;
+    const submit = vi.fn().mockImplementation(() => new Promise<RegistrationRecord>((resolve) => {
+      resolveSubmit = () => resolve(registration({ status: 'SUBMITTED' }));
+    }));
+    const leader: TeamMemberRecord = {
+      id: 'leader-1',
+      name: 'Ari Wijaya',
+      studentId: '5025211001',
+      role: 'LEADER',
+    };
+    const supervisor: TeamMemberRecord = {
+      id: 'supervisor-1',
+      name: 'Citra Dewi',
+      role: 'SUPERVISOR',
+    };
+    const documents: RegistrationDocumentRecord[] = [
+      'IDENTITY_CARD',
+      'REGISTRATION_FORM',
+      'TEAM_PHOTO',
+      'TWIBBON_PROOF',
+    ].map((category, index) => ({
+      id: `document-${index}`,
+      category,
+      originalName: `${category}.pdf`,
+      mimeType: 'application/pdf',
+      size: 100,
+    }));
+    documents.push(
+      {
+        id: 'leader-photo',
+        category: 'MEMBER_PHOTO',
+        originalName: 'ari.jpg',
+        mimeType: 'image/jpeg',
+        size: 100,
+        subjectName: 'Ari Wijaya',
+        subjectRole: 'PARTICIPANT',
+      },
+      {
+        id: 'supervisor-photo',
+        category: 'MEMBER_PHOTO',
+        originalName: 'citra.jpg',
+        mimeType: 'image/jpeg',
+        size: 100,
+        subjectName: 'Citra Dewi',
+        subjectRole: 'SUPERVISOR',
+      },
+    );
+    const api = createApi({
+      update,
+      submit,
+      get: vi.fn().mockResolvedValue(registration({ members: [leader, supervisor], documents })),
+    });
+    renderPage(api, '/portal/pendaftaran/registration-1');
+
+    const competitionButton = await screen.findByRole('radio', { name: 'Umum · Chariot Line' });
+    await user.click(competitionButton);
+    await waitFor(() => expect(update).toHaveBeenCalledWith(
+      'registration-1',
+      { competitionId: 'competition-4' },
+    ));
+    await user.click(screen.getByRole('button', { name: 'Kirim pendaftaran' }));
+    expect(submit).not.toHaveBeenCalled();
+
+    expect(resolveCompetitionUpdate).toBeTypeOf('function');
+    resolveCompetitionUpdate?.();
+    await waitFor(() => expect(submit).toHaveBeenCalledWith('registration-1'));
+    expect(screen.getAllByRole('radio').every((radio) => radio.hasAttribute('disabled'))).toBe(true);
+    await user.click(screen.getByRole('radio', { name: 'Umum · Harpastum Arena' }));
+    expect(update).not.toHaveBeenCalledWith('registration-1', { competitionId: 'competition-6' });
+    expect(resolveSubmit).toBeTypeOf('function');
+    resolveSubmit?.();
+    await waitFor(() => expect(screen.getByTestId('location')).toHaveTextContent('/portal'));
   });
 
   it('removes a persisted non-leader only after the API succeeds', async () => {

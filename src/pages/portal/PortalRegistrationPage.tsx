@@ -147,6 +147,8 @@ export default function PortalRegistrationPage({ api = registrationApi }: Portal
   const cropDragRef = useRef<{ x: number; y: number; offsetX: number; offsetY: number } | null>(null);
   const formRef = useRef<HTMLFormElement | null>(null);
   const createInFlight = useRef(false);
+  const competitionUpdateInFlight = useRef<Promise<unknown> | null>(null);
+  const submitInFlight = useRef(false);
   // Ids hydrated during this session. A draft we just created is added *before*
   // the URL changes, so that route change does not refetch and clobber whatever
   // the participant has typed in the meantime. The id present at first render is
@@ -294,9 +296,9 @@ export default function PortalRegistrationPage({ api = registrationApi }: Portal
       if (person.id) {
         await api.registrations.updateMember(registration.id, person.id, {
           name,
-          ...(studentId ? { studentId } : {}),
-          ...(email ? { email } : {}),
-          ...(phone ? { phone } : {}),
+          studentId: studentId || null,
+          email: email || null,
+          phone: phone || null,
         });
         continue;
       }
@@ -370,15 +372,22 @@ export default function PortalRegistrationPage({ api = registrationApi }: Portal
   }, [api, formSnapshot, navigate]);
 
   const selectCompetition = (nextCompetitionId: string) => {
-    if (!editable) return;
+    if (!editable || submitInFlight.current) return;
     setCompetitionId(nextCompetitionId);
     if (!registrationId) {
       void createDraft(nextCompetitionId);
       return;
     }
-    void api.registrations
-      .update(registrationId, { competitionId: nextCompetitionId })
-      .catch(() => setError('Kompetisi gagal disimpan. Silakan pilih ulang.'));
+    const update = (competitionUpdateInFlight.current ?? Promise.resolve())
+      .catch(() => undefined)
+      .then(() => api.registrations.update(registrationId, { competitionId: nextCompetitionId }))
+      .then(() => undefined);
+    competitionUpdateInFlight.current = update;
+    void update
+      .catch(() => setError('Kompetisi gagal disimpan. Silakan pilih ulang.'))
+      .finally(() => {
+        if (competitionUpdateInFlight.current === update) competitionUpdateInFlight.current = null;
+      });
   };
 
   const selectedCompetitionIndex = competitions.findIndex((competition) => competition.id === competitionId);
@@ -678,6 +687,7 @@ export default function PortalRegistrationPage({ api = registrationApi }: Portal
   };
 
   const submitRegistration = async () => {
+    if (submitInFlight.current) return;
     if (!editable) {
       setError('Pendaftaran tidak dapat dikirim pada status saat ini.');
       return;
@@ -696,11 +706,13 @@ export default function PortalRegistrationPage({ api = registrationApi }: Portal
       return;
     }
 
+    submitInFlight.current = true;
     setSubmitting(true);
     setMessage('');
     setError('');
 
     try {
+      await competitionUpdateInFlight.current;
       await flushAutosave();
       await api.registrations.submit(registrationId);
       showToast('Pendaftaran berhasil dikirim.', 'success');
@@ -718,6 +730,7 @@ export default function PortalRegistrationPage({ api = registrationApi }: Portal
         setError('Pendaftaran gagal dikirim. Silakan coba lagi.');
       }
     } finally {
+      submitInFlight.current = false;
       setSubmitting(false);
     }
   };
@@ -791,7 +804,7 @@ export default function PortalRegistrationPage({ api = registrationApi }: Portal
                         aria-label={competitionLabel}
                         aria-checked={selected}
                         className={`portal-button portal-button--ghost portal-competition-card${isHighlighted('competition') && !selected ? ' portal-field--attention' : ''}`}
-                        disabled={!editable}
+                        disabled={!editable || submitting}
                         role="radio"
                         tabIndex={index === tabbableCompetitionIndex ? 0 : -1}
                         type="button"

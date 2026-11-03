@@ -234,6 +234,13 @@ export class HealthController {
     return { status: 'ok' };
   }
 
+  @Get('release')
+  release(): { commit: string } {
+    return {
+      commit: process.env.RENDER_GIT_COMMIT?.trim() || process.env.RELEASE_SHA?.trim() || 'unknown',
+    };
+  }
+
   @Get('ready')
   async ready(): Promise<{ status: 'ok' }> {
     try {

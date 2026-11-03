@@ -1,4 +1,4 @@
-import { useState, type PropsWithChildren } from 'react';
+import { useEffect, useState, type PropsWithChildren } from 'react';
 
 import { useCinematicMotion } from '../../hooks/useCinematicMotion';
 import { HERO_ASSETS } from './assets';
@@ -22,11 +22,42 @@ export function HeroExperience({ children, className = '', forceStatic = false, 
   });
   const [videoReady, setVideoReady] = useState(false);
   const [videoFailed, setVideoFailed] = useState(false);
+  const [videoSource, setVideoSource] = useState<string | null>(null);
   const compactViewport = window.matchMedia('(max-width: 640px)').matches;
   const backgroundSource = compactViewport ? HERO_ASSETS.backgroundMobile : HERO_ASSETS.background;
   const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   const saveData = (navigator as NavigatorWithConnection).connection?.saveData === true;
   const renderVideo = !forceStatic && !reducedMotion && !saveData && !videoFailed && startVideo;
+
+  useEffect(() => {
+    if (!renderVideo) return undefined;
+    const controller = new AbortController();
+    let objectUrl: string | null = null;
+
+    void fetch(HERO_ASSETS.foregroundVideo, {
+      headers: { Accept: 'video/webm' },
+      signal: controller.signal,
+    })
+      .then((response) => {
+        if (!response.ok) throw new Error(`Hero video request failed: ${response.status}`);
+        return response.blob();
+      })
+      .then((blob) => {
+        if (controller.signal.aborted) return;
+        objectUrl = URL.createObjectURL(blob);
+        setVideoSource(objectUrl);
+      })
+      .catch(() => {
+        if (controller.signal.aborted) return;
+        setVideoReady(false);
+        setVideoFailed(true);
+      });
+
+    return () => {
+      controller.abort();
+      if (objectUrl) URL.revokeObjectURL(objectUrl);
+    };
+  }, [renderVideo]);
 
   return (
     <div ref={rootRef} className={`scene-hero hero-scene ${className}`.trim()} data-scene-active={sceneActive ? 'true' : 'false'}>
@@ -41,10 +72,10 @@ export function HeroExperience({ children, className = '', forceStatic = false, 
             <source srcSet={HERO_ASSETS.foreground} type="image/webp" />
             <img className="hero-scene__foreground-image" src={HERO_ASSETS.foregroundFallback} alt="Maskot robot gladiator JRC XIV di arena Roma" width="553" height="1202" fetchPriority="high" decoding="async" />
           </picture>
-          {renderVideo ? (
+          {renderVideo && videoSource ? (
             <video
               className="hero-scene__foreground-video"
-              src={HERO_ASSETS.foregroundVideo}
+              src={videoSource}
               muted
               autoPlay
               loop

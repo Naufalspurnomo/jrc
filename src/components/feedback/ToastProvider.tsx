@@ -103,8 +103,12 @@ export function ToastProvider({ children }: { children: ReactNode }) {
   return (
     <ToastContext.Provider value={value}>
       {children}
-      <div className="admin-sr-only" aria-label="Pengumuman notifikasi" aria-live="polite" aria-atomic="true">{announcement ? <span aria-label={announcement} /> : null}</div>
-      <div className="global-toast-viewport" aria-label="Notifikasi">
+      {announcement ? (
+        <div className="admin-sr-only" role="status" aria-live="polite" aria-atomic="true">
+          <span aria-label={announcement} />
+        </div>
+      ) : null}
+      <div className="global-toast-viewport">
         {toasts.map((toast) => <ToastItem key={toast.id} toast={toast} dismiss={dismissToast} />)}
       </div>
     </ToastContext.Provider>
