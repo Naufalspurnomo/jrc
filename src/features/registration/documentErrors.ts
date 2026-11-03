@@ -32,6 +32,39 @@ export function describeDocumentUploadError(
   return 'Dokumen gagal diunggah. Silakan coba lagi.';
 }
 
+export function describePaymentProofUploadError(
+  error: unknown,
+  file: { name: string; size: number } | null,
+  maxUploadBytes: number,
+): string {
+  if (error instanceof ApiError) {
+    if (error.status === 413) {
+      return `Berkas ${file ? `"${file.name}" ` : ''}melebihi batas ${formatBytes(maxUploadBytes)}. Kecilkan berkasnya lalu coba lagi.`;
+    }
+    if (error.status === 400 && /deadline has passed/i.test(String(error.message))) {
+      return 'Batas pembayaran invoice telah lewat. Hubungi panitia untuk memperbarui batas pembayaran.';
+    }
+    if (error.status === 400 && /matching file content|PNG, JPEG, or PDF/i.test(String(error.message))) {
+      return 'Isi berkas tidak cocok dengan formatnya. Ekspor ulang sebagai PDF, JPEG, atau PNG lalu coba lagi.';
+    }
+    if (error.status === 401) {
+      return 'Sesi Anda sudah berakhir. Masuk kembali lalu unggah ulang bukti pembayaran.';
+    }
+    if (error.status === 403) {
+      return 'Permintaan upload ditolak. Muat ulang halaman lalu coba lagi.';
+    }
+    if (error.status === 409) {
+      return 'Status pembayaran berubah saat berkas diunggah. Muat ulang halaman lalu periksa status terbaru.';
+    }
+  }
+
+  if (error instanceof TypeError) {
+    return 'Koneksi terputus saat mengunggah. Periksa jaringan lalu coba lagi.';
+  }
+
+  return 'Bukti pembayaran gagal diunggah. Silakan coba lagi.';
+}
+
 export function formatBytes(size: number): string {
   if (size < 1_024) return `${size} B`;
   if (size < 1_048_576) return `${Math.ceil(size / 1_024)} KB`;

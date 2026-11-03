@@ -12,13 +12,15 @@ const OLD_KEY = 'a'.repeat(64);
 const NEW_KEY = 'b'.repeat(64);
 const FUTURE = new Date('2099-01-01T00:00:00.000Z');
 
-function proofFile(): Express.Multer.File {
-  const buffer = Buffer.from('%PDF-proof');
+function proofFile(
+  mimeType = 'application/pdf',
+  buffer = Buffer.from('%PDF-proof'),
+): Express.Multer.File {
   return {
     fieldname: 'file',
     originalname: '../proof.pdf',
     encoding: '7bit',
-    mimetype: 'application/pdf',
+    mimetype: mimeType,
     size: buffer.length,
     buffer,
     stream: undefined as never,
@@ -143,6 +145,87 @@ describe('payment-proof storage integration', () => {
       }),
     ).rejects.toThrow('database unavailable');
     expect(storage.delete).toHaveBeenCalledWith(NEW_KEY);
+  });
+
+  it.each(['image/jpg', 'application/octet-stream'])(
+    'sniffs a JPEG uploaded as %s and stores the canonical image/jpeg MIME type',
+    async (browserMimeType) => {
+      const jpg = proofFile(browserMimeType, Buffer.from([0xff, 0xd8, 0xff, 0x00]));
+      const current = {
+        id: INVOICE_ID,
+        invoiceNumber: 'INV-1',
+        amount: 100,
+        currency: 'IDR',
+        registration: { owner: { email: 'owner@example.test', displayName: 'Owner' } },
+        paymentStatus: PaymentStatus.UNPAID,
+        deadline: FUTURE,
+        proofStorageKey: null,
+        proofOriginalName: null,
+        proofMimeType: null,
+        proofSize: null,
+        verificationReason: null,
+        verifiedAt: null,
+      };
+      const transaction = {
+        invoice: {
+          findFirst: vi.fn().mockResolvedValue(current),
+          updateMany: vi.fn().mockResolvedValue({ count: 1 }),
+          findUnique: vi.fn().mockResolvedValue({
+            ...invoiceResult(),
+            proofOriginalName: jpg.originalname,
+            proofMimeType: 'image/jpeg',
+            proofSize: jpg.size,
+          }),
+        },
+        emailOutbox: { create: vi.fn().mockResolvedValue({}) },
+        auditLog: { create: vi.fn().mockResolvedValue({}) },
+      };
+      const prisma = {
+        invoice: { findFirst: vi.fn().mockResolvedValue(current) },
+        $transaction: vi.fn((operation: (client: typeof transaction) => Promise<unknown>) => operation(transaction)),
+      };
+      const storage = {
+        upload: vi.fn().mockResolvedValue(NEW_KEY),
+        delete: vi.fn().mockResolvedValue(undefined),
+      };
+      const service = new PaymentVerificationService(
+        prisma as unknown as PrismaService,
+        storage as unknown as PrivateStorageService,
+      );
+
+      await service.uploadProof(OWNER_ID, INVOICE_ID, jpg, {
+        requestId: 'request-id',
+        ipAddress: null,
+      });
+
+      expect(storage.upload).toHaveBeenCalledWith(jpg.buffer, 'image/jpeg');
+      expect(transaction.invoice.updateMany).toHaveBeenCalledWith(expect.objectContaining({
+        data: expect.objectContaining({ proofMimeType: 'image/jpeg' }),
+      }));
+    },
+  );
+
+  it('rejects unsupported bytes before writing them to private storage', async () => {
+    const storage = {
+      upload: vi.fn(),
+      delete: vi.fn(),
+    };
+    const service = new PaymentVerificationService(
+      {} as PrismaService,
+      storage as unknown as PrivateStorageService,
+    );
+    const invalid = proofFile(
+      'application/octet-stream',
+      Buffer.from('not-a-supported-payment-proof'),
+    );
+
+    await expect(
+      service.uploadProof(OWNER_ID, INVOICE_ID, invalid, {
+        requestId: 'request-id',
+        ipAddress: null,
+      }),
+    ).rejects.toThrow('Payment proof must be a PNG, JPEG, or PDF');
+    expect(storage.upload).not.toHaveBeenCalled();
   });
 });
 

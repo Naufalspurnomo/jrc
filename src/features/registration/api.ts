@@ -366,6 +366,7 @@ export interface InvoiceRecord {
   instructions: Record<string, string | null>;
   paymentStatus: PaymentState;
   deadline: string;
+  proofUploadAllowed?: boolean;
   verificationReason: string | null;
   verifiedAt: string | null;
 }

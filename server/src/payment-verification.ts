@@ -183,20 +183,21 @@ function hasPrefix(buffer: Buffer, prefix: readonly number[]): boolean {
   );
 }
 
-function validateProof(file: Express.Multer.File): void {
-  const validMagic =
-    (file.mimetype === 'image/png' &&
-      hasPrefix(file.buffer, [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a])) ||
-    (file.mimetype === 'image/jpeg' &&
-      hasPrefix(file.buffer, [0xff, 0xd8, 0xff])) ||
-    (file.mimetype === 'application/pdf' &&
-      hasPrefix(file.buffer, [0x25, 0x50, 0x44, 0x46, 0x2d]));
+function validateProof(file: Express.Multer.File): string {
+  const mimeType = hasPrefix(file.buffer, [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a])
+    ? 'image/png'
+    : hasPrefix(file.buffer, [0xff, 0xd8, 0xff])
+      ? 'image/jpeg'
+      : hasPrefix(file.buffer, [0x25, 0x50, 0x44, 0x46, 0x2d])
+        ? 'application/pdf'
+        : null;
 
-  if (!validMagic) {
+  if (!mimeType) {
     throw new BadRequestException(
       'Payment proof must be a PNG, JPEG, or PDF with matching file content',
     );
   }
+  return mimeType;
 }
 
 const invoiceSelect = {
@@ -255,6 +256,10 @@ function serializeInvoice(invoice: InvoiceRecord) {
     instructions: instructionsObject(invoice.instructions),
     paymentStatus: invoice.paymentStatus,
     deadline: invoice.deadline.toISOString(),
+    proofUploadAllowed:
+      (invoice.paymentStatus === PaymentStatus.UNPAID ||
+        invoice.paymentStatus === PaymentStatus.REJECTED) &&
+      invoice.deadline.getTime() > Date.now(),
     proof,
     verificationReason: invoice.verificationReason,
     verifiedAt: invoice.verifiedAt?.toISOString() ?? null,
@@ -330,7 +335,7 @@ export class PaymentVerificationService {
   ): Promise<SerializedPaymentInvoice> {
     if (!file) throw new BadRequestException('Payment proof file is required');
     assertUploadSize(file.size, 'Payment proof');
-    validateProof(file);
+    const mimeType = validateProof(file);
 
     const initial = await this.prisma.invoice.findFirst({
       where: { id: invoiceId, registration: { ownerId } },
@@ -352,7 +357,7 @@ export class PaymentVerificationService {
       PaymentStatus.PENDING_VERIFICATION,
     );
 
-    const stored = await this.storeProof(file);
+    const stored = await this.storeProof(file, mimeType);
     let result: SerializedPaymentInvoice;
     try {
       result = await this.prisma.$transaction(async (transaction) => {
@@ -684,11 +689,14 @@ export class PaymentVerificationService {
     };
   }
 
-  private async storeProof(file: Express.Multer.File): Promise<UploadedProof> {
+  private async storeProof(
+    file: Express.Multer.File,
+    mimeType: string,
+  ): Promise<UploadedProof> {
     return {
-      storageKey: await this.storage.upload(file.buffer, file.mimetype),
+      storageKey: await this.storage.upload(file.buffer, mimeType),
       originalName: safeOriginalName(file.originalname),
-      mimeType: file.mimetype,
+      mimeType,
       size: file.size,
     };
   }

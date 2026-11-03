@@ -4,7 +4,7 @@ import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { describe, expect, it, vi } from 'vitest';
 
 import PortalPaymentPage from '../../../pages/portal/PortalPaymentPage';
-import type { InvoiceRecord, RegistrationApi, RegistrationRecord } from '../api';
+import { ApiError, type InvoiceRecord, type RegistrationApi, type RegistrationRecord } from '../api';
 
 const registration: RegistrationRecord = {
   id: 'registration-1',
@@ -31,7 +31,8 @@ const invoice: InvoiceRecord = {
     transferReference: 'INV-JRC-0001',
   },
   paymentStatus: 'UNPAID',
-  deadline: '2026-09-20T16:59:59.000Z',
+  deadline: '2099-09-20T16:59:59.000Z',
+  proofUploadAllowed: true,
   verificationReason: null,
   verifiedAt: null,
 };
@@ -90,6 +91,101 @@ describe('PortalPaymentPage', () => {
     expect(invoiceId).toBe('invoice-1');
     expect(body).toBeInstanceOf(FormData);
     expect((body as FormData).get('file')).toBe(proof);
+  });
+
+  it('accepts the image/jpg MIME type sent by some Windows browsers', async () => {
+    const api = createApi();
+    const user = userEvent.setup();
+    renderPage(api);
+    await waitForPage();
+
+    const proof = new File([new Uint8Array([0xff, 0xd8, 0xff])], 'proof.jpg', { type: 'image/jpg' });
+    await user.upload(screen.getByLabelText('Bukti pembayaran (PDF, JPEG, atau PNG)'), proof);
+    await user.click(screen.getByRole('button', { name: 'Unggah bukti' }));
+
+    await waitFor(() => expect(api.invoices.uploadProof).toHaveBeenCalledTimes(1));
+  });
+
+  it('allows a supported extension when a browser reports a generic MIME type', async () => {
+    const api = createApi();
+    const user = userEvent.setup({ applyAccept: false });
+    renderPage(api);
+    await waitForPage();
+
+    const proof = new File([new Uint8Array([0xff, 0xd8, 0xff])], 'proof.jpg', {
+      type: 'application/octet-stream',
+    });
+    await user.upload(screen.getByLabelText('Bukti pembayaran (PDF, JPEG, atau PNG)'), proof);
+    await user.click(screen.getByRole('button', { name: 'Unggah bukti' }));
+
+    await waitFor(() => expect(api.invoices.uploadProof).toHaveBeenCalledTimes(1));
+  });
+
+  it('explains an expired invoice instead of offering an upload that the API rejects', async () => {
+    renderPage(createApi({
+      deadline: '2020-09-20T16:59:59.000Z',
+      proofUploadAllowed: false,
+    }));
+    await waitForPage();
+
+    expect(screen.getByRole('alert')).toHaveTextContent(/batas pembayaran invoice telah lewat/i);
+    expect(screen.queryByLabelText('Bukti pembayaran (PDF, JPEG, atau PNG)')).not.toBeInTheDocument();
+  });
+
+  it('shows the API deadline rejection when the deadline passes during upload', async () => {
+    const api = createApi();
+    vi.mocked(api.invoices.uploadProof).mockRejectedValue(
+      new ApiError(400, { message: 'Invoice payment deadline has passed' }),
+    );
+    const user = userEvent.setup();
+    renderPage(api);
+    await waitForPage();
+
+    await user.upload(
+      screen.getByLabelText('Bukti pembayaran (PDF, JPEG, atau PNG)'),
+      new File(['proof'], 'proof.pdf', { type: 'application/pdf' }),
+    );
+    await user.click(screen.getByRole('button', { name: 'Unggah bukti' }));
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(/hubungi panitia/i);
+  });
+
+  it('asks the participant to sign in again on a 401 session expiry', async () => {
+    const api = createApi();
+    vi.mocked(api.invoices.uploadProof).mockRejectedValue(
+      new ApiError(401, { message: 'Authentication required' }),
+    );
+    const user = userEvent.setup();
+    renderPage(api);
+    await waitForPage();
+
+    await user.upload(
+      screen.getByLabelText('Bukti pembayaran (PDF, JPEG, atau PNG)'),
+      new File(['proof'], 'proof.pdf', { type: 'application/pdf' }),
+    );
+    await user.click(screen.getByRole('button', { name: 'Unggah bukti' }));
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(/masuk kembali/i);
+  });
+
+  it('does not mislabel a 403 rejection as an expired session', async () => {
+    const api = createApi();
+    vi.mocked(api.invoices.uploadProof).mockRejectedValue(
+      new ApiError(403, { message: 'Invalid CSRF token' }),
+    );
+    const user = userEvent.setup();
+    renderPage(api);
+    await waitForPage();
+
+    await user.upload(
+      screen.getByLabelText('Bukti pembayaran (PDF, JPEG, atau PNG)'),
+      new File(['proof'], 'proof.pdf', { type: 'application/pdf' }),
+    );
+    await user.click(screen.getByRole('button', { name: 'Unggah bukti' }));
+
+    const error = await screen.findByRole('alert');
+    expect(error).toHaveTextContent(/muat ulang/i);
+    expect(error).not.toHaveTextContent(/sesi/i);
   });
 
   it('says an uploaded proof awaits finance verification', async () => {

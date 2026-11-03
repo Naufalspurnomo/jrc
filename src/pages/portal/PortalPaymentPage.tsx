@@ -10,12 +10,19 @@ import {
   type RegistrationApi,
   type RegistrationRecord,
 } from '../../features/registration/api';
+import {
+  DOCUMENT_ACCEPT_ATTRIBUTE,
+  describePaymentProofUploadError,
+  formatBytes,
+  isAcceptedDocumentType,
+} from '../../features/registration/documentErrors';
 
 interface PortalPaymentPageProps {
   api?: RegistrationApi;
 }
 
-const proofTypes = new Set(['application/pdf', 'image/jpeg', 'image/png']);
+const MAX_UPLOAD_BYTES = 5 * 1024 * 1024;
+const PROOF_FILE_EXTENSION = /\.(pdf|jpe?g|png)$/i;
 
 function instruction(invoice: InvoiceRecord, key: string): string | undefined {
   const value = invoice.instructions[key];
@@ -91,8 +98,12 @@ export default function PortalPaymentPage({ api = registrationApi }: PortalPayme
       setUploadError('Pilih bukti pembayaran terlebih dahulu.');
       return;
     }
-    if (!proofTypes.has(proof.type)) {
+    if (!isAcceptedDocumentType(proof.type) && !PROOF_FILE_EXTENSION.test(proof.name)) {
       setUploadError('Format bukti harus PDF, JPEG, atau PNG.');
+      return;
+    }
+    if (proof.size > MAX_UPLOAD_BYTES) {
+      setUploadError(`Ukuran bukti maksimal ${formatBytes(MAX_UPLOAD_BYTES)}.`);
       return;
     }
 
@@ -105,8 +116,8 @@ export default function PortalPaymentPage({ api = registrationApi }: PortalPayme
       setInvoice(updatedInvoice);
       setProof(null);
       showToast('Bukti pembayaran berhasil diunggah.', 'success');
-    } catch {
-      setUploadError('Bukti pembayaran gagal diunggah. Silakan coba lagi.');
+    } catch (error) {
+      setUploadError(describePaymentProofUploadError(error, proof, MAX_UPLOAD_BYTES));
       showToast('Bukti pembayaran gagal diunggah.', 'error');
     } finally {
       setUploading(false);
@@ -122,7 +133,9 @@ export default function PortalPaymentPage({ api = registrationApi }: PortalPayme
     : undefined;
   const qrisImageUrl = invoice ? instruction(invoice, 'qrisImageUrl') : undefined;
   const transferReference = invoice ? instruction(invoice, 'transferReference') : undefined;
-  const canUploadProof = invoice?.paymentStatus === 'UNPAID' || invoice?.paymentStatus === 'REJECTED';
+  const uploadableStatus = invoice?.paymentStatus === 'UNPAID' || invoice?.paymentStatus === 'REJECTED';
+  const paymentDeadlinePassed = uploadableStatus && invoice?.proofUploadAllowed === false;
+  const canUploadProof = uploadableStatus && invoice?.proofUploadAllowed !== false;
 
   return (
     <PortalShell>
@@ -174,6 +187,12 @@ export default function PortalPaymentPage({ api = registrationApi }: PortalPayme
                 </section>
               )}
 
+              {uploadableStatus && paymentDeadlinePassed && (
+                <p role="alert">
+                  Batas pembayaran invoice telah lewat. Hubungi panitia untuk memperbarui batas pembayaran.
+                </p>
+              )}
+
               {invoice.paymentStatus === 'PAID' && (
                 <section aria-labelledby="official-receipt-title">
                   <h2 id="official-receipt-title">Kuitansi pembayaran resmi</h2>
@@ -202,7 +221,7 @@ export default function PortalPaymentPage({ api = registrationApi }: PortalPayme
                     <label className="portal-file-field">
                       Bukti pembayaran (PDF, JPEG, atau PNG)
                       <input
-                        accept="application/pdf,image/jpeg,image/png"
+                        accept={DOCUMENT_ACCEPT_ATTRIBUTE}
                         type="file"
                         onChange={(event) => {
                           setProof(event.target.files?.[0] ?? null);
