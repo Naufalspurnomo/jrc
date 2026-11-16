@@ -9,6 +9,7 @@ import { useAuth } from '../../features/auth';
 import {
   registrationApi,
   type RegistrationApi,
+  type GoogleSheetsStatus,
   type RegistrationRecord,
   type RegistrationState,
 } from '../../features/registration/api';
@@ -56,27 +57,15 @@ function formatDate(value: string): string {
     : new Intl.DateTimeFormat('id-ID', { dateStyle: 'medium' }).format(date);
 }
 
-async function downloadXlsx(blob: Blob, filename: string): Promise<void> {
-  const url = URL.createObjectURL(blob);
-  const anchor = document.createElement('a');
-  anchor.href = url;
-  anchor.download = filename;
-
-  try {
-    anchor.click();
-  } finally {
-    URL.revokeObjectURL(url);
-  }
-}
-
 export default function AdminDashboardPage({ api = registrationApi }: AdminDashboardPageProps) {
   const { loading: authLoading, user } = useAuth();
   const { showToast } = useToast();
   const [registrations, setRegistrations] = useState<RegistrationRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState(false);
-  const [exporting, setExporting] = useState(false);
-  const [exportError, setExportError] = useState('');
+  const [sheets, setSheets] = useState<GoogleSheetsStatus | null>(null);
+  const [syncingSheets, setSyncingSheets] = useState(false);
+  const [sheetsError, setSheetsError] = useState('');
   const [query, setQuery] = useState('');
   const [status, setStatus] = useState<StatusFilter>('ALL');
   const [requestVersion, setRequestVersion] = useState(0);
@@ -107,6 +96,15 @@ export default function AdminDashboardPage({ api = registrationApi }: AdminDashb
     };
   }, [api, authLoading, requestVersion, user]);
 
+  useEffect(() => {
+    if (authLoading || !user) return undefined;
+    let active = true;
+    void api.admin.googleSheetsStatus()
+      .then((status) => { if (active) setSheets(status); })
+      .catch(() => { if (active) setSheetsError('Status Spreadsheet gagal dimuat.'); });
+    return () => { active = false; };
+  }, [api, authLoading, user]);
+
   const filteredRegistrations = useMemo(() => {
     const search = normalized(query.trim());
     return registrations.filter((registration) => {
@@ -121,20 +119,18 @@ export default function AdminDashboardPage({ api = registrationApi }: AdminDashb
     });
   }, [query, registrations, status]);
 
-  const exportRecords = async (attendance = false) => {
-    setExporting(true);
-    setExportError('');
+  const synchronizeSheets = async () => {
+    setSyncingSheets(true);
+    setSheetsError('');
     try {
-      const blob = await (attendance ? api.admin.exportAttendance() : api.admin.exportRegistrations());
-      await downloadXlsx(blob, attendance ? 'presensi-jrc-xiv.xlsx' : 'pendaftaran-jrc-xiv.xlsx');
-      showToast(attendance ? 'Ekspor presensi berhasil diunduh.' : 'Ekspor pendaftaran berhasil diunduh.', 'success');
+      const status = await api.admin.syncGoogleSheets();
+      setSheets(status);
+      showToast('Spreadsheet berhasil disinkronkan.', 'success');
     } catch {
-      setExportError(attendance
-        ? 'Ekspor XLSX presensi gagal. Coba lagi beberapa saat lagi.'
-        : 'Ekspor XLSX pendaftaran gagal. Coba lagi beberapa saat lagi.');
-      showToast('Ekspor gagal. Silakan coba lagi.', 'error');
+      setSheetsError('Sinkronisasi Spreadsheet gagal. Coba lagi beberapa saat lagi.');
+      showToast('Sinkronisasi Spreadsheet gagal.', 'error');
     } finally {
-      setExporting(false);
+      setSyncingSheets(false);
     }
   };
 
@@ -175,25 +171,32 @@ export default function AdminDashboardPage({ api = registrationApi }: AdminDashb
             <p className="admin-page-description">Pantau status dan tindak lanjuti data tim.</p>
           </div>
           <div className="admin-page-heading__actions">
+            {sheets?.spreadsheetUrl && (
+              <a
+                className="admin-export"
+                href={sheets.spreadsheetUrl}
+                target="_blank"
+                rel="noreferrer"
+              >
+                Buka Spreadsheet
+              </a>
+            )}
             <button
               className="admin-export"
               type="button"
-              disabled={loading || exporting}
-              onClick={() => void exportRecords()}
+              disabled={loading || syncingSheets || sheets?.enabled === false}
+              onClick={() => void synchronizeSheets()}
             >
-              {exporting ? 'Menyiapkan XLSX…' : 'Ekspor XLSX'}
-            </button>
-            <button
-              className="admin-export"
-              type="button"
-              disabled={loading || exporting}
-              onClick={() => void exportRecords(true)}
-            >
-              {exporting ? 'Menyiapkan XLSX…' : 'Ekspor presensi XLSX'}
+              {syncingSheets ? 'Menyinkronkan…' : 'Sinkronkan sekarang'}
             </button>
           </div>
         </header>
-        {exportError && <p className="admin-error" role="alert">{exportError}</p>}
+        {sheets?.lastSyncedAt && (
+          <p className="admin-page-description">
+            Data Spreadsheet aktif · sinkron terakhir {formatDate(sheets.lastSyncedAt)}
+          </p>
+        )}
+        {sheetsError && <p className="admin-error" role="alert">{sheetsError}</p>}
 
         {!loading && !loadError && (
           <section className="admin-metrics" aria-label="Ringkasan status">

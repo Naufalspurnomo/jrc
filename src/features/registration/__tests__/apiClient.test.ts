@@ -144,28 +144,46 @@ describe('ApiClient', () => {
     );
   });
 
-  it('downloads authenticated admin XLSX exports as binary blobs', async () => {
-    const mime = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
-    const fetcher = vi.fn<typeof fetch>().mockImplementation(async () => new Response(new Uint8Array([80, 75, 3, 4]), {
-      status: 200,
-      headers: { 'Content-Type': mime },
-    }));
+  it('reads and triggers authenticated live Google Sheets synchronization', async () => {
+    const status = {
+      enabled: true,
+      spreadsheetUrl: 'https://docs.google.com/spreadsheets/d/sheet-123/edit',
+      syncing: false,
+      lastSyncedAt: '2026-11-16T04:00:00.000Z',
+      lastError: null,
+    };
+    const fetcher = vi.fn<typeof fetch>()
+      .mockResolvedValueOnce(new Response(JSON.stringify(status), {
+        headers: { 'Content-Type': 'application/json' },
+      }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ csrfToken: 'csrf-test' }), {
+        headers: { 'Content-Type': 'application/json' },
+      }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({
+        ...status,
+        registrationCount: 2,
+        attendanceCount: 5,
+      }), {
+        headers: { 'Content-Type': 'application/json' },
+      }));
     const api = createRegistrationApi(new ApiClient(fetcher));
 
-    const registrations = await api.admin.exportRegistrations();
-    const attendance = await api.admin.exportAttendance();
+    await expect(api.admin.googleSheetsStatus()).resolves.toEqual(status);
+    await expect(api.admin.syncGoogleSheets()).resolves.toMatchObject({
+      enabled: true,
+      registrationCount: 2,
+      attendanceCount: 5,
+    });
 
-    expect(registrations).toMatchObject({ size: 4, type: mime });
-    expect(attendance).toMatchObject({ size: 4, type: mime });
     expect(fetcher).toHaveBeenNthCalledWith(
       1,
-      '/api/admin/registrations/export.xlsx',
+      '/api/admin/google-sheets',
       expect.objectContaining({ credentials: 'include', method: 'GET' }),
     );
     expect(fetcher).toHaveBeenNthCalledWith(
-      2,
-      '/api/admin/registrations/attendance.xlsx',
-      expect.objectContaining({ credentials: 'include', method: 'GET' }),
+      3,
+      '/api/admin/google-sheets/sync',
+      expect.objectContaining({ credentials: 'include', method: 'POST' }),
     );
   });
 });

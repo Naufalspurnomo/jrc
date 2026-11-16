@@ -521,22 +521,7 @@ suite('registration system e2e', () => {
     });
   });
 
-  it('records audit history and exports a native XLSX workbook', async () => {
-    const xlsx = await reviewer
-      .get('/api/admin/registrations/export.xlsx')
-      .buffer(true)
-      .parse((response, callback) => {
-        const chunks: Buffer[] = [];
-        response.on('data', (chunk: Buffer) => chunks.push(chunk));
-        response.on('end', () => callback(null, Buffer.concat(chunks)));
-      })
-      .expect(200);
-    expect(xlsx.headers['content-type']).toContain(
-      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-    );
-    expect(xlsx.headers['content-disposition']).toContain('registrations-jrc-xiv.xlsx');
-    expect(Buffer.isBuffer(xlsx.body)).toBe(true);
-    expect(xlsx.body.subarray(0, 2).toString()).toBe('PK');
+  it('records audit history for registration, payment, and attendance mutations', async () => {
     const actions = (await prisma.auditLog.findMany({ select: { action: true } })).map((entry) => entry.action);
     expect(actions).toContain('REGISTRATION_APPROVED');
     expect(actions).toContain('PAYMENT_MARKED_PAID');

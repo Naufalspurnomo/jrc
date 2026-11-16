@@ -117,6 +117,14 @@ export class RuntimeConfigValidator implements OnModuleInit {
     if (!process.env.DATABASE_URL?.trim()) {
       invalidVariables.push('DATABASE_URL');
     }
+    if ((process.env.GOOGLE_SHEETS_ENABLED ?? '').trim().toLowerCase() === 'true') {
+      if (!process.env.GOOGLE_SHEETS_SPREADSHEET_ID?.trim()) {
+        invalidVariables.push('GOOGLE_SHEETS_SPREADSHEET_ID');
+      }
+      if (!process.env.GOOGLE_SERVICE_ACCOUNT_JSON?.trim()) {
+        invalidVariables.push('GOOGLE_SERVICE_ACCOUNT_JSON');
+      }
+    }
 
     if (invalidVariables.length > 0) {
       throw new Error(

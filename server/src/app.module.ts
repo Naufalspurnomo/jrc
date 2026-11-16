@@ -9,7 +9,7 @@ import {
   ServiceUnavailableException,
 } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
-import { APP_GUARD } from '@nestjs/core';
+import { APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
 import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 import { randomUUID } from 'node:crypto';
 import { NextFunction, Request, Response } from 'express';
@@ -39,6 +39,13 @@ import {
 } from './documents';
 import { EmailOutboxService } from './email-outbox';
 import { FinanceController, FinanceService } from './finance';
+import {
+  GoogleApiSheetsPublisher,
+  GoogleSheetsController,
+  GoogleSheetsMutationInterceptor,
+  GoogleSheetsPublisher,
+  GoogleSheetsSyncService,
+} from './google-sheets-sync';
 import { ManualPaymentProvider } from './payments/manual-payment.provider';
 import { PaidTeamsController, PaidTeamsService } from './paid-teams';
 import {
@@ -300,6 +307,7 @@ export class HealthController {
     HealthController,
     FinanceController,
     FinanceVerificationController,
+    GoogleSheetsController,
     InvoiceController,
     ParticipantTicketController,
     PaymentProofController,
@@ -319,6 +327,11 @@ export class HealthController {
     DocumentUploadInterceptor,
     EmailOutboxService,
     FinanceService,
+    GoogleSheetsSyncService,
+    {
+      provide: GoogleSheetsPublisher,
+      useClass: GoogleApiSheetsPublisher,
+    },
     {
       provide: ManualPaymentProvider,
       useFactory: () => new ManualPaymentProvider(),
@@ -332,6 +345,7 @@ export class HealthController {
     { provide: APP_GUARD, useClass: AuthGuard },
     { provide: APP_GUARD, useClass: RolesGuard },
     { provide: APP_GUARD, useClass: CsrfGuard },
+    { provide: APP_INTERCEPTOR, useClass: GoogleSheetsMutationInterceptor },
   ],
   exports: [PrismaService, AuthService],
 })

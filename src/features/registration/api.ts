@@ -38,10 +38,12 @@ export const API_PATHS = {
     kit: '/api/gate/kit',
   },
   admin: {
+    googleSheets: {
+      root: '/api/admin/google-sheets',
+      sync: '/api/admin/google-sheets/sync',
+    },
     registrations: {
       root: '/api/admin/registrations',
-      exportXlsx: '/api/admin/registrations/export.xlsx',
-      attendanceXlsx: '/api/admin/registrations/attendance.xlsx',
       byId: (registrationId: string) => `/api/admin/registrations/${encodeURIComponent(registrationId)}`,
       review: (registrationId: string) => `/api/admin/registrations/${encodeURIComponent(registrationId)}/review`,
     },
@@ -542,6 +544,16 @@ export interface PaidTeamDetailRecord {
   };
 }
 
+export interface GoogleSheetsStatus {
+  enabled: boolean;
+  spreadsheetUrl: string | null;
+  syncing: boolean;
+  lastSyncedAt: string | null;
+  lastError: string | null;
+  registrationCount?: number;
+  attendanceCount?: number;
+}
+
 export interface RegistrationApi {
   auth: {
     me(): Promise<AuthProbe>;
@@ -582,12 +594,12 @@ export interface RegistrationApi {
     handoverKit(input: TicketRequest): Promise<TicketVerification>;
   };
   admin: {
+    googleSheetsStatus(): Promise<GoogleSheetsStatus>;
+    syncGoogleSheets(): Promise<GoogleSheetsStatus>;
     listRegistrations(): Promise<RegistrationRecord[]>;
     getRegistration(registrationId: string): Promise<RegistrationRecord>;
     deleteRegistration(registrationId: string): Promise<RegistrationDeletionOutcome>;
     reviewRegistration(registrationId: string, input: ReviewInput): Promise<RegistrationRecord>;
-    exportRegistrations(): Promise<Blob>;
-    exportAttendance(): Promise<Blob>;
     listFinanceInvoices(): Promise<FinanceInvoiceRecord[]>;
     verifyPayment(invoiceId: string, input: PaymentReviewInput): Promise<InvoiceRecord>;
     listPaidTeams(input?: PaidTeamListInput): Promise<PaidTeamListResult>;
@@ -694,6 +706,8 @@ export function createRegistrationApi(client = new ApiClient()): RegistrationApi
       handoverKit: (input) => client.request<TicketVerification>(API_PATHS.gate.kit, { method: 'POST', body: input }),
     },
     admin: {
+      googleSheetsStatus: () => client.request<GoogleSheetsStatus>(API_PATHS.admin.googleSheets.root),
+      syncGoogleSheets: () => client.request<GoogleSheetsStatus>(API_PATHS.admin.googleSheets.sync, { method: 'POST' }),
       listRegistrations: () => client.request<RegistrationRecord[]>(API_PATHS.admin.registrations.root),
       getRegistration: (registrationId) => client.request<RegistrationRecord>(API_PATHS.admin.registrations.byId(registrationId)),
       deleteRegistration: (registrationId) => client.request<RegistrationDeletionOutcome>(
@@ -704,8 +718,6 @@ export function createRegistrationApi(client = new ApiClient()): RegistrationApi
         API_PATHS.admin.registrations.review(registrationId),
         { method: 'POST', body: input },
       ),
-      exportRegistrations: () => client.request<Blob>(API_PATHS.admin.registrations.exportXlsx, { responseType: 'blob' }),
-      exportAttendance: () => client.request<Blob>(API_PATHS.admin.registrations.attendanceXlsx, { responseType: 'blob' }),
       listFinanceInvoices: () => client.request<FinanceInvoiceRecord[]>(API_PATHS.admin.finance.invoices.root),
       verifyPayment: (invoiceId, input) => client.request<InvoiceRecord>(API_PATHS.admin.invoices.verify(invoiceId), {
         method: 'POST',

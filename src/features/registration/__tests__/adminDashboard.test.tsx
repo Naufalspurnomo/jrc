@@ -36,9 +36,6 @@ function registration(
 }
 
 function createApi(registrations: RegistrationRecord[]): RegistrationApi {
-  const xlsx = new Blob(['xlsx'], {
-    type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-  });
   return {
     auth: {
       me: vi.fn().mockResolvedValue(adminSession),
@@ -48,8 +45,22 @@ function createApi(registrations: RegistrationRecord[]): RegistrationApi {
     },
     admin: {
       listRegistrations: vi.fn().mockResolvedValue(registrations),
-      exportRegistrations: vi.fn().mockResolvedValue(xlsx),
-      exportAttendance: vi.fn().mockResolvedValue(xlsx),
+      googleSheetsStatus: vi.fn().mockResolvedValue({
+        enabled: true,
+        spreadsheetUrl: 'https://docs.google.com/spreadsheets/d/sheet-123/edit',
+        syncing: false,
+        lastSyncedAt: '2026-11-16T04:00:00.000Z',
+        lastError: null,
+      }),
+      syncGoogleSheets: vi.fn().mockResolvedValue({
+        enabled: true,
+        spreadsheetUrl: 'https://docs.google.com/spreadsheets/d/sheet-123/edit',
+        syncing: false,
+        lastSyncedAt: '2026-11-16T04:01:00.000Z',
+        lastError: null,
+        registrationCount: registrations.length,
+        attendanceCount: 0,
+      }),
     },
   } as unknown as RegistrationApi;
 }
@@ -69,27 +80,18 @@ describe('AdminDashboardPage', () => {
     vi.restoreAllMocks();
   });
 
-  it.each([
-    ['Ekspor XLSX', 'exportRegistrations', 'pendaftaran-jrc-xiv.xlsx', 'blob:registrations'],
-    ['Ekspor presensi XLSX', 'exportAttendance', 'presensi-jrc-xiv.xlsx', 'blob:attendance'],
-  ] as const)('downloads %s as an XLSX blob', async (buttonName, method, filename, objectUrl) => {
+  it('opens the live spreadsheet and supports a manual synchronization', async () => {
     const api = createApi([registration('001', 'Garuda Robotika', 'SUBMITTED')]);
-    const click = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => undefined);
-    const createObjectURL = vi.spyOn(URL, 'createObjectURL').mockReturnValue(objectUrl);
-    const revokeObjectURL = vi.spyOn(URL, 'revokeObjectURL').mockImplementation(() => undefined);
 
     renderDashboard(api);
     await screen.findByText('Garuda Robotika');
-    await userEvent.click(screen.getByRole('button', { name: buttonName }));
-
-    expect(api.admin[method]).toHaveBeenCalledOnce();
-    const blob = createObjectURL.mock.calls[0]?.[0];
-    expect(blob).toBeInstanceOf(Blob);
-    expect((blob as Blob).type).toBe('application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
-    expect(createObjectURL).toHaveBeenCalledWith(blob);
-    expect(click.mock.instances[0]).toHaveAttribute('download', filename);
-    expect(click).toHaveBeenCalledOnce();
-    expect(revokeObjectURL).toHaveBeenCalledWith(objectUrl);
+    expect(await screen.findByRole('link', { name: 'Buka Spreadsheet' })).toHaveAttribute(
+      'href',
+      'https://docs.google.com/spreadsheets/d/sheet-123/edit',
+    );
+    await userEvent.click(screen.getByRole('button', { name: 'Sinkronkan sekarang' }));
+    expect(api.admin.syncGoogleSheets).toHaveBeenCalledOnce();
+    expect(await screen.findByText('Spreadsheet berhasil disinkronkan.')).toBeInTheDocument();
   });
 
   it('loads registrations from the admin API and links to each review detail', async () => {
