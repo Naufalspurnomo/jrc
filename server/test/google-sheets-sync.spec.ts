@@ -20,7 +20,7 @@ describe('GoogleSheetsSyncService', () => {
     process.env.GOOGLE_SHEETS_SPREADSHEET_ID = 'sheet-123';
     const prisma = {
       registration: {
-        findMany: vi.fn().mockResolvedValue([{ 
+        findMany: vi.fn().mockResolvedValue([{
           registrationNumber: '+JRC14-2026-0001',
           teamName: '=Garuda',
           institution: '@PENS',
