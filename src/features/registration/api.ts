@@ -1,5 +1,7 @@
 import { apiUrl } from './apiOrigin';
 
+export { apiUrl } from './apiOrigin';
+
 export const API_PATHS = {
   auth: {
     csrf: '/api/auth/csrf',
