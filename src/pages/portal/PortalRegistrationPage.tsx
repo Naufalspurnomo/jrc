@@ -597,6 +597,12 @@ export default function PortalRegistrationPage({ api = registrationApi }: Portal
     setError('');
 
     try {
+      // A participant may choose a photo immediately after typing a new roster
+      // member. Ensure the roster exists server-side before the upload endpoint
+      // validates subjectName/subjectRole against it.
+      if (documentCategory === 'MEMBER_PHOTO') {
+        await flushAutosave();
+      }
       const formData = new FormData();
       formData.append('category', documentCategory);
       if (documentCategory === 'MEMBER_PHOTO') {

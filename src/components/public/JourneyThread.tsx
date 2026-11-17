@@ -85,10 +85,13 @@ export function JourneyThread() {
     const root = svg?.closest<HTMLElement>('.lower-world');
     if (!svg || !guide || !progress || !root) return undefined;
 
-    let frame = 0;
+    let geometryFrame = 0;
+    let progressFrame = 0;
+    let disposed = false;
     const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     const sync = () => {
-      frame = 0;
+      geometryFrame = 0;
+      if (disposed) return;
       const width = root.clientWidth;
       const height = root.scrollHeight;
       const compact = window.matchMedia('(max-width: 48rem)').matches;
@@ -101,9 +104,11 @@ export function JourneyThread() {
       svg.setAttribute('viewBox', `0 0 ${width} ${height}`);
       guide.setAttribute('d', route);
       progress.setAttribute('d', route);
+      scheduleProgress();
     };
 
     const syncProgress = () => {
+      if (disposed) return;
       if (reducedMotion) {
         progress.style.strokeDashoffset = '0';
         return;
@@ -116,13 +121,21 @@ export function JourneyThread() {
     };
 
     const scheduleSync = () => {
-      if (!frame) frame = window.requestAnimationFrame(sync);
+      if (!disposed && !geometryFrame) {
+        geometryFrame = window.requestAnimationFrame(() => {
+          geometryFrame = 0;
+          if (disposed) return;
+          sync();
+        });
+      }
     };
 
     const scheduleProgress = () => {
-      if (!frame) {
-        frame = window.requestAnimationFrame(() => {
-          frame = 0;
+      if (disposed) return;
+      if (!progressFrame) {
+        progressFrame = window.requestAnimationFrame(() => {
+          progressFrame = 0;
+          if (disposed) return;
           syncProgress();
         });
       }
@@ -141,10 +154,12 @@ export function JourneyThread() {
     void document.fonts?.ready?.then(scheduleSync);
 
     return () => {
+      disposed = true;
       window.removeEventListener('resize', scheduleSync);
       window.removeEventListener('scroll', scheduleProgress);
       observer?.disconnect();
-      if (frame) window.cancelAnimationFrame(frame);
+      if (geometryFrame) window.cancelAnimationFrame(geometryFrame);
+      if (progressFrame) window.cancelAnimationFrame(progressFrame);
     };
   }, []);
 

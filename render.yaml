@@ -1,0 +1,50 @@
+services:
+  - type: web
+    name: jrc-api
+    runtime: docker
+    dockerfilePath: ./server/Dockerfile
+    dockerContext: ./server
+    healthCheckPath: /api/health/ready
+    envVars:
+      - { key: PORT, value: 3000 }
+      - { key: HOST, value: 0.0.0.0 }
+      - { key: NODE_ENV, value: production }
+      - { key: TRUST_PROXY_HOPS, value: 1 }
+      - { key: STORAGE_PATH, value: /var/data/jrc-storage }
+      - { key: DATABASE_URL, sync: false }
+      - { key: CORS_ORIGINS, sync: false }
+      - { key: COOKIE_NAME, sync: false }
+      - { key: COOKIE_SECURE, sync: false }
+      - { key: COOKIE_SAME_SITE, sync: false }
+      - { key: SESSION_TTL_SECONDS, sync: false }
+      - { key: TICKET_SECRET, sync: false }
+      - { key: PUBLIC_FRONTEND_URL, sync: false }
+      - { key: PUBLIC_VERIFICATION_URL, sync: false }
+      - { key: EVENT_ID, sync: false }
+      - { key: EVENT_NAME, sync: false }
+      - { key: REGISTRATION_DEADLINE, sync: false }
+      - { key: CURRENCY, sync: false }
+      - { key: TRANSPORTER_SD_FEE, sync: false }
+      - { key: RESCUE_SMP_FEE, sync: false }
+      - { key: SHOOTER_SMA_FEE, sync: false }
+      - { key: LINE_FOLLOWER_FEE, sync: false }
+      - { key: SUMO_FEE, sync: false }
+      - { key: SOCCER_FEE, sync: false }
+      - { key: PAYMENT_PROVIDER, sync: false }
+      - { key: PAYMENT_BANK_NAME, sync: false }
+      - { key: PAYMENT_ACCOUNT_NAME, sync: false }
+      - { key: PAYMENT_ACCOUNT_NUMBER, sync: false }
+      - { key: PAYMENT_QRIS_IMAGE_URL, sync: false }
+      - { key: PAYMENT_DEADLINE_DAYS, sync: false }
+      - { key: EMAIL_TRANSPORT, sync: false }
+      - { key: EMAIL_POLL_INTERVAL_MS, sync: false }
+      - { key: SMTP_HOST, sync: false }
+      - { key: SMTP_PORT, sync: false }
+      - { key: SMTP_SECURE, sync: false }
+      - { key: SMTP_USER, sync: false }
+      - { key: SMTP_APP_PASSWORD, sync: false }
+      - { key: SMTP_FROM, sync: false }
+    disk:
+      name: jrc-storage
+      mountPath: /var/data/jrc-storage
+      sizeGB: 1

@@ -17,8 +17,9 @@ function isStaticMotionEnvironment() {
   if (typeof window === 'undefined') return false;
   return (
     window.matchMedia('(prefers-reduced-motion: reduce)').matches
-    || window.innerWidth < 768
-    || navigator.maxTouchPoints > 0
+    || window.matchMedia('(max-width: 64rem)').matches
+    || !window.matchMedia('(hover: hover)').matches
+    || !window.matchMedia('(pointer: fine)').matches
   );
 }
 
@@ -47,12 +48,23 @@ export function useCinematicMotion<T extends HTMLElement>({
 
   useEffect(() => {
     const media = window.matchMedia('(prefers-reduced-motion: reduce)');
+    const compactMedia = window.matchMedia('(max-width: 64rem)');
+    const hoverMedia = window.matchMedia('(hover: hover)');
+    const pointerMedia = window.matchMedia('(pointer: fine)');
     const syncMotionPreference = () => setReducedMotion(
-      media.matches || window.innerWidth < 768 || navigator.maxTouchPoints > 0,
+      media.matches || compactMedia.matches || !hoverMedia.matches || !pointerMedia.matches,
     );
     syncMotionPreference();
     media.addEventListener('change', syncMotionPreference);
-    return () => media.removeEventListener('change', syncMotionPreference);
+    compactMedia.addEventListener('change', syncMotionPreference);
+    hoverMedia.addEventListener('change', syncMotionPreference);
+    pointerMedia.addEventListener('change', syncMotionPreference);
+    return () => {
+      media.removeEventListener('change', syncMotionPreference);
+      compactMedia.removeEventListener('change', syncMotionPreference);
+      hoverMedia.removeEventListener('change', syncMotionPreference);
+      pointerMedia.removeEventListener('change', syncMotionPreference);
+    };
   }, []);
 
   useEffect(() => {
