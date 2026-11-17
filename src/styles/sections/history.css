@@ -63,8 +63,8 @@
   grid-template-columns: 1fr 1fr;
   align-items: center;
   column-gap: clamp(1.5rem, 4vw, 4rem);
-  min-height: 28rem;
-  padding: clamp(2.5rem, 5vw, 5rem) 0;
+  min-height: 19rem;
+  padding: clamp(1.5rem, 3vw, 2.75rem) 0;
 }
 
 .archive-entry__inscription {
@@ -83,7 +83,7 @@
 .archive-entry__inscription h3 {
   max-width: 15ch;
   margin: 0 0 1.25rem;
-  font-size: clamp(2.4rem, 4vw, 4.4rem);
+  font-size: clamp(1.8rem, 2.7vw, 3rem);
   line-height: .9;
 }
 

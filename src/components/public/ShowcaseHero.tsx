@@ -8,15 +8,6 @@ import {
 import { competitions } from '../../content/jrc';
 import { CompetitionModal } from './CompetitionModal';
 
-const PORTRAIT_PATHS = [
-  '/assets/roman-select/athena.webp',
-  '/assets/roman-select/ares.webp',
-  '/assets/roman-select/apollo.webp',
-  '/assets/roman-select/antinous.webp',
-  '/assets/roman-select/meleager.webp',
-  '/assets/roman-select/hercules.webp',
-] as const;
-
 const SWIPE_THRESHOLD = 50;
 const TRANSITION_FALLBACK_MS = 760;
 
@@ -146,17 +137,25 @@ export function ShowcaseHero() {
           <button
             type="button"
             className="character-selector__preview character-selector__preview--previous"
-            aria-label={`Pilih ${previous.shortName} — pratinjau sebelumnya`}
+            aria-label={`Pilih ${previous.name} — pratinjau sebelumnya`}
             disabled={Boolean(transition)}
             onClick={() => changeDivision(-1)}
           >
             <span
               className="character-selector__preview-image"
-              data-preview-src={PORTRAIT_PATHS[previousIndex]}
+              data-preview-src={previous.emblem.src}
               aria-hidden="true"
-              style={{ backgroundImage: `url(${PORTRAIT_PATHS[previousIndex]})` }}
-            />
-            <span className="character-selector__preview-name">{previous.shortName}</span>
+            >
+              <img
+                className="character-selector__preview-emblem"
+                src={previous.emblem.src}
+                alt=""
+                draggable={false}
+                loading="lazy"
+                decoding="async"
+              />
+            </span>
+            <span className="character-selector__preview-name">{previous.name}</span>
           </button>
 
           <button
@@ -179,14 +178,14 @@ export function ShowcaseHero() {
               >
                 <img
                   className="character-selector__plate character-selector__plate--backdrop"
-                  src={PORTRAIT_PATHS[transition.from]}
+                  src={outgoing.emblem.src}
                   alt=""
                   draggable={false}
                   aria-hidden="true"
                 />
                 <img
                   className="character-selector__plate character-selector__plate--subject"
-                  src={PORTRAIT_PATHS[transition.from]}
+                  src={outgoing.emblem.src}
                   alt=""
                   draggable={false}
                 />
@@ -203,7 +202,7 @@ export function ShowcaseHero() {
             >
               <img
                 className="character-selector__plate character-selector__plate--backdrop"
-                src={PORTRAIT_PATHS[activeIndex]}
+                src={current.emblem.src}
                 alt=""
                 draggable={false}
                 aria-hidden="true"
@@ -213,8 +212,8 @@ export function ShowcaseHero() {
               />
               <img
                 className="character-selector__plate character-selector__plate--subject"
-                src={PORTRAIT_PATHS[activeIndex]}
-                alt={`${current.shortName} — ${current.discipline}`}
+                src={current.emblem.src}
+                alt={current.emblem.alt}
                 draggable={false}
                 loading="lazy"
                 decoding="async"
@@ -235,17 +234,25 @@ export function ShowcaseHero() {
           <button
             type="button"
             className="character-selector__preview character-selector__preview--next"
-            aria-label={`Pilih ${next.shortName} — pratinjau berikutnya`}
+            aria-label={`Pilih ${next.name} — pratinjau berikutnya`}
             disabled={Boolean(transition)}
             onClick={() => changeDivision(1)}
           >
             <span
               className="character-selector__preview-image"
-              data-preview-src={PORTRAIT_PATHS[nextIndex]}
+              data-preview-src={next.emblem.src}
               aria-hidden="true"
-              style={{ backgroundImage: `url(${PORTRAIT_PATHS[nextIndex]})` }}
-            />
-            <span className="character-selector__preview-name">{next.shortName}</span>
+            >
+              <img
+                className="character-selector__preview-emblem"
+                src={next.emblem.src}
+                alt=""
+                draggable={false}
+                loading="lazy"
+                decoding="async"
+              />
+            </span>
+            <span className="character-selector__preview-name">{next.name}</span>
           </button>
         </div>
 
@@ -256,7 +263,7 @@ export function ShowcaseHero() {
           data-transitioning={Boolean(transition)}
           key={`division-name-${activeIndex}`}
         >
-          {current.shortName}
+          {current.name}
         </h2>
 
         <div className="character-selector__footer">
@@ -264,6 +271,11 @@ export function ShowcaseHero() {
             <p className="character-selector__discipline">{current.discipline}</p>
             <p className="character-selector__status">
               {current.level} · Kategori resmi JRC XIV
+            </p>
+            <p className="character-selector__status">{current.fee}</p>
+            <p className="character-selector__status contact-lines">
+              <span>{current.contact.name}</span>
+              <a href={`tel:${current.contact.phone.replace(/-/g, '')}`}>{current.contact.phone}</a>
             </p>
           </div>
 
@@ -287,11 +299,10 @@ export function ShowcaseHero() {
           competition={current}
           open={modalOpen}
           onClose={() => setModalOpen(false)}
-          portraitSrc={PORTRAIT_PATHS[activeIndex]}
         />
 
         <p className="sr-only" role="status" aria-live="polite" aria-atomic="true">
-          {current.shortName}, {current.discipline}, divisi {activeIndex + 1} dari {competitions.length}
+          {current.name}, {current.discipline}, divisi {activeIndex + 1} dari {competitions.length}
         </p>
       </div>
     </section>

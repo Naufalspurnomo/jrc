@@ -9,6 +9,7 @@ const STAFF_ROLES = [
   Role.SUPER_ADMIN,
   Role.REGISTRATION_REVIEWER,
   Role.FINANCE,
+  Role.PAID_TEAM_VIEWER,
   Role.GATE_STAFF,
   Role.SUPPORT,
 ] as const;
@@ -16,7 +17,7 @@ const STAFF_ROLES = [
 const COMPETITION_DEFINITIONS = [
   {
     slug: 'donatopia-transporter',
-    name: 'Donatopia — Transporter',
+    name: 'Castra Guardian',
     level: 'SD',
     discipline: 'Transporter',
     feeEnv: 'TRANSPORTER_SD_FEE',
@@ -24,43 +25,43 @@ const COMPETITION_DEFINITIONS = [
   },
   {
     slug: 'nightmaze-rescue-transporter',
-    name: 'Nightmaze — Rescue Transporter',
+    name: 'Robo Chiper',
     level: 'SMP',
     discipline: 'Rescue Transporter',
     feeEnv: 'RESCUE_SMP_FEE',
-    defaultFee: 300_000,
+    defaultFee: 250_000,
   },
   {
     slug: 'pirate-clash-transporter-shooter',
-    name: 'Pirate Clash — Transporter Shooter',
+    name: 'Aquaduct Romana',
     level: 'SMA',
-    discipline: 'Transporter Shooter',
+    discipline: 'Transporter Line Follower',
     feeEnv: 'SHOOTER_SMA_FEE',
-    defaultFee: 350_000,
+    defaultFee: 250_000,
   },
   {
     slug: 'wacky-rally-line-follower-mikro',
-    name: 'Wacky Rally — Line Follower Mikro',
+    name: 'Chariot Line',
     level: 'Umum',
     discipline: 'Line Follower Mikro',
     feeEnv: 'LINE_FOLLOWER_FEE',
-    defaultFee: 300_000,
+    defaultFee: 250_000,
   },
   {
     slug: 'ring-rumble-sumo',
-    name: 'Ring Rumble — Sumo',
+    name: 'Colosseum Clash',
     level: 'Umum',
     discipline: 'Sumo',
     feeEnv: 'SUMO_FEE',
-    defaultFee: 300_000,
+    defaultFee: 250_000,
   },
   {
     slug: 'goal-rush-soccer',
-    name: 'Goal Rush — Soccer',
+    name: 'Harpastum Arena',
     level: 'Umum',
     discipline: 'Soccer',
     feeEnv: 'SOCCER_FEE',
-    defaultFee: 350_000,
+    defaultFee: 250_000,
   },
 ] as const;
 
@@ -95,6 +96,12 @@ function dateTimeEnv(name: string, fallback: string): Date {
   const value = new Date(raw);
   if (Number.isNaN(value.getTime())) throw new Error(`${name} must be a valid date-time`);
   return value;
+}
+
+export function validateRegistrationWindow(registrationOpenAt: Date, registrationDeadline: Date): void {
+  if (registrationOpenAt.getTime() >= registrationDeadline.getTime()) {
+    throw new Error('REGISTRATION_OPEN_AT must be earlier than REGISTRATION_DEADLINE');
+  }
 }
 
 function normalizeEmail(raw: string): string {
@@ -178,11 +185,13 @@ async function main(): Promise<void> {
   const eventName = nonEmptyEnv('EVENT_NAME', 'JRC XIV — Imperium Machina');
   const registrationDeadline = dateTimeEnv(
     'REGISTRATION_DEADLINE',
-    '2026-12-31T23:59:59.000+07:00',
+    '2026-11-21T23:59:59+07:00',
   );
   if (registrationDeadline.getTime() <= Date.now()) {
     throw new Error('REGISTRATION_DEADLINE must be later than the current time');
   }
+  const registrationOpenAt = dateTimeEnv('REGISTRATION_OPEN_AT', '2026-09-30T08:00:00+07:00');
+  validateRegistrationWindow(registrationOpenAt, registrationDeadline);
   const currency = nonEmptyEnv('CURRENCY', 'IDR').toUpperCase();
   if (!/^[A-Z]{3}$/.test(currency)) throw new Error('CURRENCY must be a three-letter currency code');
 
@@ -205,6 +214,7 @@ async function main(): Promise<void> {
           eventName,
           fee: competition.fee,
           currency,
+          registrationOpenAt,
           registrationDeadline,
         },
         update: {
@@ -215,6 +225,7 @@ async function main(): Promise<void> {
           eventName,
           fee: competition.fee,
           currency,
+          registrationOpenAt,
           registrationDeadline,
         },
       });
@@ -249,12 +260,14 @@ async function main(): Promise<void> {
   });
 }
 
-main()
-  .catch((error: unknown) => {
-    const message = error instanceof Error ? error.message : 'Unknown seed error';
-    console.error(`Seed failed: ${message}`);
-    process.exitCode = 1;
-  })
-  .finally(async () => {
-    await prisma.$disconnect();
-  });
+if (require.main === module) {
+  void main()
+    .catch((error: unknown) => {
+      const message = error instanceof Error ? error.message : 'Unknown seed error';
+      console.error(`Seed failed: ${message}`);
+      process.exitCode = 1;
+    })
+    .finally(async () => {
+      await prisma.$disconnect();
+    });
+}

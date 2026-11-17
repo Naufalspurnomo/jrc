@@ -46,11 +46,19 @@ export default function CompetitionPage() {
               Kembali ke enam arena
             </Link>
             <p className="competition-hero__fixture">{competition.fixtureLabel}</p>
+            <img
+              className="competition-hero__emblem"
+              src={competition.emblem.src}
+              alt={competition.emblem.alt}
+              draggable={false}
+            />
             <div className="competition-hero__title-row">
               <span aria-hidden="true">{competition.romanNumeral}</span>
               <div>
-                <p>{competition.level} · {competition.discipline}</p>
-                <h1>{competition.shortName}</h1>
+                <p>
+                  <span>{competition.level}</span> · <span>{competition.discipline}</span>
+                </p>
+                <h1>{competition.name}</h1>
               </div>
             </div>
             <p className="competition-hero__provocation">{competition.provocation}</p>
@@ -75,10 +83,7 @@ export default function CompetitionPage() {
             <header>
               <p className="site-kicker kicker">Detail kategori</p>
               <h2 id="competition-intel-title">Informasi resmi.</h2>
-              <p>
-                Biaya pendaftaran dan guidebook belum diumumkan. Informasi akan diperbarui setelah
-                tersedia.
-              </p>
+              <p>Biaya berlaku per tim. Hubungi narahubung kategori untuk informasi lebih lanjut.</p>
             </header>
             <dl>
               <div>
@@ -90,8 +95,24 @@ export default function CompetitionPage() {
                 <dd>{competition.fee}</dd>
               </div>
               <div>
+                <dt>Narahubung</dt>
+                <dd className="contact-lines">
+                  <span>{competition.contact.name}</span>
+                  <a href={`tel:${competition.contact.phone.replace(/-/g, '')}`}>{competition.contact.phone}</a>
+                </dd>
+              </div>
+              <div>
                 <dt>Guidebook</dt>
-                <dd>{competition.guidebook.status}</dd>
+                <dd>
+                  <a
+                    className="guidebook-link"
+                    href={competition.guidebook.href}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    {competition.guidebook.label} <span aria-hidden="true">↗</span>
+                  </a>
+                </dd>
               </div>
               <div>
                 <dt>Status kategori</dt>

@@ -13,6 +13,7 @@ const session: AuthSession = {
     displayName: 'Ari Wijaya',
     email: 'ari@example.test',
     role: 'PARTICIPANT',
+    emailVerified: false,
   },
 };
 
@@ -23,6 +24,8 @@ function createApi(register: RegistrationApi['auth']['register']): RegistrationA
       login: vi.fn(),
       register,
       logout: vi.fn(),
+      verifyEmail: vi.fn(),
+      resendEmailVerification: vi.fn(),
     },
   } as unknown as RegistrationApi;
 }
@@ -34,6 +37,7 @@ function renderSignup(api: RegistrationApi) {
         <Routes>
           <Route path="/portal/daftar" element={<PortalSignupPage />} />
           <Route path="/portal" element={<h1>Portal peserta</h1>} />
+          <Route path="/portal/verifikasi-email" element={<h1>Verifikasi email Anda</h1>} />
         </Routes>
       </AuthProvider>
     </MemoryRouter>,
@@ -41,7 +45,19 @@ function renderSignup(api: RegistrationApi) {
 }
 
 describe('PortalSignupPage', () => {
-  it('registers a participant then enters the participant portal', async () => {
+  it('shows the official registration flow before the account form', async () => {
+    renderSignup(createApi(vi.fn()));
+
+    const guideLink = await screen.findByRole('link', { name: 'Lihat alur pendaftaran' });
+    const nameField = screen.getByLabelText('Nama lengkap');
+
+    expect(guideLink).toHaveAttribute('href', 'https://intip.in/AlurPendaftaranJRC14');
+    expect(guideLink).toHaveAttribute('target', '_blank');
+    expect(guideLink).toHaveAttribute('rel', 'noopener noreferrer');
+    expect(guideLink.compareDocumentPosition(nameField) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
+  it('registers a participant then requests email verification', async () => {
     const register = vi.fn().mockResolvedValue(session);
     const user = userEvent.setup();
     renderSignup(createApi(register));
@@ -58,7 +74,7 @@ describe('PortalSignupPage', () => {
       email: 'ari@example.test',
       password: 'rahasia-aman',
     }));
-    expect(await screen.findByRole('heading', { name: 'Portal peserta' })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: 'Verifikasi email Anda' })).toBeInTheDocument();
   });
 
   it('validates participant details before registration', async () => {
@@ -78,6 +94,26 @@ describe('PortalSignupPage', () => {
     expect(screen.getByText('Kata sandi minimal 8 karakter.')).toBeInTheDocument();
     expect(screen.getByText('Konfirmasi kata sandi tidak sama.')).toBeInTheDocument();
     expect(register).not.toHaveBeenCalled();
+  });
+
+  it('replaces an upstream HTML error page with an actionable signup message', async () => {
+    const register = vi.fn().mockRejectedValue(new Error(
+      '<!DOCTYPE HTML><html><head><title>404 Not Found</title></head><body><h1>Not Found</h1></body></html>',
+    ));
+    const user = userEvent.setup();
+    renderSignup(createApi(register));
+
+    await screen.findByLabelText('Nama lengkap');
+    await user.type(screen.getByLabelText('Nama lengkap'), 'Ari Wijaya');
+    await user.type(screen.getByLabelText('Email'), 'ari@example.test');
+    await user.type(screen.getByLabelText('Kata sandi'), 'rahasia-aman');
+    await user.type(screen.getByLabelText('Konfirmasi kata sandi'), 'rahasia-aman');
+    await user.click(screen.getByRole('button', { name: 'Daftar' }));
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      'Tidak dapat membuat akun. Periksa koneksi lalu coba lagi.',
+    );
+    expect(screen.queryByText(/<!DOCTYPE HTML>/i)).not.toBeInTheDocument();
   });
 
   it('shows pending state and a server error without leaving the form', async () => {

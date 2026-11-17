@@ -1,7 +1,7 @@
 import { Logger } from '@nestjs/common';
 import { OutboxStatus } from '@prisma/client';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { EmailOutboxService } from '../src/email-outbox';
+import { EmailOutboxService, encryptEmailBody, encryptRichEmail } from '../src/email-outbox';
 import { PrismaService } from '../src/prisma.service';
 
 const mailer = vi.hoisted(() => ({
@@ -27,6 +27,7 @@ function record(overrides: Record<string, unknown> = {}) {
     attempts: 0,
     maxAttempts: 8,
     availableAt: new Date('2026-09-07T11:59:00.000Z'),
+    expiresAt: null,
     lockedUntil: null,
     workerToken: null,
     lastError: null,
@@ -64,6 +65,7 @@ beforeEach(() => {
     ...ORIGINAL_ENV,
     NODE_ENV: 'test',
     EMAIL_TRANSPORT: 'noop',
+    TICKET_SECRET: 'test-ticket-secret-with-at-least-32-characters',
   };
   vi.useFakeTimers();
   vi.setSystemTime(NOW);
@@ -127,6 +129,7 @@ describe('EmailOutboxService processing', () => {
       },
       data: {
         status: OutboxStatus.SENT,
+        body: '[DELIVERED]',
         sentAt: NOW,
         lastError: null,
         lockedUntil: null,
@@ -175,10 +178,68 @@ describe('EmailOutboxService processing', () => {
 
     expect(emailOutbox.updateMany).not.toHaveBeenCalled();
   });
+
+  it('expires password reset email before delivering a token older than one hour', async () => {
+    configureSmtp();
+    const expired = record({
+      expiresAt: new Date('2026-09-07T11:59:59.000Z'),
+    });
+    const { emailOutbox, service } = harness([expired]);
+
+    await expect(service.processOnce()).resolves.toBe(0);
+
+    expect(mailer.sendMail).not.toHaveBeenCalled();
+    expect(emailOutbox.updateMany).toHaveBeenCalledWith({
+      where: {
+        id: expired.id,
+        status: OutboxStatus.PENDING,
+        attempts: 0,
+        availableAt: { lte: NOW },
+      },
+      data: {
+        status: OutboxStatus.FAILED,
+        attempts: expired.maxAttempts,
+        body: '[EXPIRED]',
+        lastError: 'Email expired before delivery',
+        lockedUntil: null,
+        workerToken: null,
+      },
+    });
+  });
 });
 
 
 describe('EmailOutboxService transports', () => {
+  it('rejects malformed decoded attachment CIDs before SMTP delivery', async () => {
+    configureSmtp();
+    const body = encryptEmailBody(JSON.stringify({ version: 1, text: 'x', attachments: [{ filename: 'x.png', contentType: 'image/png', cid: 'bad cid<script>', content: 'eA==' }] }));
+    const { service } = harness([record({ body })]);
+    await service.processOnce();
+    expect(mailer.sendMail).not.toHaveBeenCalled();
+  });
+
+  it('rejects excessive decoded attachments before SMTP delivery', async () => {
+    configureSmtp();
+    const attachment = { filename: 'x.png', contentType: 'image/png', content: 'eA==' };
+    const body = encryptEmailBody(JSON.stringify({ version: 1, text: 'x', attachments: Array.from({ length: 5 }, () => attachment) }));
+    const { service } = harness([record({ body })]);
+    await service.processOnce();
+    expect(mailer.sendMail).not.toHaveBeenCalled();
+  });
+
+  it('decrypts and delivers bounded rich messages with an in-memory attachment', async () => {
+    configureSmtp();
+    mailer.sendMail.mockResolvedValue({ messageId: 'test-id' });
+    const body = encryptRichEmail({ text: 'Receipt', html: '<b>Receipt</b>', attachments: [{ filename: 'ticket.png', contentType: 'image/png', cid: 'ticket-qr', content: Buffer.from('png') }] });
+    expect(body).not.toContain('Receipt');
+    const { service } = harness([record({ body })]);
+    await service.processOnce();
+    expect(mailer.sendMail).toHaveBeenCalledWith(expect.objectContaining({ text: 'Receipt', html: '<b>Receipt</b>', attachments: [{ filename: 'ticket.png', contentType: 'image/png', cid: 'ticket-qr', content: Buffer.from('png') }] }));
+  });
+
+  it('rejects oversized rich attachments', () => {
+    expect(() => encryptRichEmail({ text: 'x', attachments: [{ filename: 'x.png', contentType: 'image/png', content: Buffer.alloc(1024 * 1024 + 1) }] })).toThrow('too large');
+  });
   it('configures hardened SMTP and sends only plain text', async () => {
     configureSmtp();
     mailer.sendMail.mockResolvedValue({ messageId: 'test-id' });
@@ -205,6 +266,21 @@ describe('EmailOutboxService transports', () => {
       disableFileAccess: true,
       disableUrlAccess: true,
     });
+  });
+
+  it('decrypts sensitive bodies only for delivery', async () => {
+    configureSmtp();
+    mailer.sendMail.mockResolvedValue({ messageId: 'test-id' });
+    const plaintext = 'https://example.test/verify?token=secret-token';
+    const encrypted = encryptEmailBody(plaintext);
+    const { service } = harness([record({ body: encrypted })]);
+
+    expect(encrypted).not.toContain('secret-token');
+    await service.processOnce();
+
+    expect(mailer.sendMail).toHaveBeenCalledWith(
+      expect.objectContaining({ text: plaintext }),
+    );
   });
 
   it('logs only the outbox ID and recipient domain for console transport', async () => {

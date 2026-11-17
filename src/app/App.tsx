@@ -19,9 +19,14 @@ import HomePage from '../pages/HomePage';
 const CompetitionPage = lazy(() => import('../pages/CompetitionPage'));
 const PortalDashboardPage = lazy(() => import('../pages/portal/PortalDashboardPage'));
 const PortalLoginPage = lazy(() => import('../pages/portal/PortalLoginPage'));
+const PortalForgotPasswordPage = lazy(() => import('../pages/portal/PortalForgotPasswordPage'));
+const PortalResetPasswordPage = lazy(() => import('../pages/portal/PortalResetPasswordPage'));
 const PortalPaymentPage = lazy(() => import('../pages/portal/PortalPaymentPage'));
 const PortalRegistrationPage = lazy(() => import('../pages/portal/PortalRegistrationPage'));
 const PortalSignupPage = lazy(() => import('../pages/portal/PortalSignupPage'));
+const PortalEmailVerificationPage = lazy(
+  () => import('../pages/portal/PortalEmailVerificationPage'),
+);
 const PortalTicketPage = lazy(() => import('../pages/portal/PortalTicketPage'));
 const PublicTicketVerificationPage = lazy(
   () => import('../pages/ticket/PublicTicketVerificationPage'),
@@ -32,6 +37,8 @@ const AdminRegistrationDetailPage = lazy(
   () => import('../pages/admin/AdminRegistrationDetailPage'),
 );
 const AdminFinancePage = lazy(() => import('../pages/admin/AdminFinancePage'));
+const AdminPaidTeamsPage = lazy(() => import('../pages/admin/AdminPaidTeamsPage'));
+const AdminPaidTeamDetailPage = lazy(() => import('../pages/admin/AdminPaidTeamDetailPage'));
 const AdminScannerPage = lazy(() => import('../pages/admin/AdminScannerPage'));
 
 function NotFoundPage() {
@@ -58,12 +65,16 @@ export function AppRoutes({ homeStartupReady = true }: { homeStartupReady?: bool
         <Route path="/" element={<HomePage startupReady={homeStartupReady} />} />
         <Route path="/perlombaan/:slug" element={<CompetitionPage />} />
         <Route path="/portal/masuk" element={<PortalLoginPage />} />
+        <Route path="/portal/lupa-kata-sandi" element={<PortalForgotPasswordPage />} />
+        <Route path="/portal/reset-kata-sandi" element={<PortalResetPasswordPage />} />
         <Route path="/portal/daftar" element={<PortalSignupPage />} />
+        <Route path="/portal/verifikasi-email" element={<PortalEmailVerificationPage />} />
         <Route path="/ticket/verify" element={<PublicTicketVerificationPage />} />
         <Route
           element={<RequireAuth roles={['PARTICIPANT']} redirectTo="/portal/masuk" />}
         >
           <Route path="/portal" element={<PortalDashboardPage />} />
+
           <Route path="/portal/pendaftaran/baru" element={<PortalRegistrationPage />} />
           <Route
             path="/portal/pendaftaran/:registrationId"
@@ -101,6 +112,15 @@ export function AppRoutes({ homeStartupReady = true }: { homeStartupReady?: bool
           element={<RequireAuth roles={['SUPER_ADMIN', 'FINANCE']} redirectTo="/admin/masuk" />}
         >
           <Route path="/admin/finance" element={<AdminFinancePage />} />
+        </Route>
+        <Route
+          element={<RequireAuth roles={['SUPER_ADMIN', 'PAID_TEAM_VIEWER']} redirectTo="/admin/masuk" />}
+        >
+          <Route path="/admin/tim-lunas" element={<AdminPaidTeamsPage />} />
+          <Route
+            path="/admin/tim-lunas/:registrationId"
+            element={<AdminPaidTeamDetailPage />}
+          />
         </Route>
         <Route
           element={<RequireAuth roles={['SUPER_ADMIN', 'GATE_STAFF']} redirectTo="/admin/masuk" />}
@@ -167,7 +187,7 @@ function getRouteMetadata(pathname: string) {
   const competition = findCompetition(competitionMatch?.params.slug);
   if (competition) {
     return {
-      title: `${competition.shortName} — Perlombaan JRC XIV`,
+      title: `${competition.name} — Perlombaan JRC XIV`,
       robots: indexedRobots,
     };
   }

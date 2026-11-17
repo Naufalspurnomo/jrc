@@ -28,9 +28,8 @@ import {
 } from '@prisma/client';
 import { Transform, TransformFnParams } from 'class-transformer';
 import { IsIn, IsString, MaxLength, MinLength } from 'class-validator';
-import { randomBytes, randomUUID, timingSafeEqual } from 'node:crypto';
-import { chmod, lstat, mkdir, unlink, writeFile } from 'node:fs/promises';
-import { basename, join, resolve } from 'node:path';
+import { randomUUID, timingSafeEqual } from 'node:crypto';
+import { basename } from 'node:path';
 import { Request, Response } from 'express';
 import multer from 'multer';
 import QRCode from 'qrcode';
@@ -47,8 +46,11 @@ import {
 } from './common/ticket-token';
 import { assertPaymentTransition } from './domain/payment-state';
 import { PrismaService } from './prisma.service';
+import { PrivateStorageService } from './private-storage';
+import { encryptRichEmail } from './email-outbox';
+import { renderTransactionalEmail } from './email-template';
+import { assertUploadSize, maxUploadBytes, uploadLimitDescription } from './upload-limits';
 
-const DEFAULT_MAX_UPLOAD_BYTES = 10 * 1024 * 1024;
 const STORAGE_KEY_PATTERN = /^[a-f0-9]{64}$/;
 const VERIFY_STATUSES = [PaymentStatus.PAID, PaymentStatus.REJECTED] as const;
 
@@ -80,26 +82,6 @@ export class VerifyPaymentDto {
   reason!: string;
 }
 
-function maxUploadBytes(): number {
-  const raw = process.env.MAX_UPLOAD_BYTES?.trim();
-  if (!raw) return DEFAULT_MAX_UPLOAD_BYTES;
-
-  const parsed = Number(raw);
-  if (!Number.isSafeInteger(parsed) || parsed <= 0) {
-    throw new InternalServerErrorException(
-      'MAX_UPLOAD_BYTES must be a positive integer',
-    );
-  }
-  return parsed;
-}
-
-function storageRoot(): string {
-  const configured = process.env.STORAGE_PATH?.trim();
-  if (!configured) {
-    throw new InternalServerErrorException('STORAGE_PATH is required');
-  }
-  return resolve(configured);
-}
 
 function ticketSecret(): string {
   const secret = process.env.TICKET_SECRET ?? '';
@@ -137,10 +119,49 @@ function buildVerificationUrl(token: string, eventId: string): string {
       'PUBLIC_VERIFICATION_URL must not contain credentials',
     );
   }
+  if (process.env.NODE_ENV === 'production' && url.protocol !== 'https:') {
+    throw new InternalServerErrorException(
+      'PUBLIC_VERIFICATION_URL must use HTTPS in production',
+    );
+  }
 
   url.searchParams.set('token', token);
   url.searchParams.set('eventId', eventId);
   return url.toString();
+}
+
+export function buildPortalReceiptUrl(registrationId: string): string {
+  const configured = process.env.PUBLIC_FRONTEND_URL?.trim();
+  if (!configured && process.env.NODE_ENV === 'production') {
+    throw new InternalServerErrorException('PUBLIC_FRONTEND_URL is required in production');
+  }
+  let base: URL;
+  try {
+    base = new URL(configured || 'http://localhost:5173');
+  } catch {
+    throw new InternalServerErrorException('PUBLIC_FRONTEND_URL must be a valid URL');
+  }
+  if (!['http:', 'https:'].includes(base.protocol) || base.username || base.password) {
+    throw new InternalServerErrorException('PUBLIC_FRONTEND_URL is unsafe');
+  }
+  if (process.env.NODE_ENV === 'production' && base.protocol !== 'https:') {
+    throw new InternalServerErrorException('PUBLIC_FRONTEND_URL must use HTTPS in production');
+  }
+  return new URL(
+    `/portal/pendaftaran/${encodeURIComponent(registrationId)}/pembayaran`,
+    base,
+  ).toString();
+}
+
+export function renderRichTextEmail(text: string): { text: string; html: string } {
+  const escaped = text.replace(/[&<>"']/g, (character) => ({
+    '&': '&amp;',
+    '<': '&lt;',
+    '>': '&gt;',
+    '"': '&quot;',
+    "'": '&#39;',
+  })[character] ?? character);
+  return { text, html: `<p>${escaped.replaceAll('\n', '<br>')}</p>` };
 }
 
 function safeOriginalName(originalName: string): string {
@@ -162,20 +183,21 @@ function hasPrefix(buffer: Buffer, prefix: readonly number[]): boolean {
   );
 }
 
-function validateProof(file: Express.Multer.File): void {
-  const validMagic =
-    (file.mimetype === 'image/png' &&
-      hasPrefix(file.buffer, [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a])) ||
-    (file.mimetype === 'image/jpeg' &&
-      hasPrefix(file.buffer, [0xff, 0xd8, 0xff])) ||
-    (file.mimetype === 'application/pdf' &&
-      hasPrefix(file.buffer, [0x25, 0x50, 0x44, 0x46, 0x2d]));
+function validateProof(file: Express.Multer.File): string {
+  const mimeType = hasPrefix(file.buffer, [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a])
+    ? 'image/png'
+    : hasPrefix(file.buffer, [0xff, 0xd8, 0xff])
+      ? 'image/jpeg'
+      : hasPrefix(file.buffer, [0x25, 0x50, 0x44, 0x46, 0x2d])
+        ? 'application/pdf'
+        : null;
 
-  if (!validMagic) {
+  if (!mimeType) {
     throw new BadRequestException(
       'Payment proof must be a PNG, JPEG, or PDF with matching file content',
     );
   }
+  return mimeType;
 }
 
 const invoiceSelect = {
@@ -234,6 +256,9 @@ function serializeInvoice(invoice: InvoiceRecord) {
     instructions: instructionsObject(invoice.instructions),
     paymentStatus: invoice.paymentStatus,
     deadline: invoice.deadline.toISOString(),
+    proofUploadAllowed:
+      (invoice.paymentStatus === PaymentStatus.UNPAID ||
+        invoice.paymentStatus === PaymentStatus.REJECTED),
     proof,
     verificationReason: invoice.verificationReason,
     verifiedAt: invoice.verifiedAt?.toISOString() ?? null,
@@ -281,7 +306,7 @@ export class PaymentProofUploadInterceptor implements NestInterceptor {
         ) {
           rejectUpload(
             new PayloadTooLargeException(
-              `Payment proof exceeds ${maxUploadBytes()} bytes`,
+              `Payment proof exceeds the per-file limit of ${uploadLimitDescription()}`,
             ),
           );
           return;
@@ -296,7 +321,10 @@ export class PaymentProofUploadInterceptor implements NestInterceptor {
 
 @Injectable()
 export class PaymentVerificationService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly storage: PrivateStorageService = new PrivateStorageService(),
+  ) {}
 
   async uploadProof(
     ownerId: string,
@@ -305,12 +333,8 @@ export class PaymentVerificationService {
     audit: AuditContext,
   ): Promise<SerializedPaymentInvoice> {
     if (!file) throw new BadRequestException('Payment proof file is required');
-    if (file.size > maxUploadBytes()) {
-      throw new PayloadTooLargeException(
-        `Payment proof exceeds ${maxUploadBytes()} bytes`,
-      );
-    }
-    validateProof(file);
+    assertUploadSize(file.size, 'Payment proof');
+    const mimeType = validateProof(file);
 
     const initial = await this.prisma.invoice.findFirst({
       where: { id: invoiceId, registration: { ownerId } },
@@ -324,21 +348,23 @@ export class PaymentVerificationService {
       },
     });
     if (!initial) throw new NotFoundException('Invoice not found');
-    if (initial.deadline.getTime() <= Date.now()) {
-      throw new BadRequestException('Invoice payment deadline has passed');
-    }
     assertPaymentTransition(
       initial.paymentStatus,
       PaymentStatus.PENDING_VERIFICATION,
     );
 
-    const stored = await this.storeProof(file);
+    const stored = await this.storeProof(file, mimeType);
     let result: SerializedPaymentInvoice;
     try {
       result = await this.prisma.$transaction(async (transaction) => {
         const current = await transaction.invoice.findFirst({
           where: { id: invoiceId, registration: { ownerId } },
           select: {
+            id: true,
+            invoiceNumber: true,
+            amount: true,
+            currency: true,
+            registration: { select: { owner: { select: { email: true, displayName: true } } } },
             paymentStatus: true,
             deadline: true,
             proofStorageKey: true,
@@ -350,10 +376,6 @@ export class PaymentVerificationService {
           },
         });
         if (!current) throw new NotFoundException('Invoice not found');
-        const now = new Date();
-        if (current.deadline <= now) {
-          throw new BadRequestException('Invoice payment deadline has passed');
-        }
         assertPaymentTransition(
           current.paymentStatus,
           PaymentStatus.PENDING_VERIFICATION,
@@ -363,7 +385,6 @@ export class PaymentVerificationService {
           where: {
             id: invoiceId,
             paymentStatus: current.paymentStatus,
-            deadline: { gt: now },
             registration: { ownerId },
           },
           data: {
@@ -382,6 +403,19 @@ export class PaymentVerificationService {
             'Invoice changed before the payment proof was saved',
           );
         }
+
+        await transaction.emailOutbox.create({
+          data: {
+            to: current.registration.owner.email,
+            subject: `Bukti pembayaran ${current.invoiceNumber} diterima`,
+            body: encryptRichEmail(renderTransactionalEmail({
+              title: 'Bukti pembayaran diterima', greetingName: current.registration.owner.displayName,
+              intro: 'Bukti pembayaran Anda telah diterima dan akan diperiksa oleh tim Finance.', status: 'MENUNGGU VERIFIKASI',
+              details: [{ label: 'Invoice', value: current.invoiceNumber }, { label: 'Jumlah', value: `${current.currency} ${current.amount}` }, { label: 'Berkas', value: stored.originalName }],
+              paragraphs: ['Pembayaran belum dinyatakan lunas sampai proses rekonsiliasi selesai.'],
+            })),
+          },
+        });
 
         await transaction.auditLog.create({
           data: {
@@ -450,6 +484,10 @@ export class PaymentVerificationService {
       const current = await transaction.invoice.findUnique({
         where: { id: invoiceId },
         select: {
+          invoiceNumber: true,
+          amount: true,
+          currency: true,
+          deadline: true,
           paymentStatus: true,
           verificationReason: true,
           verifiedAt: true,
@@ -461,7 +499,7 @@ export class PaymentVerificationService {
               registrationNumber: true,
               teamName: true,
               owner: { select: { email: true, displayName: true } },
-              competition: { select: { name: true } },
+              competition: { select: { name: true, eventId: true } },
             },
           },
         },
@@ -541,28 +579,31 @@ export class PaymentVerificationService {
       });
 
       const paid = dto.status === PaymentStatus.PAID;
-      await transaction.emailOutbox.create({
-        data: {
-          to: current.registration.owner.email,
-          subject: paid
-            ? `Pembayaran ${current.registration.registrationNumber} terverifikasi`
-            : `Bukti pembayaran ${current.registration.registrationNumber} ditolak`,
-          body: paid
-            ? [
-                `Halo ${current.registration.owner.displayName},`,
-                '',
-                `Pembayaran tim ${current.registration.teamName} untuk ${current.registration.competition.name} telah diverifikasi.`,
-                'Tiket Anda telah diterbitkan dan tersedia di portal peserta.',
-              ].join('\n')
-            : [
-                `Halo ${current.registration.owner.displayName},`,
-                '',
-                `Bukti pembayaran tim ${current.registration.teamName} ditolak.`,
-                `Alasan: ${reason}`,
-                'Silakan unggah bukti pembayaran baru melalui portal peserta.',
-              ].join('\n'),
-        },
-      });
+      let body: string;
+      if (paid) {
+        const token = deriveTicketToken(ticketId!, secret!);
+        const verificationUrl = buildVerificationUrl(token, current.registration.competition.eventId);
+        const portalReceiptUrl = buildPortalReceiptUrl(current.registration.id);
+        const qr = await QRCode.toBuffer(verificationUrl, { errorCorrectionLevel: 'M', margin: 2, type: 'png' });
+        body = encryptRichEmail(renderTransactionalEmail({
+          title: 'Pembayaran terverifikasi', greetingName: current.registration.owner.displayName,
+          intro: 'Pembayaran Anda telah terverifikasi. Tiket resmi JRC XIV kini aktif.', status: 'LUNAS · TIKET AKTIF',
+          details: [{ label: 'Referensi kuitansi', value: current.invoiceNumber }, { label: 'Tim', value: current.registration.teamName }, { label: 'Kompetisi', value: current.registration.competition.name }, { label: 'Jumlah', value: `${current.currency} ${current.amount}` }, { label: 'Waktu pembayaran', value: verifiedAt.toISOString() }, { label: 'Referensi rekonsiliasi', value: reason }],
+          paragraphs: ['QR berikut adalah kredensial tiket. Jaga kerahasiaannya dan tunjukkan saat check-in.'],
+          contentText: `Verifikasi tiket: ${verificationUrl}`,
+          ticketQrPng: qr,
+          cta: { label: 'Buka kuitansi di portal', url: portalReceiptUrl },
+        }));
+      } else {
+        body = encryptRichEmail(renderTransactionalEmail({
+          title: 'Bukti pembayaran ditolak', greetingName: current.registration.owner.displayName,
+          intro: `Bukti pembayaran tim ${current.registration.teamName} belum dapat diterima.`, status: 'DITOLAK',
+          details: [{ label: 'Nomor pendaftaran', value: current.registration.registrationNumber }, { label: 'Alasan', value: reason }],
+          paragraphs: ['Unggah bukti pembayaran baru melalui portal peserta.'],
+          cta: { label: 'Unggah bukti baru', url: buildPortalReceiptUrl(current.registration.id) },
+        }));
+      }
+      await transaction.emailOutbox.create({ data: { to: current.registration.owner.email, subject: paid ? `Pembayaran ${current.registration.registrationNumber} terverifikasi` : `Bukti pembayaran ${current.registration.registrationNumber} ditolak`, body } });
 
       const invoice = await transaction.invoice.findUnique({
         where: { id: invoiceId },
@@ -639,46 +680,21 @@ export class PaymentVerificationService {
     };
   }
 
-  private async storeProof(file: Express.Multer.File): Promise<UploadedProof> {
-    const root = storageRoot();
-    await mkdir(root, { recursive: true, mode: 0o700 });
-    const rootStat = await lstat(root);
-    if (!rootStat.isDirectory() || rootStat.isSymbolicLink()) {
-      throw new InternalServerErrorException(
-        'STORAGE_PATH must be a real directory',
-      );
-    }
-    await chmod(root, 0o700);
-
-    for (let attempt = 0; attempt < 3; attempt += 1) {
-      const storageKey = randomBytes(32).toString('hex');
-      try {
-        await writeFile(join(root, storageKey), file.buffer, {
-          flag: 'wx',
-          mode: 0o600,
-        });
-        return {
-          storageKey,
-          originalName: safeOriginalName(file.originalname),
-          mimeType: file.mimetype,
-          size: file.size,
-        };
-      } catch (error: unknown) {
-        const code = (error as NodeJS.ErrnoException).code;
-        if (code !== 'EEXIST' || attempt === 2) throw error;
-      }
-    }
-
-    throw new InternalServerErrorException('Could not store payment proof');
+  private async storeProof(
+    file: Express.Multer.File,
+    mimeType: string,
+  ): Promise<UploadedProof> {
+    return {
+      storageKey: await this.storage.upload(file.buffer, mimeType),
+      originalName: safeOriginalName(file.originalname),
+      mimeType,
+      size: file.size,
+    };
   }
 
   private async removeStoredProof(storageKey: string): Promise<void> {
     if (!STORAGE_KEY_PATTERN.test(storageKey)) return;
-    try {
-      await unlink(join(storageRoot(), storageKey));
-    } catch (error: unknown) {
-      if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error;
-    }
+    await this.storage.delete(storageKey);
   }
 }
 

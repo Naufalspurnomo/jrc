@@ -2,14 +2,55 @@ import { RegistrationStatus, Role } from '@prisma/client';
 import { mkdir, readFile, readdir, rm, stat, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { Readable } from 'node:stream';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { ROLES_KEY } from '../src/auth';
 import {
   AdminDocumentsController,
   DocumentsService,
+  validateMemberPhotoAspectRatio,
 } from '../src/documents';
 import { PrismaService } from '../src/prisma.service';
+import { PrivateStorageService } from '../src/private-storage';
 
+function pngImage(width: number, height: number): Buffer {
+  const buffer = Buffer.alloc(24);
+  Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]).copy(buffer);
+  buffer.writeUInt32BE(13, 8);
+  buffer.write('IHDR', 12, 'ascii');
+  buffer.writeUInt32BE(width, 16);
+  buffer.writeUInt32BE(height, 20);
+  return buffer;
+}
+
+function jpegImage(width: number, height: number): Buffer {
+  const buffer = Buffer.alloc(13);
+  Buffer.from([0xff, 0xd8, 0xff, 0xc0]).copy(buffer);
+  buffer.writeUInt16BE(9, 4);
+  buffer[6] = 8;
+  buffer.writeUInt16BE(height, 7);
+  buffer.writeUInt16BE(width, 9);
+  buffer[11] = 1;
+  buffer[12] = 0;
+  return buffer;
+}
+
+describe('member photo dimensions', () => {
+  it.each([
+    ['PNG', 'image/png', pngImage(900, 1200)],
+    ['JPEG', 'image/jpeg', jpegImage(900, 1200)],
+  ])('accepts a 3:4 %s portrait', (_label, mimeType, contents) => {
+    expect(() => validateMemberPhotoAspectRatio(mimeType, contents)).not.toThrow();
+  });
+
+  it.each([
+    ['landscape PNG', 'image/png', pngImage(1200, 900)],
+    ['square JPEG', 'image/jpeg', jpegImage(900, 900)],
+    ['truncated PNG', 'image/png', Buffer.from([0x89, 0x50])],
+  ])('rejects %s', (_label, mimeType, contents) => {
+    expect(() => validateMemberPhotoAspectRatio(mimeType, contents)).toThrow();
+  });
+});
 const ORIGINAL_ENV = { ...process.env };
 const REGISTRATION_ID = '18a46e52-63ee-439d-8a77-280f126d82e6';
 const DOCUMENT_ID = '4fe8fb90-e44b-42c4-a4c4-4c671f1e34c6';
@@ -40,11 +81,13 @@ function documentRecord(overrides: Record<string, unknown> = {}) {
   return {
     id: DOCUMENT_ID,
     registrationId: REGISTRATION_ID,
-    category: 'STUDENT_CARD',
+    category: 'IDENTITY_CARD',
     originalName: 'student-card.pdf',
     mimeType: 'application/pdf',
     size: Buffer.byteLength('%PDF-test'),
     storageKey: STORAGE_KEY,
+    subjectName: null,
+    subjectRole: null,
     createdAt: CREATED_AT,
     ...overrides,
   };
@@ -96,18 +139,22 @@ describe('DocumentsService', () => {
     const result = await service.upload(
       OWNER_ID,
       REGISTRATION_ID,
-      ' STUDENT_CARD ',
+      ' IDENTITY_CARD ',
+      undefined,
+      undefined,
       uploadFile(),
       { requestId: 'request-id', ipAddress: '127.0.0.1' },
     );
 
     expect(result).toEqual({
       id: DOCUMENT_ID,
-      category: 'STUDENT_CARD',
+      category: 'IDENTITY_CARD',
       originalName: 'student-card.pdf',
       mimeType: 'application/pdf',
       size: Buffer.byteLength('%PDF-test'),
       createdAt: CREATED_AT.toISOString(),
+      subjectName: null,
+      subjectRole: null,
     });
     expect(result).not.toHaveProperty('storageKey');
     const files = await readdir(storagePath);
@@ -124,7 +171,7 @@ describe('DocumentsService', () => {
       expect.objectContaining({
         data: expect.objectContaining({
           registrationId: REGISTRATION_ID,
-          category: 'STUDENT_CARD',
+          category: 'IDENTITY_CARD',
           storageKey: files[0],
         }),
       }),
@@ -157,12 +204,65 @@ describe('DocumentsService', () => {
       service.upload(
         OWNER_ID,
         REGISTRATION_ID,
-        'STUDENT_CARD',
+        'IDENTITY_CARD',
+        undefined,
+        undefined,
         uploadFile(),
         { requestId: 'request-id', ipAddress: null },
       ),
     ).rejects.toThrow('database unavailable');
     expect(await readdir(storagePath)).toEqual([]);
+  });
+
+  it('preserves the transaction error when rollback cleanup fails', async () => {
+    const primary = new Error('database unavailable');
+    const prisma = {
+      registration: { findFirst: vi.fn().mockResolvedValue({ status: RegistrationStatus.DRAFT }) },
+      $transaction: vi.fn().mockRejectedValue(primary),
+    };
+    const storage = {
+      upload: vi.fn().mockResolvedValue(STORAGE_KEY),
+      delete: vi.fn().mockRejectedValue(new Error('secret cleanup failure')),
+    };
+    const service = new DocumentsService(
+      prisma as unknown as PrismaService,
+      storage as unknown as PrivateStorageService,
+    );
+
+    await expect(service.upload(
+      OWNER_ID, REGISTRATION_ID, 'IDENTITY_CARD', undefined, undefined,
+      uploadFile(), { requestId: 'request-id', ipAddress: null },
+    )).rejects.toBe(primary);
+    expect(storage.delete).toHaveBeenCalledWith(STORAGE_KEY);
+  });
+
+  it('rejects a stored document whose size differs from the database record', async () => {
+    const stream = Readable.from(['short']);
+    const prisma = {
+      document: {
+        findFirst: vi.fn().mockResolvedValue({
+          id: DOCUMENT_ID,
+          registrationId: REGISTRATION_ID,
+          category: 'IDENTITY_CARD',
+          originalName: 'identity.pdf',
+          mimeType: 'application/pdf',
+          size: 100,
+          storageKey: STORAGE_KEY,
+          subjectName: null,
+          subjectRole: null,
+        }),
+      },
+    };
+    const storage = { read: vi.fn().mockResolvedValue({ stream, size: 5 }) };
+    const service = new DocumentsService(
+      prisma as unknown as PrismaService,
+      storage as unknown as PrivateStorageService,
+    );
+
+    await expect(
+      service.getParticipantDocument(OWNER_ID, REGISTRATION_ID, DOCUMENT_ID),
+    ).rejects.toThrow('Document file not found');
+    expect(stream.destroyed).toBe(true);
   });
 
   it('returns 404 for a registration not owned by the participant', async () => {
@@ -175,7 +275,9 @@ describe('DocumentsService', () => {
       service.upload(
         OWNER_ID,
         REGISTRATION_ID,
-        'STUDENT_CARD',
+        'IDENTITY_CARD',
+        undefined,
+        undefined,
         uploadFile(),
         { requestId: 'request-id', ipAddress: null },
       ),
@@ -197,7 +299,9 @@ describe('DocumentsService', () => {
       service.upload(
         OWNER_ID,
         REGISTRATION_ID,
-        'STUDENT_CARD',
+        'IDENTITY_CARD',
+        undefined,
+        undefined,
         uploadFile(),
         { requestId: 'request-id', ipAddress: null },
       ),
@@ -218,7 +322,9 @@ describe('DocumentsService', () => {
       service.upload(
         OWNER_ID,
         REGISTRATION_ID,
-        'STUDENT_CARD',
+        'IDENTITY_CARD',
+        undefined,
+        undefined,
         uploadFile({ mimetype: 'image/png' }),
         { requestId: 'request-id', ipAddress: null },
       ),

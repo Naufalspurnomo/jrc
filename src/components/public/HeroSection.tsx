@@ -57,7 +57,7 @@ export function HeroSection({ startupReady = true }: { startupReady?: boolean })
       <div className="hero-section__shade" aria-hidden="true" />
       <div className="hero-section__content site-shell page-shell">
         <p className="hero-section__serial">
-          <span>Est. 2012</span>
+          <span>Est. 2009</span>
           <span aria-hidden="true" />
           <span>XIV Edition</span>
         </p>
@@ -92,7 +92,7 @@ export function HeroSection({ startupReady = true }: { startupReady?: boolean })
             aria-label={remaining.complete ? 'Pendaftaran telah ditutup' : 'Hitung mundur penutupan pendaftaran'}
             data-complete={remaining.complete ? 'true' : 'false'}
           >
-            <p className="hero-section__countdown-label">Pendaftaran berakhir · 15 Oktober 2026</p>
+            <p className="hero-section__countdown-label">Pendaftaran berakhir · 21 November 2026</p>
             {remaining.complete ? (
               <p className="hero-section__countdown-complete">Pendaftaran telah ditutup.</p>
             ) : (

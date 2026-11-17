@@ -12,6 +12,7 @@ enum Role {
   SUPER_ADMIN
   REGISTRATION_REVIEWER
   FINANCE
+  PAID_TEAM_VIEWER
   GATE_STAFF
   SUPPORT
 }
@@ -46,6 +47,7 @@ enum TicketStatus {
 enum TeamMemberRole {
   LEADER
   MEMBER
+  SUPERVISOR
 }
 
 enum OutboxStatus {
@@ -56,21 +58,51 @@ enum OutboxStatus {
 }
 
 model User {
-  id               String         @id @default(uuid()) @db.Uuid
-  email            String         @unique
-  displayName      String
-  passwordHash     String         @map("password_hash")
-  role             Role           @default(PARTICIPANT)
-  active           Boolean        @default(true)
-  createdAt        DateTime       @default(now()) @map("created_at")
-  updatedAt        DateTime       @updatedAt @map("updated_at")
-  sessions         Session[]
-  registrations    Registration[]
-  audits           AuditLog[]     @relation("AuditActor")
-  verifiedInvoices Invoice[]      @relation("InvoiceVerifier")
-  checkedInTickets Ticket[]       @relation("TicketCheckInActor")
+  id                      String                   @id @default(uuid()) @db.Uuid
+  email                   String                   @unique
+  displayName             String
+  passwordHash            String                   @map("password_hash")
+  role                    Role                     @default(PARTICIPANT)
+  active                  Boolean                  @default(true)
+  emailVerifiedAt         DateTime?                @map("email_verified_at")
+  createdAt               DateTime                 @default(now()) @map("created_at")
+  updatedAt               DateTime                 @updatedAt @map("updated_at")
+  sessions                Session[]
+  registrations           Registration[]
+  audits                  AuditLog[]               @relation("AuditActor")
+  verifiedInvoices        Invoice[]                @relation("InvoiceVerifier")
+  checkedInTickets        Ticket[]                 @relation("TicketCheckInActor")
+  attendedMembers         TeamMember[]             @relation("MemberAttendanceActor")
+  handedOverKits          Ticket[]                 @relation("TicketKitHandoverActor")
+  emailVerificationTokens EmailVerificationToken[]
+  passwordResetTokens      PasswordResetToken[]
 
   @@map("users")
+}
+
+model PasswordResetToken {
+  id         String    @id @default(uuid()) @db.Uuid
+  userId     String    @unique @map("user_id") @db.Uuid
+  tokenHash  String    @unique @map("token_hash")
+  expiresAt  DateTime  @map("expires_at")
+  consumedAt DateTime? @map("consumed_at")
+  createdAt  DateTime  @default(now()) @map("created_at")
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([expiresAt])
+  @@map("password_reset_tokens")
+}
+
+model EmailVerificationToken {
+  id         String    @id @default(uuid()) @db.Uuid
+  userId     String    @unique @map("user_id") @db.Uuid
+  tokenHash  String    @unique @map("token_hash")
+  expiresAt  DateTime  @map("expires_at")
+  consumedAt DateTime? @map("consumed_at")
+  createdAt  DateTime  @default(now()) @map("created_at")
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("email_verification_tokens")
 }
 
 model Session {
@@ -101,6 +133,7 @@ model Competition {
   fee                  Int
   currency             String         @default("IDR")
   active               Boolean        @default(true)
+  registrationOpenAt   DateTime       @map("registration_open_at")
   registrationDeadline DateTime       @map("registration_deadline")
   createdAt            DateTime       @default(now()) @map("created_at")
   updatedAt            DateTime       @updatedAt @map("updated_at")
@@ -119,7 +152,8 @@ model Registration {
   institution        String
   phone              String?
   status             RegistrationStatus @default(DRAFT)
-  reviewReason       String?            @map("review_reason")
+  reviewReasonCategory String?          @map("review_reason_category")
+  reviewReasonComment  String?          @map("review_reason")
   submittedAt        DateTime?          @map("submitted_at")
   reviewedAt         DateTime?          @map("reviewed_at")
   createdAt          DateTime           @default(now()) @map("created_at")
@@ -131,7 +165,7 @@ model Registration {
   invoice            Invoice?
   ticket             Ticket?
 
-  @@index([ownerId])
+  @@unique([ownerId])
   @@index([competitionId, status])
   @@map("registrations")
 }
@@ -146,9 +180,13 @@ model TeamMember {
   phone          String?
   createdAt      DateTime       @default(now()) @map("created_at")
   updatedAt      DateTime       @updatedAt @map("updated_at")
+  attendedAt     DateTime?      @map("attended_at")
+  attendedById   String?        @map("attended_by_id") @db.Uuid
   registration   Registration   @relation(fields: [registrationId], references: [id], onDelete: Cascade)
+  attendedBy     User?          @relation("MemberAttendanceActor", fields: [attendedById], references: [id], onDelete: SetNull)
 
   @@index([registrationId])
+  @@index([attendedById])
   @@map("team_members")
 }
 
@@ -160,6 +198,8 @@ model Document {
   mimeType       String       @map("mime_type")
   size           Int
   storageKey     String       @unique @map("storage_key")
+  subjectName    String?      @map("subject_name")
+  subjectRole    String?      @map("subject_role")
   createdAt      DateTime     @default(now()) @map("created_at")
   registration   Registration @relation(fields: [registrationId], references: [id], onDelete: Cascade)
 
@@ -202,13 +242,17 @@ model Ticket {
   issuedAt         DateTime     @default(now()) @map("issued_at")
   checkedInAt      DateTime?    @map("checked_in_at")
   checkedInById    String?      @map("checked_in_by_id") @db.Uuid
+  kitHandedOverAt  DateTime?    @map("kit_handed_over_at")
+  kitHandedOverById String?     @map("kit_handed_over_by_id") @db.Uuid
   revokedAt        DateTime?    @map("revoked_at")
   revocationReason String?      @map("revocation_reason")
   registration     Registration @relation(fields: [registrationId], references: [id], onDelete: Restrict)
   checkedInBy      User?        @relation("TicketCheckInActor", fields: [checkedInById], references: [id], onDelete: SetNull)
+  kitHandedOverBy  User?        @relation("TicketKitHandoverActor", fields: [kitHandedOverById], references: [id], onDelete: SetNull)
 
   @@index([status])
   @@index([checkedInById])
+  @@index([kitHandedOverById])
   @@map("tickets")
 }
 
@@ -240,6 +284,7 @@ model EmailOutbox {
   attempts    Int          @default(0)
   maxAttempts Int          @default(8) @map("max_attempts")
   availableAt DateTime     @default(now()) @map("available_at")
+  expiresAt   DateTime?    @map("expires_at")
   lockedUntil DateTime?    @map("locked_until")
   workerToken String?      @map("worker_token")
   lastError   String?      @map("last_error")

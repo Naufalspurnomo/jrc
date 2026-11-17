@@ -9,7 +9,8 @@ import {
   HttpCode,
   HttpStatus,
   Injectable,
-  InternalServerErrorException,
+
+  Logger,
   NestInterceptor,
   NotFoundException,
   Param,
@@ -22,11 +23,9 @@ import {
   UploadedFile,
   UseInterceptors,
 } from '@nestjs/common';
-import { Prisma, Role } from '@prisma/client';
-import { randomBytes, randomUUID } from 'node:crypto';
-import { createReadStream } from 'node:fs';
+import { Prisma, Role, TeamMemberRole } from '@prisma/client';
+import { randomUUID } from 'node:crypto';
 import type { Readable } from 'node:stream';
-import { chmod, lstat, mkdir, unlink, writeFile } from 'node:fs/promises';
 import { basename, dirname, resolve } from 'node:path';
 import { Request, Response } from 'express';
 import multer from 'multer';
@@ -39,8 +38,11 @@ import {
 } from './auth';
 import { canEditRegistration } from './domain/registration-state';
 import { PrismaService } from './prisma.service';
+import { PrivateStorageService } from './private-storage';
+import { assertUploadSize, maxUploadBytes, uploadLimitDescription } from './upload-limits';
 
-const DEFAULT_MAX_UPLOAD_BYTES = 10 * 1024 * 1024;
+const DOCUMENT_CATEGORIES = new Set(['RECOMMENDATION_LETTER', 'IDENTITY_CARD', 'REGISTRATION_FORM', 'TEAM_PHOTO', 'TWIBBON_PROOF', 'MEMBER_PHOTO']);
+const MEMBER_PHOTO_ROLES = new Set(['PARTICIPANT', 'SUPERVISOR']);
 
 const DOCUMENT_SIGNATURES: Readonly<Record<string, readonly number[]>> = {
   'application/pdf': [0x25, 0x50, 0x44, 0x46, 0x2d],
@@ -62,6 +64,8 @@ interface DocumentRecord {
   size: number;
   storageKey: string;
   createdAt: Date;
+  subjectName: string | null;
+  subjectRole: string | null;
 }
 
 interface StoredDocument {
@@ -78,26 +82,6 @@ export interface DocumentDownload {
   size: number;
 }
 
-function maxUploadBytes(): number {
-  const configured = process.env.MAX_UPLOAD_BYTES?.trim();
-  if (!configured) return DEFAULT_MAX_UPLOAD_BYTES;
-
-  const parsed = Number(configured);
-  if (!Number.isSafeInteger(parsed) || parsed <= 0) {
-    throw new InternalServerErrorException(
-      'MAX_UPLOAD_BYTES must be a positive integer',
-    );
-  }
-  return parsed;
-}
-
-function storageRoot(): string {
-  const configured = process.env.STORAGE_PATH?.trim();
-  if (!configured) {
-    throw new InternalServerErrorException('STORAGE_PATH is required');
-  }
-  return resolve(configured);
-}
 
 function safeOriginalName(originalName: string): string {
   const cleaned = basename(originalName.replaceAll('\\', '/'))
@@ -116,9 +100,7 @@ function normalizeCategory(category: string): string {
   if (!normalized) {
     throw new BadRequestException('Document category is required');
   }
-  if (normalized.length > 100) {
-    throw new BadRequestException('Document category must not exceed 100 characters');
-  }
+  if (!DOCUMENT_CATEGORIES.has(normalized)) throw new BadRequestException('Unsupported document category');
   return normalized;
 }
 
@@ -130,6 +112,8 @@ function serializeDocument(document: DocumentRecord) {
     mimeType: document.mimeType,
     size: document.size,
     createdAt: document.createdAt.toISOString(),
+    subjectName: document.subjectName,
+    subjectRole: document.subjectRole,
   };
 }
 
@@ -146,6 +130,65 @@ export function hasAllowedDocumentSignature(
     contents.length >= signature.length &&
     signature.every((byte, index) => contents[index] === byte)
   );
+}
+
+interface ImageDimensions {
+  width: number;
+  height: number;
+}
+
+function pngDimensions(contents: Buffer): ImageDimensions | null {
+  if (
+    contents.length < 24 ||
+    contents.readUInt32BE(8) !== 13 ||
+    contents.toString('ascii', 12, 16) !== 'IHDR'
+  ) return null;
+  const width = contents.readUInt32BE(16);
+  const height = contents.readUInt32BE(20);
+  return width > 0 && height > 0 ? { width, height } : null;
+}
+
+const JPEG_START_OF_FRAME_MARKERS = new Set([
+  0xc0, 0xc1, 0xc2, 0xc3, 0xc5, 0xc6, 0xc7, 0xc9, 0xca, 0xcb, 0xcd, 0xce, 0xcf,
+]);
+
+function jpegDimensions(contents: Buffer): ImageDimensions | null {
+  let offset = 2;
+  while (offset < contents.length) {
+    if (contents[offset] !== 0xff) return null;
+    while (offset < contents.length && contents[offset] === 0xff) offset += 1;
+    if (offset >= contents.length) return null;
+    const marker = contents[offset];
+    offset += 1;
+    if (marker === 0xd9 || marker === 0xda) return null;
+    if (marker === 0x01 || (marker >= 0xd0 && marker <= 0xd7)) continue;
+    if (offset + 2 > contents.length) return null;
+    const segmentLength = contents.readUInt16BE(offset);
+    if (segmentLength < 2 || offset + segmentLength > contents.length) return null;
+    if (JPEG_START_OF_FRAME_MARKERS.has(marker)) {
+      if (segmentLength < 7) return null;
+      const height = contents.readUInt16BE(offset + 3);
+      const width = contents.readUInt16BE(offset + 5);
+      return width > 0 && height > 0 ? { width, height } : null;
+    }
+    offset += segmentLength;
+  }
+  return null;
+}
+
+/** Accept MEMBER_PHOTO images within 0.02 of the required 3:4 ratio. */
+export function validateMemberPhotoAspectRatio(mimeType: string, contents: Buffer): void {
+  const dimensions = mimeType === 'image/png'
+    ? pngDimensions(contents)
+    : mimeType === 'image/jpeg'
+      ? jpegDimensions(contents)
+      : null;
+  if (!dimensions) {
+    throw new BadRequestException('Member photo image dimensions could not be read');
+  }
+  if (Math.abs(dimensions.width / dimensions.height - 3 / 4) > 0.02) {
+    throw new BadRequestException('Member photo must have a 3:4 portrait aspect ratio');
+  }
 }
 
 export function resolveDocumentStoragePath(
@@ -199,7 +242,7 @@ export class DocumentUploadInterceptor implements NestInterceptor {
         ) {
           rejectUpload(
             new PayloadTooLargeException(
-              `Document exceeds ${maxUploadBytes()} bytes`,
+              `Document exceeds the per-file limit of ${uploadLimitDescription()}`,
             ),
           );
           return;
@@ -214,12 +257,19 @@ export class DocumentUploadInterceptor implements NestInterceptor {
 
 @Injectable()
 export class DocumentsService {
-  constructor(private readonly prisma: PrismaService) {}
+  private readonly logger = new Logger(DocumentsService.name);
+
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly storage: PrivateStorageService = new PrivateStorageService(),
+  ) {}
 
   async upload(
     ownerId: string,
     registrationId: string,
     category: string,
+    subjectName: string | undefined,
+    subjectRole: string | undefined,
     file: Express.Multer.File | undefined,
     audit: AuditContext,
   ): Promise<SerializedDocument> {
@@ -234,13 +284,19 @@ export class DocumentsService {
       );
     }
     if (!file) throw new BadRequestException('Document file is required');
-    if (file.buffer.length > maxUploadBytes()) {
-      throw new PayloadTooLargeException(
-        `Document exceeds ${maxUploadBytes()} bytes`,
-      );
-    }
+    assertUploadSize(file.buffer.length, 'Document');
 
     const normalizedCategory = normalizeCategory(category);
+    const normalizedSubjectName = subjectName?.trim() || null;
+    const normalizedSubjectRole = subjectRole?.trim() || null;
+    if (normalizedCategory === 'MEMBER_PHOTO') {
+      if (!normalizedSubjectName || normalizedSubjectName.length > 150) throw new BadRequestException('Member photo requires a full participant name');
+      if (!normalizedSubjectRole || !MEMBER_PHOTO_ROLES.has(normalizedSubjectRole)) throw new BadRequestException('Member photo role must be PARTICIPANT or SUPERVISOR');
+      if (!['image/jpeg', 'image/png'].includes(file.mimetype)) throw new BadRequestException('Member photo must be a JPEG or PNG image');
+      validateMemberPhotoAspectRatio(file.mimetype, file.buffer);
+    } else if (normalizedSubjectName || normalizedSubjectRole) {
+      throw new BadRequestException('Subject metadata is allowed only for member photos');
+    }
     validateDocument(file);
     const stored = await this.storeDocument(file);
 
@@ -257,6 +313,33 @@ export class DocumentsService {
           );
         }
 
+        if (normalizedCategory === 'MEMBER_PHOTO') {
+          const rosterRole = normalizedSubjectRole === 'SUPERVISOR'
+            ? TeamMemberRole.SUPERVISOR
+            : { in: [TeamMemberRole.LEADER, TeamMemberRole.MEMBER] };
+          const rosterMember = await transaction.teamMember.findFirst({
+            where: {
+              registrationId,
+              name: { equals: normalizedSubjectName as string, mode: Prisma.QueryMode.insensitive },
+              role: rosterRole,
+            },
+            select: { id: true },
+          });
+          if (!rosterMember) {
+            throw new BadRequestException('Member photo subject must match the registered roster');
+          }
+          const duplicate = await transaction.document.findFirst({
+            where: {
+              registrationId,
+              category: 'MEMBER_PHOTO',
+              subjectName: { equals: normalizedSubjectName as string, mode: Prisma.QueryMode.insensitive },
+              subjectRole: normalizedSubjectRole,
+            },
+            select: { id: true },
+          });
+          if (duplicate) throw new BadRequestException('A member photo already exists for this roster person');
+        }
+
         const created = await transaction.document.create({
           data: {
             registrationId,
@@ -265,6 +348,8 @@ export class DocumentsService {
             mimeType: stored.mimeType,
             size: stored.size,
             storageKey: stored.storageKey,
+            subjectName: normalizedSubjectName,
+            subjectRole: normalizedSubjectRole,
           },
         });
         const serialized = serializeDocument(created);
@@ -285,7 +370,13 @@ export class DocumentsService {
         return serialized;
       });
     } catch (error: unknown) {
-      await this.removeStoredDocument(stored.storageKey);
+      try {
+        await this.removeStoredDocument(stored.storageKey);
+      } catch {
+        this.logger.error(
+          'Failed to remove stored document after transaction rollback',
+        );
+      }
       throw error;
     }
   }
@@ -369,45 +460,27 @@ export class DocumentsService {
   private async storeDocument(
     file: Express.Multer.File,
   ): Promise<StoredDocument> {
-    const root = storageRoot();
-    await mkdir(root, { recursive: true, mode: 0o700 });
-    const rootStat = await lstat(root);
-    if (!rootStat.isDirectory() || rootStat.isSymbolicLink()) {
-      throw new InternalServerErrorException(
-        'STORAGE_PATH must be a real directory',
-      );
-    }
-    await chmod(root, 0o700);
-
-    for (let attempt = 0; attempt < 3; attempt += 1) {
-      const storageKey = randomBytes(32).toString('hex');
-      try {
-        await writeFile(resolveDocumentStoragePath(root, storageKey), file.buffer, {
-          flag: 'wx',
-          mode: 0o600,
-        });
-        return {
-          storageKey,
-          originalName: safeOriginalName(file.originalname),
-          mimeType: file.mimetype,
-          size: file.buffer.length,
-        };
-      } catch (error: unknown) {
-        const code = (error as NodeJS.ErrnoException).code;
-        if (code !== 'EEXIST' || attempt === 2) throw error;
-      }
-    }
-
-    throw new InternalServerErrorException('Could not store document');
+    return {
+      storageKey: await this.storage.upload(file.buffer, file.mimetype),
+      originalName: safeOriginalName(file.originalname),
+      mimeType: file.mimetype,
+      size: file.buffer.length,
+    };
   }
 
   private async openDocument(document: DocumentRecord): Promise<DocumentDownload> {
-    const path = resolveDocumentStoragePath(storageRoot(), document.storageKey);
     try {
-      const fileStat = await lstat(path);
-      if (!fileStat.isFile() || fileStat.isSymbolicLink()) {
+      const stored = await this.storage.read(document.storageKey);
+      if (stored.size !== document.size) {
+        stored.stream.destroy();
         throw new NotFoundException('Document file not found');
       }
+      return {
+        stream: stored.stream,
+        originalName: document.originalName,
+        mimeType: document.mimeType,
+        size: document.size,
+      };
     } catch (error: unknown) {
       if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
         throw new NotFoundException('Document file not found');
@@ -415,21 +488,10 @@ export class DocumentsService {
       throw error;
     }
 
-    return {
-      stream: createReadStream(path),
-      originalName: document.originalName,
-      mimeType: document.mimeType,
-      size: document.size,
-    };
   }
 
   private async removeStoredDocument(storageKey: string): Promise<void> {
-    const path = resolveDocumentStoragePath(storageRoot(), storageKey);
-    try {
-      await unlink(path);
-    } catch (error: unknown) {
-      if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error;
-    }
+    await this.storage.delete(storageKey);
   }
 }
 
@@ -470,6 +532,8 @@ export class ParticipantDocumentsController {
     @CurrentUser() user: AuthPrincipal,
     @Param('registrationId', new ParseUUIDPipe()) registrationId: string,
     @Body('category') category: string,
+    @Body('subjectName') subjectName: string | undefined,
+    @Body('subjectRole') subjectRole: string | undefined,
     @UploadedFile() file: Express.Multer.File | undefined,
     @Req() request: AuthenticatedRequest,
   ): Promise<SerializedDocument> {
@@ -477,6 +541,8 @@ export class ParticipantDocumentsController {
       user.id,
       registrationId,
       category,
+      subjectName,
+      subjectRole,
       file,
       auditContext(request),
     );

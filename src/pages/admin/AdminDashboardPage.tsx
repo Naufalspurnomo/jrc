@@ -1,12 +1,15 @@
 import { useEffect, useMemo, useState, type ComponentProps } from 'react';
 import { Link } from 'react-router-dom';
 
+import { ConfirmationDialog } from '../../components/feedback/ConfirmationDialog';
+import { useToast } from '../../components/feedback/ToastProvider';
 import { AdminShell } from '../../components/portal/AdminShell';
 import { StatusBadge } from '../../components/portal/StatusBadge';
 import { useAuth } from '../../features/auth';
 import {
   registrationApi,
   type RegistrationApi,
+  type GoogleSheetsStatus,
   type RegistrationRecord,
   type RegistrationState,
 } from '../../features/registration/api';
@@ -39,6 +42,9 @@ const statusLabels: Record<RegistrationState, string> = {
 };
 
 const registrationStates = Object.keys(statusLabels) as RegistrationState[];
+const deletableStates = new Set<RegistrationState>([
+  'DRAFT', 'SUBMITTED', 'UNDER_REVIEW', 'REVISION_REQUESTED', 'REJECTED', 'CANCELLED',
+]);
 
 function normalized(value: string | null | undefined): string {
   return value?.toLocaleLowerCase('id-ID') ?? '';
@@ -51,30 +57,21 @@ function formatDate(value: string): string {
     : new Intl.DateTimeFormat('id-ID', { dateStyle: 'medium' }).format(date);
 }
 
-async function downloadCsv(api: RegistrationApi): Promise<void> {
-  const csv = await api.admin.exportRegistrations();
-  const url = URL.createObjectURL(new Blob([`\uFEFF${csv}`], { type: 'text/csv;charset=utf-8' }));
-  const anchor = document.createElement('a');
-  anchor.href = url;
-  anchor.download = 'pendaftaran-jrc-xiv.csv';
-
-  try {
-    anchor.click();
-  } finally {
-    URL.revokeObjectURL(url);
-  }
-}
-
 export default function AdminDashboardPage({ api = registrationApi }: AdminDashboardPageProps) {
   const { loading: authLoading, user } = useAuth();
+  const { showToast } = useToast();
   const [registrations, setRegistrations] = useState<RegistrationRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState(false);
-  const [exporting, setExporting] = useState(false);
-  const [exportError, setExportError] = useState('');
+  const [sheets, setSheets] = useState<GoogleSheetsStatus | null>(null);
+  const [syncingSheets, setSyncingSheets] = useState(false);
+  const [sheetsError, setSheetsError] = useState('');
   const [query, setQuery] = useState('');
   const [status, setStatus] = useState<StatusFilter>('ALL');
   const [requestVersion, setRequestVersion] = useState(0);
+  const [deleteTarget, setDeleteTarget] = useState<RegistrationRecord | null>(null);
+  const [deleteConfirmation, setDeleteConfirmation] = useState('');
+  const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
     if (authLoading || !user) return undefined;
@@ -99,6 +96,15 @@ export default function AdminDashboardPage({ api = registrationApi }: AdminDashb
     };
   }, [api, authLoading, requestVersion, user]);
 
+  useEffect(() => {
+    if (authLoading || !user) return undefined;
+    let active = true;
+    void api.admin.googleSheetsStatus()
+      .then((status) => { if (active) setSheets(status); })
+      .catch(() => { if (active) setSheetsError('Status Spreadsheet gagal dimuat.'); });
+    return () => { active = false; };
+  }, [api, authLoading, user]);
+
   const filteredRegistrations = useMemo(() => {
     const search = normalized(query.trim());
     return registrations.filter((registration) => {
@@ -113,15 +119,45 @@ export default function AdminDashboardPage({ api = registrationApi }: AdminDashb
     });
   }, [query, registrations, status]);
 
-  const exportRecords = async () => {
-    setExporting(true);
-    setExportError('');
+  const synchronizeSheets = async () => {
+    setSyncingSheets(true);
+    setSheetsError('');
     try {
-      await downloadCsv(api);
+      const status = await api.admin.syncGoogleSheets();
+      setSheets(status);
+      showToast('Spreadsheet berhasil disinkronkan.', 'success');
     } catch {
-      setExportError('Ekspor CSV gagal. Coba lagi beberapa saat lagi.');
+      setSheetsError('Sinkronisasi Spreadsheet gagal. Coba lagi beberapa saat lagi.');
+      showToast('Sinkronisasi Spreadsheet gagal.', 'error');
     } finally {
-      setExporting(false);
+      setSyncingSheets(false);
+    }
+  };
+
+  const closeDeleteDialog = () => {
+    if (deleting) return;
+    setDeleteTarget(null);
+    setDeleteConfirmation('');
+  };
+
+  const deleteRegistration = async () => {
+    if (!deleteTarget || deleting) return;
+    setDeleting(true);
+    try {
+      const outcome = await api.admin.deleteRegistration(deleteTarget.id);
+      setRegistrations((current) => current.filter(({ id }) => id !== deleteTarget.id));
+      setDeleteTarget(null);
+      setDeleteConfirmation('');
+      showToast(
+        outcome.cleanupWarnings.length
+          ? 'Pendaftaran dihapus. Sebagian berkas privat perlu dibersihkan manual.'
+          : 'Pendaftaran berhasil dihapus.',
+        outcome.cleanupWarnings.length ? 'info' : 'success',
+      );
+    } catch {
+      showToast('Pendaftaran gagal dihapus. Data tetap tersimpan.', 'error');
+    } finally {
+      setDeleting(false);
     }
   };
 
@@ -130,19 +166,37 @@ export default function AdminDashboardPage({ api = registrationApi }: AdminDashb
       <main className="admin-main">
         <header className="admin-page-heading">
           <div>
-            <p className="admin-eyebrow">TABULARIUM · XIV</p>
-            <h1>Meja komando pendaftaran</h1>
+            <p className="admin-eyebrow">PENDAFTARAN</p>
+            <h1>Ringkasan pendaftaran</h1>
+            <p className="admin-page-description">Pantau status dan tindak lanjuti data tim.</p>
           </div>
-          <button
-            className="admin-export"
-            type="button"
-            disabled={loading || exporting}
-            onClick={() => void exportRecords()}
-          >
-            {exporting ? 'Menyiapkan CSV…' : 'Ekspor CSV'}
-          </button>
+          <div className="admin-page-heading__actions">
+            {sheets?.spreadsheetUrl && (
+              <a
+                className="admin-export"
+                href={sheets.spreadsheetUrl}
+                target="_blank"
+                rel="noreferrer"
+              >
+                Buka Spreadsheet
+              </a>
+            )}
+            <button
+              className="admin-export"
+              type="button"
+              disabled={loading || syncingSheets || sheets?.enabled === false}
+              onClick={() => void synchronizeSheets()}
+            >
+              {syncingSheets ? 'Menyinkronkan…' : 'Sinkronkan sekarang'}
+            </button>
+          </div>
         </header>
-        {exportError && <p className="admin-error" role="alert">{exportError}</p>}
+        {sheets?.lastSyncedAt && (
+          <p className="admin-page-description">
+            Data Spreadsheet aktif · sinkron terakhir {formatDate(sheets.lastSyncedAt)}
+          </p>
+        )}
+        {sheetsError && <p className="admin-error" role="alert">{sheetsError}</p>}
 
         {!loading && !loadError && (
           <section className="admin-metrics" aria-label="Ringkasan status">
@@ -174,7 +228,7 @@ export default function AdminDashboardPage({ api = registrationApi }: AdminDashb
           <section className="admin-register" aria-labelledby="admin-register-title">
             <div className="admin-register__heading">
               <div>
-                <p className="admin-eyebrow">INDEX LEGIONUM</p>
+                <p className="admin-eyebrow">DATA TIM</p>
                 <h2 id="admin-register-title">Daftar pendaftar</h2>
               </div>
               <span>{filteredRegistrations.length} hasil</span>
@@ -199,6 +253,7 @@ export default function AdminDashboardPage({ api = registrationApi }: AdminDashb
                   ))}
                 </select>
               </label>
+              <button className="admin-filter-reset" type="button" disabled={!query && status === 'ALL'} onClick={() => { setQuery(''); setStatus('ALL'); }}>Reset filter</button>
             </div>
 
             {registrations.length === 0 ? (
@@ -207,7 +262,7 @@ export default function AdminDashboardPage({ api = registrationApi }: AdminDashb
                 <p>Pendaftaran baru akan tampil di sini.</p>
               </div>
             ) : filteredRegistrations.length === 0 ? (
-              <p className="admin-empty">Tidak ada pendaftaran yang cocok dengan filter.</p>
+              <div className="admin-empty"><p>Tidak ada pendaftaran yang cocok dengan filter.</p><button className="admin-action" type="button" onClick={() => { setQuery(''); setStatus('ALL'); }}>Reset filter</button></div>
             ) : (
               <div className="admin-table-wrap">
                 <table>
@@ -229,12 +284,19 @@ export default function AdminDashboardPage({ api = registrationApi }: AdminDashb
                         </td>
                         <td>{formatDate(registration.updatedAt)}</td>
                         <td>
-                          <Link
-                            aria-label={`Tinjau ${registration.teamName || registration.registrationNumber}`}
-                            to={`/admin/pendaftaran/${encodeURIComponent(registration.id)}`}
-                          >
-                            Tinjau →
-                          </Link>
+                          <div className="admin-row-actions">
+                            <Link
+                              aria-label={`Tinjau ${registration.teamName || registration.registrationNumber}`}
+                              to={`/admin/pendaftaran/${encodeURIComponent(registration.id)}`}
+                            >
+                              Tinjau →
+                            </Link>
+                            {user?.role === 'SUPER_ADMIN' && deletableStates.has(registration.status) && !registration.invoice && !registration.ticketStatus && (
+                              <button className="admin-delete-link" type="button" onClick={() => { setDeleteTarget(registration); setDeleteConfirmation(''); }}>
+                                Hapus
+                              </button>
+                            )}
+                          </div>
                         </td>
                       </tr>
                     ))}
@@ -245,6 +307,17 @@ export default function AdminDashboardPage({ api = registrationApi }: AdminDashb
           </section>
         )}
       </main>
+      <ConfirmationDialog
+        open={Boolean(deleteTarget)}
+        title="Hapus pendaftaran permanen?"
+        description={<p>Data tim, anggota, dan dokumen akan dihapus. Tindakan ini tidak dapat dibatalkan.</p>}
+        confirmationLabel={deleteTarget?.registrationNumber || deleteTarget?.teamName || ''}
+        confirmationValue={deleteConfirmation}
+        pending={deleting}
+        onConfirmationChange={setDeleteConfirmation}
+        onCancel={closeDeleteDialog}
+        onConfirm={() => void deleteRegistration()}
+      />
     </AdminShell>
   );
 }

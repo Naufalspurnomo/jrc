@@ -2,6 +2,7 @@ import {
   BadRequestException,
   Body,
   Controller,
+  Delete,
   Get,
   Injectable,
   NotFoundException,
@@ -10,7 +11,6 @@ import {
   Post,
   Query,
   Req,
-  Res,
 } from '@nestjs/common';
 import { Prisma, RegistrationStatus, Role } from '@prisma/client';
 import { Transform, TransformFnParams, Type } from 'class-transformer';
@@ -27,17 +27,19 @@ import {
   MinLength,
 } from 'class-validator';
 import { randomUUID } from 'node:crypto';
-import { Response } from 'express';
+
 import {
   AuthPrincipal,
   AuthenticatedRequest,
   CurrentUser,
   Roles,
 } from './auth';
-import { csvRow } from './common/csv';
 import { assertRegistrationTransition } from './domain/registration-state';
 import { ManualPaymentProvider } from './payments/manual-payment.provider';
 import { PrismaService } from './prisma.service';
+import { PrivateStorageService } from './private-storage';
+import { encryptRichEmail } from './email-outbox';
+import { buildRegistrationPortalUrl, renderTransactionalEmail } from './email-template';
 
 const trim = ({ value }: TransformFnParams): unknown =>
   typeof value === 'string' ? value.trim() : value;
@@ -49,7 +51,18 @@ const REVIEW_STATUSES = [
   RegistrationStatus.REJECTED,
 ] as const;
 
+const DELETABLE_STATUSES = [
+  RegistrationStatus.DRAFT,
+  RegistrationStatus.SUBMITTED,
+  RegistrationStatus.UNDER_REVIEW,
+  RegistrationStatus.REVISION_REQUESTED,
+  RegistrationStatus.REJECTED,
+  RegistrationStatus.CANCELLED,
+] as const;
+
 type ReviewStatus = (typeof REVIEW_STATUSES)[number];
+export const REVIEW_REASON_CATEGORIES = ['DOCUMENT_INCOMPLETE','DOCUMENT_INVALID','DATA_MISMATCH','ELIGIBILITY','PAYMENT_OR_ADMINISTRATIVE','OTHER'] as const;
+type ReviewReasonCategory = (typeof REVIEW_REASON_CATEGORIES)[number];
 
 export class AdminRegistrationFiltersDto {
   @IsOptional()
@@ -99,7 +112,11 @@ export class ReviewRegistrationDto {
   @IsString()
   @MinLength(1)
   @MaxLength(2_000)
-  reason?: string;
+  reasonComment?: string;
+
+  @IsOptional()
+  @IsIn([...REVIEW_REASON_CATEGORIES])
+  reasonCategory?: ReviewReasonCategory;
 }
 
 const invoiceSelect = {
@@ -128,7 +145,8 @@ const adminRegistrationSelect = {
   institution: true,
   phone: true,
   status: true,
-  reviewReason: true,
+  reviewReasonCategory: true,
+  reviewReasonComment: true,
   submittedAt: true,
   reviewedAt: true,
   createdAt: true,
@@ -176,6 +194,8 @@ const adminRegistrationSelect = {
       originalName: true,
       mimeType: true,
       size: true,
+      subjectName: true,
+      subjectRole: true,
       createdAt: true,
     },
   },
@@ -246,7 +266,8 @@ function serializeAdminRegistration(registration: AdminRegistrationRecord) {
     institution: registration.institution,
     phone: registration.phone,
     status: registration.status,
-    reviewReason: registration.reviewReason,
+    reviewReasonCategory: registration.reviewReasonCategory,
+    reviewReasonComment: registration.reviewReasonComment,
     submittedAt: registration.submittedAt?.toISOString() ?? null,
     reviewedAt: registration.reviewedAt?.toISOString() ?? null,
     createdAt: registration.createdAt.toISOString(),
@@ -286,6 +307,8 @@ function serializeAdminRegistration(registration: AdminRegistrationRecord) {
       originalName: document.originalName,
       mimeType: document.mimeType,
       size: document.size,
+      subjectName: document.subjectName,
+      subjectRole: document.subjectRole,
       createdAt: document.createdAt.toISOString(),
       downloadUrl: `/api/admin/registrations/${encodeURIComponent(registration.id)}/documents/${encodeURIComponent(document.id)}`,
     })),
@@ -385,12 +408,82 @@ const REVIEW_ACTIONS: Record<ReviewStatus, string> = {
   REJECTED: 'REGISTRATION_REJECTED',
 };
 
+
 @Injectable()
 export class AdminRegistrationsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly manualPayment: ManualPaymentProvider,
+    private readonly storage: PrivateStorageService = new PrivateStorageService(),
   ) {}
+
+  async delete(
+    actorId: string,
+    id: string,
+    audit: AuditContext,
+  ): Promise<{ deleted: true; cleanupWarnings: string[] }> {
+    const storageKeys = await this.prisma.$transaction(async (transaction) => {
+      const current = await transaction.registration.findUnique({
+        where: { id },
+        select: {
+          id: true,
+          registrationNumber: true,
+          teamName: true,
+          status: true,
+          owner: { select: { id: true, email: true, displayName: true } },
+          documents: { select: { storageKey: true } },
+          invoice: { select: { id: true } },
+          ticket: { select: { id: true } },
+        },
+      });
+      if (!current) throw new NotFoundException('Registration not found');
+      if (
+        !DELETABLE_STATUSES.includes(current.status as (typeof DELETABLE_STATUSES)[number]) ||
+        current.invoice ||
+        current.ticket
+      ) {
+        throw new BadRequestException('Registration is protected and cannot be deleted');
+      }
+
+      const deleted = await transaction.registration.deleteMany({
+        where: { id, status: current.status, invoice: null, ticket: null },
+      });
+      if (deleted.count !== 1) {
+        throw new BadRequestException('Registration changed before deletion was completed');
+      }
+
+      const documentStorageKeys = current.documents.map(({ storageKey }) => storageKey);
+      await transaction.auditLog.create({
+        data: {
+          actorId,
+          action: 'REGISTRATION_DELETED',
+          entityType: 'Registration',
+          entityId: id,
+          before: {
+            registrationNumber: current.registrationNumber,
+            teamName: current.teamName,
+            status: current.status,
+            owner: current.owner,
+            documentStorageKeys,
+          },
+          reason: 'Super Admin removed an eligible registration',
+          requestId: audit.requestId,
+          ipAddress: audit.ipAddress,
+        },
+      });
+      return documentStorageKeys;
+    }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
+
+    const cleanupWarnings: string[] = [];
+    for (const storageKey of storageKeys) {
+      try {
+        await this.storage.delete(storageKey);
+      } catch {
+        cleanupWarnings.push('Satu berkas privat gagal dibersihkan.');
+      }
+    }
+    return { deleted: true, cleanupWarnings };
+  }
 
   async list(
     query: AdminRegistrationListDto,
@@ -416,45 +509,6 @@ export class AdminRegistrationsService {
     return serializeAdminRegistration(registration);
   }
 
-  async exportCsv(filters: AdminRegistrationFiltersDto): Promise<string> {
-    const registrations = await this.prisma.registration.findMany({
-      where: registrationWhere(filters),
-      orderBy: [{ updatedAt: 'desc' }, { id: 'asc' }],
-      select: {
-        registrationNumber: true,
-        teamName: true,
-        institution: true,
-        status: true,
-        updatedAt: true,
-        competition: { select: { name: true } },
-        _count: { select: { members: true } },
-      },
-    });
-
-    const rows = registrations.map((registration) =>
-      csvRow([
-        registration.registrationNumber,
-        registration.teamName,
-        registration.institution,
-        registration.competition.name,
-        registration.status,
-        registration._count.members,
-        registration.updatedAt.toISOString(),
-      ]),
-    );
-    return `\uFEFF${[
-      csvRow([
-        'Registration Number',
-        'Team',
-        'Institution',
-        'Competition',
-        'Status',
-        'Member Count',
-        'Updated At',
-      ]),
-      ...rows,
-    ].join('\r\n')}\r\n`;
-  }
 
   async review(
     actorId: string,
@@ -462,14 +516,15 @@ export class AdminRegistrationsService {
     dto: ReviewRegistrationDto,
     audit: AuditContext,
   ): Promise<SerializedAdminRegistration> {
-    const reason = dto.reason?.trim() || null;
+    const reasonComment = dto.reasonComment?.trim() || null;
+    const reasonCategory = dto.reasonCategory ?? null;
     if (
       (dto.status === RegistrationStatus.REVISION_REQUESTED ||
         dto.status === RegistrationStatus.REJECTED) &&
-      !reason
+      (!reasonComment || !reasonCategory)
     ) {
       throw new BadRequestException(
-        'A reason is required for revision requests and rejections',
+        'A reasonCategory and reasonComment are required for revision requests and rejections',
       );
     }
 
@@ -478,7 +533,8 @@ export class AdminRegistrationsService {
         where: { id },
         select: {
           status: true,
-          reviewReason: true,
+          reviewReasonCategory: true,
+          reviewReasonComment: true,
           reviewedAt: true,
           registrationNumber: true,
           teamName: true,
@@ -503,7 +559,8 @@ export class AdminRegistrationsService {
         where: { id, status: current.status },
         data: {
           status: dto.status,
-          reviewReason: reason,
+          reviewReasonCategory: reasonCategory,
+          reviewReasonComment: reasonComment,
           reviewedAt,
         },
       });
@@ -551,18 +608,12 @@ export class AdminRegistrationsService {
           data: {
             to: current.owner.email,
             subject: `Invoice pendaftaran ${current.registrationNumber}`,
-            body: [
-              `Halo ${current.owner.displayName},`,
-              '',
-              `Pendaftaran tim ${current.teamName} untuk ${current.competition.name} telah disetujui.`,
-              `Nomor invoice: ${createdInvoice.invoiceNumber}`,
-              `Jumlah: ${current.competition.currency} ${current.competition.fee}`,
-              `Batas pembayaran: ${createdInvoice.deadline.toISOString()}`,
-              `Referensi transfer: ${current.registrationNumber}`,
-              '',
-              'Silakan lihat instruksi pembayaran lengkap di portal peserta.',
-              'Pembayaran dinyatakan lunas setelah diverifikasi oleh tim keuangan.',
-            ].join('\n'),
+            body: encryptRichEmail(renderTransactionalEmail({
+              title: 'Pendaftaran disetujui', greetingName: current.owner.displayName,
+              intro: 'Pendaftaran Anda telah disetujui. Selesaikan pembayaran sesuai informasi invoice berikut.', status: 'MENUNGGU PEMBAYARAN',
+              details: [{ label: 'Tim', value: current.teamName }, { label: 'Kompetisi', value: current.competition.name }, { label: 'Nomor invoice', value: createdInvoice.invoiceNumber }, { label: 'Jumlah', value: `${current.competition.currency} ${current.competition.fee}` }, { label: 'Batas pembayaran', value: createdInvoice.deadline.toISOString() }, { label: 'Referensi transfer', value: current.registrationNumber }, { label: 'Bank', value: String(order.instructions.bankName) }, { label: 'Nama rekening', value: String(order.instructions.bankAccountName) }, { label: 'Nomor rekening', value: String(order.instructions.bankAccountNumber) }, ...(order.instructions.qrisImageUrl ? [{ label: 'QRIS', value: String(order.instructions.qrisImageUrl) }] : [])],
+              paragraphs: ['Pembayaran baru dinyatakan lunas setelah rekonsiliasi oleh tim Finance.'], cta: { label: 'Buka portal pembayaran', url: buildRegistrationPortalUrl(id) },
+            })),
           },
         });
       } else if (
@@ -577,16 +628,13 @@ export class AdminRegistrationsService {
           data: {
             to: current.owner.email,
             subject: `Status pendaftaran ${current.registrationNumber}`,
-            body: [
-              `Halo ${current.owner.displayName},`,
-              '',
-              `Pendaftaran tim ${current.teamName} ${result}.`,
-              `Alasan: ${reason}`,
-              '',
-              dto.status === RegistrationStatus.REVISION_REQUESTED
-                ? 'Silakan perbarui pendaftaran melalui portal peserta lalu kirim kembali.'
-                : 'Silakan hubungi panitia jika memerlukan informasi lebih lanjut.',
-            ].join('\n'),
+            body: encryptRichEmail(renderTransactionalEmail({
+              title: dto.status === RegistrationStatus.REVISION_REQUESTED ? 'Pendaftaran memerlukan revisi' : 'Pendaftaran ditolak', greetingName: current.owner.displayName,
+              intro: `Pendaftaran tim ${current.teamName} ${result}.`, status: dto.status === RegistrationStatus.REVISION_REQUESTED ? 'PERLU REVISI' : 'DITOLAK',
+              details: [{ label: 'Nomor pendaftaran', value: current.registrationNumber }, { label: 'Kategori alasan', value: reasonCategory ?? '' }, { label: 'Alasan', value: reasonComment ?? '' }],
+              paragraphs: [dto.status === RegistrationStatus.REVISION_REQUESTED ? 'Perbarui data pendaftaran melalui portal peserta, lalu kirim kembali.' : 'Hubungi panitia jika Anda memerlukan informasi lebih lanjut.'],
+              ...(dto.status === RegistrationStatus.REVISION_REQUESTED ? { cta: { label: 'Perbarui pendaftaran', url: buildRegistrationPortalUrl(id) } } : {}),
+            })),
           },
         });
       }
@@ -599,12 +647,14 @@ export class AdminRegistrationsService {
           entityId: id,
           before: {
             status: current.status,
-            reviewReason: current.reviewReason,
+            reviewReasonCategory: current.reviewReasonCategory,
+            reviewReasonComment: current.reviewReasonComment,
             reviewedAt: current.reviewedAt?.toISOString() ?? null,
           },
           after: {
             status: dto.status,
-            reviewReason: reason,
+            reviewReasonCategory: reasonCategory,
+          reviewReasonComment: reasonComment,
             reviewedAt: reviewedAt.toISOString(),
             ...(createdInvoice
               ? {
@@ -617,7 +667,7 @@ export class AdminRegistrationsService {
                 }
               : {}),
           },
-          reason,
+          reason: reasonCategory && reasonComment ? `${reasonCategory}: ${reasonComment}` : null,
           requestId: audit.requestId,
           ipAddress: audit.ipAddress,
         },
@@ -657,18 +707,6 @@ export class AdminRegistrationsController {
     return this.registrations.list(query);
   }
 
-  @Get('export.csv')
-  async exportCsv(
-    @Query() query: AdminRegistrationFiltersDto,
-    @Res({ passthrough: true }) response: Response,
-  ): Promise<string> {
-    response.setHeader('Content-Type', 'text/csv; charset=utf-8');
-    response.setHeader(
-      'Content-Disposition',
-      `attachment; filename="registrations.csv"; filename*=UTF-8''registrations.csv`,
-    );
-    return this.registrations.exportCsv(query);
-  }
 
   @Get(':id')
   get(
@@ -686,6 +724,19 @@ export class AdminRegistrationsController {
     @Req() request: AuthenticatedRequest,
   ): Promise<SerializedAdminRegistration> {
     return this.registrations.review(user.id, id, dto, {
+      requestId: request.requestId ?? randomUUID(),
+      ipAddress: request.ip || request.socket.remoteAddress || null,
+    });
+  }
+
+  @Roles(Role.SUPER_ADMIN)
+  @Delete(':id')
+  deleteRegistration(
+    @CurrentUser() user: AuthPrincipal,
+    @Param('id', new ParseUUIDPipe()) id: string,
+    @Req() request: AuthenticatedRequest,
+  ): Promise<{ deleted: true; cleanupWarnings: string[] }> {
+    return this.registrations.delete(user.id, id, {
       requestId: request.requestId ?? randomUUID(),
       ipAddress: request.ip || request.socket.remoteAddress || null,
     });
