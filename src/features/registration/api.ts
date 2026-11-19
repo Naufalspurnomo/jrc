@@ -610,6 +610,19 @@ export interface RegistrationApi {
 }
 
 export function createRegistrationApi(client = new ApiClient()): RegistrationApi {
+  const listAllAdminRegistrations = async (): Promise<RegistrationRecord[]> => {
+    const pageSize = 100;
+    const registrations: RegistrationRecord[] = [];
+
+    for (let page = 1; ; page += 1) {
+      const batch = await client.request<RegistrationRecord[]>(
+        `${API_PATHS.admin.registrations.root}?page=${page}&pageSize=${pageSize}`,
+      );
+      registrations.push(...batch);
+      if (batch.length < pageSize) return registrations;
+    }
+  };
+
   return {
     auth: {
       me: () => client.request<AuthProbe>(API_PATHS.auth.me),
@@ -710,7 +723,7 @@ export function createRegistrationApi(client = new ApiClient()): RegistrationApi
     admin: {
       googleSheetsStatus: () => client.request<GoogleSheetsStatus>(API_PATHS.admin.googleSheets.root),
       syncGoogleSheets: () => client.request<GoogleSheetsStatus>(API_PATHS.admin.googleSheets.sync, { method: 'POST' }),
-      listRegistrations: () => client.request<RegistrationRecord[]>(API_PATHS.admin.registrations.root),
+      listRegistrations: listAllAdminRegistrations,
       getRegistration: (registrationId) => client.request<RegistrationRecord>(API_PATHS.admin.registrations.byId(registrationId)),
       deleteRegistration: (registrationId) => client.request<RegistrationDeletionOutcome>(
         API_PATHS.admin.registrations.byId(registrationId),

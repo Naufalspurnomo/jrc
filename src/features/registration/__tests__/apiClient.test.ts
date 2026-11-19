@@ -92,6 +92,31 @@ describe('ApiClient', () => {
     );
   });
 
+  it('loads every admin registration page before calculating dashboard totals', async () => {
+    const firstPage = Array.from({ length: 100 }, (_, index) => ({ id: `registration-${index + 1}` }));
+    const secondPage = Array.from({ length: 39 }, (_, index) => ({ id: `registration-${index + 101}` }));
+    const fetcher = vi.fn<typeof fetch>()
+      .mockResolvedValueOnce(new Response(JSON.stringify(firstPage), {
+        headers: { 'Content-Type': 'application/json' },
+      }))
+      .mockResolvedValueOnce(new Response(JSON.stringify(secondPage), {
+        headers: { 'Content-Type': 'application/json' },
+      }));
+    const api = createRegistrationApi(new ApiClient(fetcher));
+
+    await expect(api.admin.listRegistrations()).resolves.toHaveLength(139);
+    expect(fetcher).toHaveBeenNthCalledWith(
+      1,
+      '/api/admin/registrations?page=1&pageSize=100',
+      expect.objectContaining({ credentials: 'include', method: 'GET' }),
+    );
+    expect(fetcher).toHaveBeenNthCalledWith(
+      2,
+      '/api/admin/registrations?page=2&pageSize=100',
+      expect.objectContaining({ credentials: 'include', method: 'GET' }),
+    );
+  });
+
   it('loads the read-only paid-team list with encoded filters', async () => {
     const fetcher = vi.fn<typeof fetch>().mockResolvedValue(new Response(JSON.stringify({
       items: [], page: 2, pageSize: 25, hasNextPage: false,
