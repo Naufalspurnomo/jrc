@@ -165,7 +165,8 @@ model Registration {
   invoice            Invoice?
   ticket             Ticket?
 
-  @@unique([ownerId])
+  @@unique([ownerId, competitionId])
+  @@index([ownerId])
   @@index([competitionId, status])
   @@map("registrations")
 }

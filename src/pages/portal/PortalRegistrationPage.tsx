@@ -181,8 +181,14 @@ export default function PortalRegistrationPage({ api = registrationApi }: Portal
           existingRegistrationId && !hydratedIds.current.has(existingRegistrationId),
         );
 
-        const [competitionRecords, existingRegistration] = await Promise.all([
+        const [competitionRecords, registrationRecords, existingRegistration] = await Promise.all([
           api.competitions.list(),
+          // Existing drafts remain editable during a transient dashboard-list failure.
+          // Creation fails closed; the server remains authoritative for both limits.
+          Promise.resolve().then(() => api.registrations.list()).catch((error: unknown) => {
+            if (existingRegistrationId) return [];
+            throw error;
+          }),
           shouldHydrate && existingRegistrationId
             ? api.registrations.get(existingRegistrationId)
             : Promise.resolve(null),
@@ -191,7 +197,20 @@ export default function PortalRegistrationPage({ api = registrationApi }: Portal
         if (!active) return;
         serverClockBaseline.current = Date.now();
         setNow(serverClockBaseline.current);
-        setCompetitions(competitionRecords);
+        const registrations = Array.isArray(registrationRecords) ? registrationRecords : [];
+        const usedCompetitionIds = new Set(
+          registrations
+            .filter((registration) => registration.id !== existingRegistrationId)
+            .map((registration) => registration.competitionId),
+        );
+        setCompetitions(
+          competitionRecords.filter((competition) => !usedCompetitionIds.has(competition.id)),
+        );
+
+        if (!existingRegistrationId && registrations.length >= 2) {
+          navigate('/portal', { replace: true });
+          return;
+        }
 
         if (existingRegistration) {
           if (existingRegistrationId) hydratedIds.current.add(existingRegistrationId);
@@ -362,8 +381,10 @@ export default function PortalRegistrationPage({ api = registrationApi }: Portal
       // The draft id lives in the URL so a reload rehydrates the same draft
       // instead of silently creating a second one.
       navigate(`/portal/pendaftaran/${registration.id}`, { replace: true });
-    } catch {
-      setError('Draft gagal dibuat. Periksa koneksi lalu pilih kompetisi sekali lagi.');
+    } catch (error) {
+      setError(error instanceof ApiError && ['COMPETITION_ALREADY_REGISTERED', 'REGISTRATION_LIMIT_REACHED'].includes(error.code ?? '')
+        ? error.message
+        : 'Draft gagal dibuat. Periksa koneksi lalu coba lagi.');
       setCompetitionId('');
     } finally {
       createInFlight.current = false;
@@ -384,7 +405,15 @@ export default function PortalRegistrationPage({ api = registrationApi }: Portal
       .then(() => undefined);
     competitionUpdateInFlight.current = update;
     void update
-      .catch(() => setError('Kompetisi gagal disimpan. Silakan pilih ulang.'))
+      .catch(async () => {
+        setError('Kompetisi gagal disimpan. Pilihan dipulihkan dari server.');
+        try {
+          const saved = await api.registrations.get(registrationId);
+          setCompetitionId(saved.competitionId);
+        } catch {
+          setError('Kompetisi gagal disimpan. Muat ulang halaman untuk memeriksa pilihan server.');
+        }
+      })
       .finally(() => {
         if (competitionUpdateInFlight.current === update) competitionUpdateInFlight.current = null;
       });

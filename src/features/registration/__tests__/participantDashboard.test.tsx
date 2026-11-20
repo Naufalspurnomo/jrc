@@ -12,6 +12,7 @@ const session: AuthSession = {
     displayName: 'Ari Wijaya',
     email: 'ari@example.test',
     role: 'PARTICIPANT',
+    emailVerified: true,
   },
 };
 
@@ -83,6 +84,28 @@ describe('PortalDashboardPage', () => {
       'href',
       '/portal/pendaftaran/baru',
     );
+  });
+
+  it('offers a second team while the account has one registration', async () => {
+    renderDashboard(createApi([
+      registration('001', 'Garuda Robotika', 'SUBMITTED'),
+    ]));
+
+    expect(await screen.findByRole('link', { name: 'Daftarkan tim kedua' })).toHaveAttribute(
+      'href',
+      '/portal/pendaftaran/baru',
+    );
+    expect(screen.getByText(/cabang lomba berbeda/i)).toBeInTheDocument();
+  });
+
+  it('hides the create action after the account reaches two registrations', async () => {
+    renderDashboard(createApi([
+      registration('001', 'Garuda Robotika', 'DRAFT'),
+      registration('002', 'Rajawali Mesin', 'APPROVED'),
+    ]));
+
+    expect(await screen.findByRole('heading', { name: 'Garuda Robotika' })).toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: 'Daftarkan tim kedua' })).not.toBeInTheDocument();
   });
 
   it('shows structured review feedback on the registration card', async () => {

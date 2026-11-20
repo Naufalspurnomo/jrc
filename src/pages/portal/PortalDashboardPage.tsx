@@ -138,6 +138,20 @@ export default function PortalDashboardPage({ api = registrationApi }: PortalDas
           </section>
         )}
 
+        {!loading && !error && registrations.length === 1 && (
+          <section className="portal-notice" aria-labelledby="second-registration-title">
+            <span className="portal-notice__number" aria-hidden="true">II</span>
+            <div>
+              <p className="portal-eyebrow">SECUNDA REGISTRATIO</p>
+              <h2 id="second-registration-title">Masih dapat mendaftarkan satu tim lagi.</h2>
+              <p>Tim kedua wajib memilih cabang lomba berbeda dari tim pertama.</p>
+              <Link className="portal-button portal-button--primary" to="/portal/pendaftaran/baru">
+                Daftarkan tim kedua
+              </Link>
+            </div>
+          </section>
+        )}
+
         {!loading && !error && registrations.length > 0 && (
           <section className="portal-dashboard-grid" aria-label="Daftar pendaftaran">
             {registrations.map((registration) => {

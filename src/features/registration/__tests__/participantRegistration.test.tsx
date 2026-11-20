@@ -66,7 +66,7 @@ function createApi(overrides: Partial<RegistrationApi['registrations']> = {}): R
       list: vi.fn().mockResolvedValue(competitions),
     },
     registrations: {
-      list: vi.fn(),
+      list: vi.fn().mockResolvedValue([]),
       get: vi.fn().mockResolvedValue(registration()),
       create: vi.fn().mockResolvedValue(created),
       update: vi.fn().mockResolvedValue(created),
@@ -113,6 +113,37 @@ function LocationProbe() {
 
 describe('PortalRegistrationPage', () => {
   beforeEach(() => sessionStorage.clear());
+
+  it('excludes the competition already used by the first team when creating a second team', async () => {
+    const firstRegistration = registration({
+      id: 'registration-first',
+      competitionId: 'competition-1',
+      competition: { id: 'competition-1', name: 'Castra Guardian' },
+    });
+    const api = createApi({ list: vi.fn().mockResolvedValue([firstRegistration]) });
+
+    renderPage(api);
+
+    expect(await screen.findByRole('radio', { name: /Robo Chiper/i })).toBeInTheDocument();
+    expect(screen.queryByRole('radio', { name: /Castra Guardian/i })).not.toBeInTheDocument();
+    expect(api.registrations.list).toHaveBeenCalledOnce();
+  });
+
+  it('redirects to the dashboard instead of offering a third registration', async () => {
+    const api = createApi({
+      list: vi.fn().mockResolvedValue([
+        registration({ id: 'registration-first', competitionId: 'competition-1' }),
+        registration({ id: 'registration-second', competitionId: 'competition-2' }),
+      ]),
+    });
+
+    renderPage(api);
+
+    await waitFor(() => {
+      expect(screen.getByTestId('location')).toHaveTextContent('/portal');
+    });
+    expect(api.registrations.create).not.toHaveBeenCalled();
+  });
 
   it('requires tutorial acknowledgement on /baru before revealing the six competitions', async () => {
     const user = userEvent.setup();

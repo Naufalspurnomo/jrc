@@ -48,6 +48,7 @@ import { encryptRichEmail } from './email-outbox';
 import { buildRegistrationPortalUrl, renderTransactionalEmail } from './email-template';
 
 const MAX_PARTICIPANTS = 3;
+const MAX_REGISTRATIONS_PER_ACCOUNT = 2;
 const REGISTRATION_NUMBER_ATTEMPTS = 5;
 const EDITABLE_STATUSES: RegistrationStatus[] = [
   RegistrationStatus.DRAFT,
@@ -371,28 +372,51 @@ export class RegistrationsService {
     dto: CreateRegistrationDto,
   ): Promise<SerializedRegistration> {
     await this.requireOpenCompetition(dto.competitionId);
-    if (await this.prisma.registration.findUnique({ where: { ownerId }, select: { id: true } })) {
-      throw new BadRequestException('A participant account may own only one registration');
-    }
 
     for (let attempt = 0; attempt < REGISTRATION_NUMBER_ATTEMPTS; attempt += 1) {
       try {
-        const registration = await this.prisma.registration.create({
-          data: {
-            registrationNumber: this.newRegistrationNumber(),
-            ownerId,
-            competitionId: dto.competitionId,
-            teamName: dto.teamName?.trim() ?? '',
-            institution: dto.institution?.trim() ?? '',
-            phone: dto.phone?.trim() || null,
-          },
-          select: registrationSelect,
+        return await this.prisma.$transaction(async (transaction) => {
+          const existingCount = await transaction.registration.count({
+            where: { ownerId },
+          });
+          if (existingCount >= MAX_REGISTRATIONS_PER_ACCOUNT) {
+            throw this.registrationLimitError();
+          }
+
+          const duplicateCompetition = await transaction.registration.findFirst({
+            where: { ownerId, competitionId: dto.competitionId },
+            select: { id: true },
+          });
+          if (duplicateCompetition) {
+            throw this.duplicateCompetitionError();
+          }
+
+          const registration = await transaction.registration.create({
+            data: {
+              registrationNumber: this.newRegistrationNumber(),
+              ownerId,
+              competitionId: dto.competitionId,
+              teamName: dto.teamName?.trim() ?? '',
+              institution: dto.institution?.trim() ?? '',
+              phone: dto.phone?.trim() || null,
+            },
+            select: registrationSelect,
+          });
+          return serializeRegistration(registration);
+        }, {
+          isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
         });
-        return serializeRegistration(registration);
       } catch (error: unknown) {
-        if (this.isUniqueConstraintError(error, 'owner_id')) {
-          throw new BadRequestException('A participant account may own only one registration');
+        if (this.isUniqueConstraintError(error, 'competition_id')) {
+          throw this.duplicateCompetitionError();
         }
+        if (this.isRegistrationLimitConstraintError(error)) {
+          throw this.registrationLimitError();
+        }
+        const retryable =
+          error instanceof Prisma.PrismaClientKnownRequestError &&
+          error.code === 'P2034';
+        if (retryable && attempt < REGISTRATION_NUMBER_ATTEMPTS - 1) continue;
         if (this.isUniqueConstraintError(error, 'registration_number')) continue;
         throw error;
       }
@@ -426,37 +450,58 @@ export class RegistrationsService {
       await this.requireOpenCompetition(dto.competitionId);
     }
 
-    return this.prisma.$transaction(async (transaction) => {
-      const updated = await transaction.registration.updateMany({
-        where: { id, ownerId, status: { in: EDITABLE_STATUSES } },
-        data: {
-          ...(dto.competitionId === undefined
-            ? {}
-            : { competitionId: dto.competitionId }),
-          ...(dto.teamName === undefined
-            ? {}
-            : { teamName: dto.teamName.trim() }),
-          ...(dto.institution === undefined
-            ? {}
-            : { institution: dto.institution.trim() }),
-          ...(dto.phone === undefined
-            ? {}
-            : { phone: dto.phone?.trim() || null }),
-        },
-      });
-      if (updated.count !== 1) {
-        throw new BadRequestException(
-          'Registration is not editable in its current status',
-        );
-      }
+    try {
+      return await this.withSerializableRetry(async (transaction) => {
+        if (dto.competitionId !== undefined) {
+          const duplicateCompetition = await transaction.registration.findFirst({
+            where: {
+              ownerId,
+              competitionId: dto.competitionId,
+              id: { not: id },
+            },
+            select: { id: true },
+          });
+          if (duplicateCompetition) {
+            throw this.duplicateCompetitionError();
+          }
+        }
 
-      const registration = await transaction.registration.findUnique({
-        where: { id },
-        select: registrationSelect,
+        const updated = await transaction.registration.updateMany({
+          where: { id, ownerId, status: { in: EDITABLE_STATUSES } },
+          data: {
+            ...(dto.competitionId === undefined
+              ? {}
+              : { competitionId: dto.competitionId }),
+            ...(dto.teamName === undefined
+              ? {}
+              : { teamName: dto.teamName.trim() }),
+            ...(dto.institution === undefined
+              ? {}
+              : { institution: dto.institution.trim() }),
+            ...(dto.phone === undefined
+              ? {}
+              : { phone: dto.phone?.trim() || null }),
+          },
+        });
+        if (updated.count !== 1) {
+          throw new BadRequestException(
+            'Registration is not editable in its current status',
+          );
+        }
+
+        const registration = await transaction.registration.findUnique({
+          where: { id },
+          select: registrationSelect,
+        });
+        if (!registration) throw new NotFoundException('Registration not found');
+        return serializeRegistration(registration);
       });
-      if (!registration) throw new NotFoundException('Registration not found');
-      return serializeRegistration(registration);
-    });
+    } catch (error: unknown) {
+      if (this.isUniqueConstraintError(error, 'competition_id')) {
+        throw this.duplicateCompetitionError();
+      }
+      throw error;
+    }
   }
 
   async addMember(
@@ -810,6 +855,36 @@ export class RegistrationsService {
     const year = new Date().getUTCFullYear();
     const suffix = randomBytes(5).toString('hex').toUpperCase();
     return `JRC14-${year}-${suffix}`;
+  }
+
+  private duplicateCompetitionError(): BadRequestException {
+    return new BadRequestException({
+      code: 'COMPETITION_ALREADY_REGISTERED',
+      message: 'Akun ini sudah memiliki tim pada cabang lomba tersebut',
+    });
+  }
+
+  private registrationLimitError(): BadRequestException {
+    return new BadRequestException({
+      code: 'REGISTRATION_LIMIT_REACHED',
+      message: 'Satu akun hanya dapat mendaftarkan maksimal dua tim',
+    });
+  }
+
+  private isRegistrationLimitConstraintError(error: unknown): boolean {
+    if (!(error instanceof Error)) return false;
+    const prismaError = error as Error & {
+      code?: string;
+      meta?: { constraint?: unknown; database_error?: unknown };
+    };
+    // PostgreSQL trigger checks may surface as UnknownRequestError, not P2004.
+    if (!(error instanceof Prisma.PrismaClientUnknownRequestError) && prismaError.code !== 'P2004') return false;
+    const details = [
+      prismaError.message,
+      prismaError.meta?.constraint,
+      prismaError.meta?.database_error,
+    ].filter((value): value is string => typeof value === 'string');
+    return details.some((value) => value.includes('registrations_owner_max_two'));
   }
 
   private isUniqueConstraintError(error: unknown, field?: string): boolean {

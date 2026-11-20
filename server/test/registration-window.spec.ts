@@ -141,6 +141,7 @@ describe('draft competition selection window', () => {
     const prisma = {
       competition: { findFirst: vi.fn().mockResolvedValue({ id: COMPETITION_ID }) },
       registration: { findUnique: vi.fn().mockResolvedValue({ id: REGISTRATION_ID }) },
+      $transaction: vi.fn().mockRejectedValue(new BadRequestException('account policy checked')),
     };
     const service = new RegistrationsService(prisma as unknown as PrismaService);
 
