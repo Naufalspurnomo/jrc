@@ -815,6 +815,7 @@ export default function PortalRegistrationPage({ api = registrationApi }: Portal
             <section className="portal-registration-guide" aria-labelledby="registration-guide-title">
               <details open={!tutorialAcknowledged}>
                 <summary><h2 id="registration-guide-title">Tata cara pendaftaran</h2></summary>
+                <p><a className="portal-text-link" href="https://docs.google.com/document/d/1H8fT1GxvrF79tG5Ac4RLy9xiuduZOmok/edit" target="_blank" rel="noopener noreferrer">Buka guidebook pendaftaran <span aria-hidden="true">↗</span></a></p>
                 <ol><li><strong>Buat akun atau masuk, lalu verifikasi email.</strong></li><li><strong>Pilih kompetisi dan simpan draft.</strong> Draft dapat dilengkapi sebelum periode kirim dibuka.</li><li><strong>Lengkapi tim dan dokumen.</strong></li><li><strong>Kirim selama periode pendaftaran.</strong> Dibuka 30 September 2026 pukul 08.00 WIB.</li><li><strong>Tunggu peninjauan.</strong> Bayar hanya setelah invoice diterbitkan panitia.</li></ol>
                 {!tutorialAcknowledged && <button className="portal-button portal-button--primary" type="button" onClick={() => { sessionStorage.setItem(TUTORIAL_ACK_KEY, 'true'); setTutorialAcknowledged(true); }}>Saya sudah memahami alur pendaftaran</button>}
               </details>

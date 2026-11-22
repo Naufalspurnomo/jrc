@@ -151,6 +151,13 @@ describe('PortalRegistrationPage', () => {
     renderPage(api, '/portal/pendaftaran/baru', false);
 
     expect(await screen.findByRole('heading', { name: 'Tata cara pendaftaran' })).toBeInTheDocument();
+    const guidebookLink = screen.getByRole('link', { name: /Buka guidebook pendaftaran/ });
+    expect(guidebookLink).toHaveAttribute(
+      'href',
+      'https://docs.google.com/document/d/1H8fT1GxvrF79tG5Ac4RLy9xiuduZOmok/edit',
+    );
+    expect(guidebookLink).toHaveAttribute('target', '_blank');
+    expect(guidebookLink).toHaveAttribute('rel', 'noopener noreferrer');
     expect(screen.queryByRole('radio')).not.toBeInTheDocument();
     expect(screen.queryByLabelText('Nama tim')).not.toBeInTheDocument();
 
