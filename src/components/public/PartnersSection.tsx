@@ -30,6 +30,14 @@ export function PartnersSection() {
         <div className="patron-court__invitation" data-journey-anchor data-journey-side="left">
           <span>Terbuka untuk kolaborasi</span>
           <p>Hubungi panitia JRC XIV untuk menjadi bagian dari arena ini.</p>
+          <a
+            className="site-action site-action--quiet"
+            href="https://drive.google.com/drive/folders/1wUU6MTmg7fnscY6cFdjcV6impL1-sE94?usp=sharing"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            Lihat sponsor &amp; media partner <span aria-hidden="true">↗</span>
+          </a>
         </div>
       </div>
     </section>

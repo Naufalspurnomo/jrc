@@ -5,6 +5,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import CompetitionPage from '../../pages/CompetitionPage';
 import { FAQSection } from './FAQSection';
+import { PartnersSection } from './PartnersSection';
 import { ShowcaseHero } from './ShowcaseHero';
 
 vi.mock('../../hooks/useScrollReveal', () => ({
@@ -103,6 +104,18 @@ describe('arena presentation', () => {
       'href',
       'https://drive.google.com/drive/folders/16BcdtUUSv1JQzueG_RLt0G_fX7SDFu1t?usp=drive_link',
     );
+  });
+
+  it('exposes the sponsor and media partner folder as an external action', () => {
+    render(<PartnersSection />);
+
+    const link = screen.getByRole('link', { name: /Lihat sponsor & media partner/ });
+    expect(link).toHaveAttribute(
+      'href',
+      'https://drive.google.com/drive/folders/1wUU6MTmg7fnscY6cFdjcV6impL1-sE94?usp=sharing',
+    );
+    expect(link).toHaveAttribute('target', '_blank');
+    expect(link).toHaveAttribute('rel', 'noopener noreferrer');
   });
 
   it('renders every FAQ category contact as its own semantic row', async () => {
