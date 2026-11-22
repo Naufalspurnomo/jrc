@@ -534,32 +534,79 @@
 }
 
 .lower-world .patron-court__opening > span { max-width: 34rem; color: var(--scene-soft); font-weight: 520; line-height: 1.72; }
-.lower-world .patron-court__colonnade { display: grid; grid-template-columns: 1fr; border-top: 1px solid var(--sky-rule); }
+.lower-world .patron-court__showcase { display: grid; gap: clamp(3.5rem, 7vw, 6.5rem); }
 
-.lower-world .patron-court__bay {
-  display: grid;
-  min-height: 0;
-  padding: clamp(1.75rem, 3vw, 2.7rem) 0;
-  grid-template-columns: minmax(0, 1fr) auto;
-  align-items: baseline;
-  gap: 2rem;
-  border: 0;
-  border-bottom: 1px solid var(--sky-rule);
+.lower-world .patron-court__group { display: grid; gap: 1.6rem; }
+
+.lower-world .patron-court__group h3 {
+  margin: 0;
+  color: var(--scene-ink);
+  font-size: clamp(2rem, 3.2vw, 3.45rem);
+  line-height: .9;
+  text-shadow: var(--scene-shadow);
 }
 
-.lower-world .patron-court__bay h3 { margin: 0; font-size: clamp(2rem, 3.2vw, 3.45rem); line-height: .9; }
-.lower-world .patron-court__bay p { margin: 0; }
+.lower-world .patron-court__logos {
+  display: grid;
+  margin: 0;
+  padding: 0;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 9.5rem), 1fr));
+  gap: clamp(.75rem, 1.5vw, 1.15rem);
+  list-style: none;
+}
+
+.lower-world .patron-court__logos li {
+  min-width: 0;
+  border: 1px solid rgb(255 233 190 / 24%);
+  background: rgb(255 248 233 / 94%);
+  box-shadow: 0 .8rem 2rem rgb(23 5 2 / 18%);
+}
+
+.lower-world .patron-court__logos figure {
+  display: grid;
+  height: 100%;
+  margin: 0;
+  grid-template-rows: minmax(8rem, 1fr) auto;
+}
+
+.lower-world .patron-court__logo-frame {
+  display: grid;
+  min-height: 8rem;
+  padding: 1rem;
+  place-items: center;
+}
+
+.lower-world .patron-court__logo-frame img {
+  display: block;
+  width: auto;
+  max-width: 100%;
+  height: auto;
+  max-height: 7rem;
+  object-fit: contain;
+}
+
+.lower-world .patron-court__logos figcaption {
+  padding: .75rem .85rem;
+  border-top: 1px solid rgb(74 18 9 / 12%);
+  color: #4a1209;
+  font: 650 .58rem/1.35 var(--font-mono);
+  letter-spacing: .08em;
+  text-align: center;
+  text-transform: uppercase;
+}
 
 .lower-world .patron-court__invitation {
   display: grid;
   margin-top: 2rem;
   padding-top: 1.75rem;
-  grid-template-columns: minmax(0, .7fr) minmax(0, 1.3fr);
+  grid-template-columns: minmax(0, .7fr) minmax(0, 1.3fr) auto;
+  align-items: center;
   gap: 2rem;
   border: 0;
 }
 
 .lower-world .patron-court__invitation p { margin: 0; color: var(--scene-soft); font-weight: 520; line-height: 1.7; }
+.lower-world .patron-court__invitation .site-action { justify-self: end; }
 
 /* FAQ — bright final clearing; dark ink follows the art instead of adding a panel. */
 .lower-world .faq-section {
@@ -799,8 +846,9 @@
 
   .lower-world .patron-court { min-height: auto; padding: 9rem 0; background-color: transparent; }
   .lower-world .patron-court__opening h2 { font-size: clamp(2.2rem, 10.5vw, 3.8rem); }
-  .lower-world .patron-court__bay { grid-template-columns: 1fr; gap: .85rem; }
   .lower-world .patron-court__invitation { grid-template-columns: 1fr; gap: 1rem; }
+  .lower-world .patron-court__invitation .site-action { justify-self: start; }
+  .lower-world .patron-court__logos { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 
   .lower-world .faq-section {
     min-height: auto;

@@ -106,10 +106,26 @@ describe('arena presentation', () => {
     );
   });
 
-  it('exposes the sponsor and media partner folder as an external action', () => {
+  it('renders the sponsor and media partner logos without placeholders', () => {
     render(<PartnersSection />);
 
-    const link = screen.getByRole('link', { name: /Lihat sponsor & media partner/ });
+    const sponsors = screen.getByRole('list', { name: 'Logo Sponsor JRC XIV' });
+    const mediaPartners = screen.getByRole('list', { name: 'Logo Media Partner JRC XIV' });
+    expect(within(sponsors).getAllByRole('img')).toHaveLength(6);
+    expect(within(mediaPartners).getAllByRole('img')).toHaveLength(12);
+    expect(screen.getByAltText('Logo Akishop Electronics')).toHaveAttribute(
+      'src',
+      '/assets/partners/sponsor/akishop-electronics.webp',
+    );
+    expect(screen.getByAltText('Logo Info Event Jatim')).toHaveAttribute(
+      'src',
+      '/assets/partners/media-partner/info-event-jatim.webp',
+    );
+    expect(screen.queryByText('Akan diumumkan')).not.toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: 'Title Partner' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: 'Strategic Partner' })).not.toBeInTheDocument();
+
+    const link = screen.getByRole('link', { name: /Buka folder logo/ });
     expect(link).toHaveAttribute(
       'href',
       'https://drive.google.com/drive/folders/1wUU6MTmg7fnscY6cFdjcV6impL1-sE94?usp=sharing',

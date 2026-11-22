@@ -250,7 +250,7 @@ export function useScrubTransitions({ disabled = false }: ScrubOptions = {}) {
 
       const partners = document.querySelector<HTMLElement>('.journey-scene--partners');
       const partnerOpening = partners?.querySelector<HTMLElement>('.patron-court__opening');
-      const partnerBays = partners?.querySelectorAll<HTMLElement>('.patron-court__bay');
+      const partnerBays = partners?.querySelectorAll<HTMLElement>('.patron-court__group');
       const partnerInvite = partners?.querySelector<HTMLElement>('.patron-court__invitation');
       if (partners && partnerOpening) createSceneMotion({ trigger: partners, targets: partnerOpening });
       if (partners && partnerBays?.length) createSceneMotion({
