@@ -9,6 +9,7 @@ type CompetitionForSerialization = {
   eventName: string;
   fee: number;
   currency: string;
+  registrationOpenAt: Date;
   registrationDeadline: Date;
   [key: string]: unknown;
 };
@@ -25,6 +26,8 @@ export function serializeCompetition(competition: CompetitionForSerialization) {
     eventName: competition.eventName,
     fee: competition.fee,
     currency: competition.currency,
+    registrationOpenAt: competition.registrationOpenAt.toISOString(),
     registrationDeadline: competition.registrationDeadline.toISOString(),
+    serverTime: new Date().toISOString(),
   };
 }

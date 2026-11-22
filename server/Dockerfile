@@ -12,23 +12,47 @@ RUN npm ci
 COPY . .
 RUN npx prisma generate \
     && npm run build \
-    && test -f dist/src/main.js
+    && npx tsc --project tsconfig.seed.json \
+    && test -f dist/src/main.js \
+    && test -f dist/prisma/seed.js
 
-FROM build AS migration
+FROM build AS migration-dependencies
 
-RUN chown node:node /app/package.json /app/package-lock.json \
-    && chown -R node:node /app/prisma
+RUN npm prune --omit=optional \
+    && npm cache clean --force
+
+FROM node:22-bookworm-slim AS migration
+
+ARG RELEASE_SHA=unknown
+LABEL org.opencontainers.image.revision="${RELEASE_SHA}"
+
+ENV NODE_ENV=production
+WORKDIR /app
+
+RUN apt-get update \
+    && apt-get install --no-install-recommends -y openssl tini \
+    && rm -rf /var/lib/apt/lists/*
+
+COPY --from=migration-dependencies --chown=node:node /app/package.json ./
+COPY --from=migration-dependencies --chown=node:node /app/node_modules ./node_modules
+COPY --from=build --chown=node:node /app/prisma ./prisma
+COPY --from=build --chown=node:node /app/dist/prisma ./dist/prisma
 
 USER node
 
-CMD ["npx", "prisma", "migrate", "deploy"]
+ENTRYPOINT ["tini", "--", "sh", "-c", "case \"${1:-migrate}\" in migrate) exec npx --no-install prisma migrate deploy ;; seed) exec node dist/prisma/seed.js ;; *) echo 'Usage: migrate | seed' >&2; exit 64 ;; esac", "jrc-migration"]
+CMD ["migrate"]
 
 FROM build AS runtime-dependencies
 
 RUN npm prune --omit=dev --omit=optional \
+    && rm -rf node_modules/prisma node_modules/@prisma/config node_modules/deepmerge-ts \
     && npm cache clean --force
 
 FROM node:22-bookworm-slim AS production
+
+ARG RELEASE_SHA=unknown
+LABEL org.opencontainers.image.revision="${RELEASE_SHA}"
 
 ENV NODE_ENV=production \
     PORT=3000
@@ -41,9 +65,10 @@ RUN apt-get update \
     && mkdir -p /app/storage \
     && chown node:node /app/storage
 
-COPY --from=runtime-dependencies --chown=node:node /app/package.json /app/package-lock.json ./
+COPY --from=runtime-dependencies --chown=node:node /app/package.json ./
 COPY --from=runtime-dependencies --chown=node:node /app/node_modules ./node_modules
-COPY --from=build --chown=node:node /app/dist ./dist
+COPY --from=build --chown=node:node /app/dist/src ./dist/src
+COPY --from=build --chown=node:node /app/assets ./assets
 
 USER node
 

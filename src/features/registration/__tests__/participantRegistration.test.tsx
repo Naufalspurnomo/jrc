@@ -1,21 +1,27 @@
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { MemoryRouter, Route, Routes } from 'react-router-dom';
-import { describe, expect, it, vi } from 'vitest';
+import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { AuthProvider } from '../../auth/AuthProvider';
 import PortalRegistrationPage from '../../../pages/portal/PortalRegistrationPage';
 import type {
   CompetitionRecord,
   RegistrationApi,
+  RegistrationDocumentRecord,
   RegistrationRecord,
   TeamMemberRecord,
 } from '../api';
 
-const competition: CompetitionRecord = {
-  id: 'competition-1',
-  name: 'Ring Rumble — Sumo',
-  level: 'Nasional',
-};
+const competitions: CompetitionRecord[] = [
+  { id: 'competition-1', name: 'Castra Guardian', level: 'SD' },
+  { id: 'competition-2', name: 'Robo Chiper', level: 'SMP' },
+  { id: 'competition-3', name: 'Aquaduct Romana', level: 'SMA' },
+  { id: 'competition-4', name: 'Chariot Line', level: 'Umum' },
+  { id: 'competition-5', name: 'Colosseum Clash', level: 'Umum' },
+  { id: 'competition-6', name: 'Harpastum Arena', level: 'Umum' },
+];
+const competition = competitions[4];
 
 function registration(overrides: Partial<RegistrationRecord> = {}): RegistrationRecord {
   return {
@@ -40,11 +46,27 @@ function createApi(overrides: Partial<RegistrationApi['registrations']> = {}): R
   let memberNumber = 0;
 
   return {
+    auth: {
+      me: vi.fn().mockResolvedValue({
+        user: {
+          id: 'user-1',
+          email: 'ari@example.test',
+          displayName: 'Ari Wijaya',
+          role: 'PARTICIPANT',
+          emailVerified: true,
+        },
+      }),
+      login: vi.fn(),
+      register: vi.fn(),
+      logout: vi.fn(),
+      verifyEmail: vi.fn(),
+      resendEmailVerification: vi.fn(),
+    },
     competitions: {
-      list: vi.fn().mockResolvedValue([competition]),
+      list: vi.fn().mockResolvedValue(competitions),
     },
     registrations: {
-      list: vi.fn(),
+      list: vi.fn().mockResolvedValue([]),
       get: vi.fn().mockResolvedValue(registration()),
       create: vi.fn().mockResolvedValue(created),
       update: vi.fn().mockResolvedValue(created),
@@ -66,51 +88,420 @@ function createApi(overrides: Partial<RegistrationApi['registrations']> = {}): R
   } as unknown as RegistrationApi;
 }
 
-function renderPage(api: RegistrationApi, entry = '/portal/pendaftaran/baru') {
+function renderPage(api: RegistrationApi, entry = '/portal/pendaftaran/baru', acknowledgeTutorial = true) {
+  if (acknowledgeTutorial) {
+    sessionStorage.setItem('jrc-registration-flow-acknowledged', 'true');
+  }
   return render(
     <MemoryRouter initialEntries={[entry]}>
-      <Routes>
-        <Route path="/portal" element={<h1>Portal peserta</h1>} />
-        <Route path="/portal/pendaftaran" element={<PortalRegistrationPage api={api} />} />
-        <Route path="/portal/pendaftaran/:registrationId" element={<PortalRegistrationPage api={api} />} />
-      </Routes>
+      <AuthProvider api={api}>
+        <Routes>
+          <Route path="/portal" element={<h1>Portal peserta</h1>} />
+          <Route path="/portal/pendaftaran/baru" element={<PortalRegistrationPage api={api} />} />
+          <Route path="/portal/pendaftaran/:registrationId" element={<PortalRegistrationPage api={api} />} />
+        </Routes>
+        <LocationProbe />
+      </AuthProvider>
     </MemoryRouter>,
   );
 }
 
+function LocationProbe() {
+  const location = useLocation();
+  return <span data-testid="location">{location.pathname}</span>;
+}
+
 describe('PortalRegistrationPage', () => {
-  it('creates the registration before adding leader and dynamic members with backend-supported fields', async () => {
+  beforeEach(() => sessionStorage.clear());
+
+  it('excludes the competition already used by the first team when creating a second team', async () => {
+    const firstRegistration = registration({
+      id: 'registration-first',
+      competitionId: 'competition-1',
+      competition: { id: 'competition-1', name: 'Castra Guardian' },
+    });
+    const api = createApi({ list: vi.fn().mockResolvedValue([firstRegistration]) });
+
+    renderPage(api);
+
+    expect(await screen.findByRole('radio', { name: /Robo Chiper/i })).toBeInTheDocument();
+    expect(screen.queryByRole('radio', { name: /Castra Guardian/i })).not.toBeInTheDocument();
+    expect(api.registrations.list).toHaveBeenCalledOnce();
+  });
+
+  it('redirects to the dashboard instead of offering a third registration', async () => {
+    const api = createApi({
+      list: vi.fn().mockResolvedValue([
+        registration({ id: 'registration-first', competitionId: 'competition-1' }),
+        registration({ id: 'registration-second', competitionId: 'competition-2' }),
+      ]),
+    });
+
+    renderPage(api);
+
+    await waitFor(() => {
+      expect(screen.getByTestId('location')).toHaveTextContent('/portal');
+    });
+    expect(api.registrations.create).not.toHaveBeenCalled();
+  });
+
+  it('requires tutorial acknowledgement on /baru before revealing the six competitions', async () => {
+    const user = userEvent.setup();
+    const api = createApi();
+    renderPage(api, '/portal/pendaftaran/baru', false);
+
+    expect(await screen.findByRole('heading', { name: 'Tata cara pendaftaran' })).toBeInTheDocument();
+    expect(screen.queryByRole('radio')).not.toBeInTheDocument();
+    expect(screen.queryByLabelText('Nama tim')).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'Saya sudah memahami alur pendaftaran' }));
+
+    expect(await screen.findAllByRole('radio')).toHaveLength(6);
+    expect(sessionStorage.getItem('jrc-registration-flow-acknowledged')).toBe('true');
+  });
+
+  it('allows draft editing before opening while keeping submission locked', async () => {
+    const user = userEvent.setup();
+    const api = createApi();
+    vi.mocked(api.competitions.list).mockResolvedValue(competitions.map((item) => ({
+      ...item,
+      registrationOpenAt: '2026-09-30T01:00:00.000Z',
+      registrationDeadline: '2026-11-21T16:59:59.000Z',
+      serverTime: '2026-09-29T01:00:00.000Z',
+      registrationStatus: 'UPCOMING' as const,
+    })));
+    renderPage(api);
+
+    await user.click(await screen.findByRole('radio', { name: 'Umum · Colosseum Clash' }));
+    const teamName = await screen.findByLabelText('Nama tim');
+    await user.type(teamName, 'Nova');
+    await user.click(screen.getByRole('button', { name: 'Simpan sekarang' }));
+
+    expect(screen.getByText(/Tombol kirim aktif 30 September 2026 pukul 08\.00 WIB/)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Kirim pendaftaran' })).toBeDisabled();
+    await waitFor(() => expect(api.registrations.update).toHaveBeenCalled());
+  });
+
+  it('keeps an existing draft deep link accessible without tutorial acknowledgement', async () => {
+    const api = createApi();
+    renderPage(api, '/portal/pendaftaran/registration-1', false);
+
+    expect(await screen.findByLabelText('Nama tim')).toHaveValue('Garuda Robotika');
+    expect(screen.getAllByRole('radio')).toHaveLength(6);
+    expect(screen.queryByRole('button', { name: 'Saya sudah memahami alur pendaftaran' })).not.toBeInTheDocument();
+    expect(sessionStorage.getItem('jrc-registration-flow-acknowledged')).toBeNull();
+  });
+
+  it('uses level-specific required document categories for Umum and SD', async () => {
+    const umumApi = createApi();
+    const { unmount } = renderPage(umumApi, '/portal/pendaftaran/registration-1', false);
+
+    await screen.findByDisplayValue('Garuda Robotika');
+    const umumChecklist = screen.getByRole('list', { name: 'Kelengkapan dokumen wajib' });
+    expect(umumChecklist.children).toHaveLength(4);
+    expect(umumChecklist).not.toHaveTextContent('Surat rekomendasi');
+    expect(screen.getByLabelText('Kategori dokumen')).not.toHaveDisplayValue('Surat rekomendasi');
+    expect(screen.queryByRole('option', { name: 'Surat rekomendasi' })).not.toBeInTheDocument();
+    unmount();
+
+    const sdCompetition = competitions[0];
+    const sdApi = createApi({
+      get: vi.fn().mockResolvedValue(registration({
+        competitionId: sdCompetition.id,
+        competition: { id: sdCompetition.id, name: sdCompetition.name },
+      })),
+    });
+    renderPage(sdApi, '/portal/pendaftaran/registration-1', false);
+
+    await screen.findByRole('radio', { name: 'SD · Castra Guardian' });
+    const sdChecklist = screen.getByRole('list', { name: 'Kelengkapan dokumen wajib' });
+    expect(sdChecklist.children).toHaveLength(5);
+    expect(sdChecklist).toHaveTextContent('Surat rekomendasi');
+    expect(screen.getByRole('option', { name: 'Surat rekomendasi' })).toBeInTheDocument();
+  });
+
+  it('shows a load alert and retries competition loading without creating a registration', async () => {
+    const user = userEvent.setup();
+    const api = createApi();
+    vi.mocked(api.competitions.list).mockRejectedValueOnce(new Error('network error'));
+    renderPage(api);
+
+    const alert = await screen.findByRole('alert');
+    expect(alert).toHaveTextContent('Pendaftaran gagal dimuat. Silakan coba lagi.');
+    expect(screen.queryByRole('radio')).not.toBeInTheDocument();
+    expect(screen.queryByLabelText('Nama tim')).not.toBeInTheDocument();
+    expect(api.registrations.create).not.toHaveBeenCalled();
+    expect(api.registrations.update).not.toHaveBeenCalled();
+
+    await user.click(screen.getByRole('button', { name: 'Coba lagi' }));
+
+    expect(await screen.findAllByRole('radio')).toHaveLength(competitions.length);
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+    expect(api.competitions.list).toHaveBeenCalledTimes(2);
+    expect(screen.queryByLabelText('Nama tim')).not.toBeInTheDocument();
+    expect(api.registrations.create).not.toHaveBeenCalled();
+    expect(api.registrations.update).not.toHaveBeenCalled();
+  });
+
+  it('shows an accessible empty state without revealing or creating a registration', async () => {
+    const api = createApi();
+    vi.mocked(api.competitions.list).mockResolvedValueOnce([]);
+    renderPage(api);
+
+    const emptyState = await screen.findByRole('status');
+    expect(emptyState).toHaveTextContent('Belum ada kompetisi aktif.');
+    expect(screen.queryByRole('radio')).not.toBeInTheDocument();
+    expect(screen.queryByLabelText('Nama tim')).not.toBeInTheDocument();
+    expect(api.registrations.create).not.toHaveBeenCalled();
+    expect(api.registrations.update).not.toHaveBeenCalled();
+  });
+
+  it('starts with six accessible competition cards and makes no registration request before a choice', async () => {
     const user = userEvent.setup();
     const api = createApi();
     renderPage(api);
 
-    expect(await screen.findByRole('option', { name: 'Nasional · Ring Rumble — Sumo' })).toBeInTheDocument();
-    await user.type(screen.getByLabelText('Nama tim'), 'Nova');
+    expect(await screen.findByRole('heading', { name: 'Pilih kompetisi JRC XIV' })).toBeInTheDocument();
+    for (const availableCompetition of competitions) {
+      expect(screen.getByRole('radio', {
+        name: `${availableCompetition.level} · ${availableCompetition.name}`,
+      })).toBeInTheDocument();
+    }
+    expect(screen.queryByLabelText('Nama tim')).not.toBeInTheDocument();
+    expect(screen.queryByRole('combobox', { name: 'Kompetisi' })).not.toBeInTheDocument();
+    expect(api.registrations.create).not.toHaveBeenCalled();
+    expect(api.registrations.update).not.toHaveBeenCalled();
+
+    const selectedCompetition = competitions[1];
+    await user.click(screen.getByRole('radio', {
+      name: `${selectedCompetition.level} · ${selectedCompetition.name}`,
+    }));
+
+    // Choosing a competition is what creates the draft; the form opens with it.
+    expect(await screen.findByLabelText('Nama tim')).toBeInTheDocument();
+    await waitFor(() => expect(api.registrations.create).toHaveBeenCalledWith({
+      competitionId: selectedCompetition.id,
+    }));
+  });
+
+  it('shows official details for the selected competition and updates them when selection changes', async () => {
+    const user = userEvent.setup();
+    const api = createApi();
+    vi.mocked(api.competitions.list).mockResolvedValueOnce(competitions.map((item, index) => ({
+      ...item,
+      slug: [
+        'donatopia-transporter',
+        'nightmaze-rescue-transporter',
+        'pirate-clash-transporter-shooter',
+        'wacky-rally-line-follower-mikro',
+        'ring-rumble-sumo',
+        'goal-rush-soccer',
+      ][index],
+    })));
+    renderPage(api);
+
+    await user.click(await screen.findByRole('radio', { name: 'Umum · Colosseum Clash' }));
+
+    const details = await screen.findByRole('region', { name: 'Detail kompetisi Colosseum Clash' });
+    expect(details).toHaveTextContent('Umum · Colosseum Clash');
+    expect(details).toHaveTextContent('Jenis lomba');
+    expect(details).toHaveTextContent('Sumo');
+    expect(details).toHaveTextContent('Pertarungan robot sumo yang menempatkan traksi, deteksi lawan, konstruksi, dan strategi dalam satu lingkar arena.');
+    expect(details).toHaveTextContent('Tantangan utama');
+    expect(details).toHaveTextContent('Mendorong lawan keluar ring melalui desain tangguh dan strategi kendali yang disiplin.');
+
+    await user.click(screen.getByRole('radio', { name: 'Umum · Harpastum Arena' }));
+
+    expect(await screen.findByRole('region', { name: 'Detail kompetisi Harpastum Arena' })).toHaveTextContent(
+      'Sepak bola robot sebagai ujian integrasi gerak, pembacaan situasi, dan eksekusi strategi di arena dinamis.',
+    );
+    expect(screen.queryByText('Mendorong lawan keluar ring melalui desain tangguh dan strategi kendali yang disiplin.')).not.toBeInTheDocument();
+  });
+
+  it('uses a roving tab stop and selects competitions with wrapped radio keyboard navigation', async () => {
+    const user = userEvent.setup();
+    const api = createApi();
+    renderPage(api);
+
+    let competitionCards = await screen.findAllByRole('radio');
+    expect(competitionCards).toHaveLength(competitions.length);
+    expect(competitionCards.map((card) => card.tabIndex)).toEqual([0, -1, -1, -1, -1, -1]);
+
+    competitionCards[0].focus();
+    await user.keyboard('{ArrowRight}');
+    expect(competitionCards[1]).toHaveFocus();
+    expect(competitionCards[1]).toHaveAttribute('aria-checked', 'true');
+    expect(competitionCards.map((card) => card.tabIndex)).toEqual([-1, 0, -1, -1, -1, -1]);
+    expect(await screen.findByLabelText('Nama tim')).toBeInTheDocument();
+
+    await user.keyboard('{ArrowDown}');
+    await waitFor(() => expect(screen.getAllByRole('radio')[2]).toHaveFocus());
+    competitionCards = screen.getAllByRole('radio');
+    expect(competitionCards[2]).toHaveAttribute('aria-checked', 'true');
+
+    await user.keyboard('{ArrowLeft}');
+    await waitFor(() => expect(screen.getAllByRole('radio')[1]).toHaveFocus());
+    competitionCards = screen.getAllByRole('radio');
+    expect(competitionCards[1]).toHaveAttribute('aria-checked', 'true');
+
+    await user.keyboard('{ArrowUp}');
+    await waitFor(() => expect(screen.getAllByRole('radio')[0]).toHaveFocus());
+    competitionCards = screen.getAllByRole('radio');
+    expect(competitionCards[0]).toHaveAttribute('aria-checked', 'true');
+
+    await user.keyboard('{ArrowLeft}');
+    await waitFor(() => expect(screen.getAllByRole('radio')[5]).toHaveFocus());
+    competitionCards = screen.getAllByRole('radio');
+    expect(competitionCards[5]).toHaveAttribute('aria-checked', 'true');
+
+    await user.keyboard('{ArrowRight}');
+    await waitFor(() => expect(screen.getAllByRole('radio')[0]).toHaveFocus());
+    competitionCards = screen.getAllByRole('radio');
+    expect(competitionCards[0]).toHaveAttribute('aria-checked', 'true');
+
+    await user.keyboard('{End}');
+    await waitFor(() => expect(screen.getAllByRole('radio')[5]).toHaveFocus());
+    competitionCards = screen.getAllByRole('radio');
+    expect(competitionCards[5]).toHaveAttribute('aria-checked', 'true');
+
+    await user.keyboard('{Home}');
+    await waitFor(() => expect(screen.getAllByRole('radio')[0]).toHaveFocus());
+    competitionCards = screen.getAllByRole('radio');
+    expect(competitionCards[0]).toHaveAttribute('aria-checked', 'true');
+    // Exactly one draft is created, no matter how many times the choice changes.
+    expect(api.registrations.create).toHaveBeenCalledTimes(1);
+  });
+
+  it('creates the draft on competition choice, then autosaves members with backend-supported fields', async () => {
+    const user = userEvent.setup();
+    const api = createApi();
+    renderPage(api);
+
+    const competitionCard = await screen.findByRole('radio', { name: 'Umum · Colosseum Clash' });
+    await user.click(competitionCard);
+
+    // The draft is created by the choice alone, before any typing.
+    await waitFor(() => expect(api.registrations.create).toHaveBeenCalledWith({
+      competitionId: competition.id,
+    }));
+
+    await user.type(await screen.findByLabelText('Nama tim'), 'Nova');
     await user.type(screen.getByLabelText('Institusi'), 'ITS');
     await user.type(screen.getByLabelText('Nomor WhatsApp tim'), '081234567890');
-    await user.selectOptions(screen.getByLabelText('Kompetisi'), competition.id);
     await user.type(screen.getByLabelText('Nama ketua'), 'Ari Wijaya');
     await user.type(screen.getByLabelText('NIS/NIM ketua'), '5025211001');
     await user.click(screen.getByRole('button', { name: 'Tambah anggota' }));
     await user.type(screen.getByLabelText('Nama anggota 1'), 'Bima Putra');
     await user.type(screen.getByLabelText('NIS/NIM anggota 1'), '5025211002');
-    await user.click(screen.getByRole('button', { name: 'Simpan draft' }));
 
-    await waitFor(() => expect(api.registrations.create).toHaveBeenCalledWith({
-      competitionId: competition.id,
-      teamName: 'Nova',
-      institution: 'ITS',
-      phone: '081234567890',
-    }));
-    expect(api.registrations.addMember).toHaveBeenNthCalledWith(1, 'registration-1', {
+    // Typing is persisted without an explicit save action.
+    await waitFor(() => expect(api.registrations.update).toHaveBeenCalledWith(
+      'registration-1',
+      expect.objectContaining({ teamName: 'Nova', institution: 'ITS' }),
+    ));
+    await waitFor(() => expect(api.registrations.addMember).toHaveBeenCalledWith('registration-1', {
       name: 'Ari Wijaya',
+      role: 'LEADER',
       studentId: '5025211001',
-    });
-    expect(api.registrations.addMember).toHaveBeenNthCalledWith(2, 'registration-1', {
+    }));
+    await waitFor(() => expect(api.registrations.addMember).toHaveBeenCalledWith('registration-1', {
       name: 'Bima Putra',
+      role: 'MEMBER',
       studentId: '5025211002',
+    }));
+    expect(competitionCard).toHaveAttribute('aria-checked', 'true');
+  });
+
+  it('moves /baru to the saved draft URL so a reload cannot create a second registration', async () => {
+    const user = userEvent.setup();
+    const api = createApi();
+    renderPage(api);
+
+    const competitionCard = await screen.findByRole('radio', { name: 'Umum · Colosseum Clash' });
+    await user.click(competitionCard);
+
+    await waitFor(() => expect(api.registrations.create).toHaveBeenCalledTimes(1));
+    await waitFor(() => expect(screen.getByTestId('location')).toHaveTextContent(
+      '/portal/pendaftaran/registration-1',
+    ));
+  });
+
+  it('preloads and displays the selected competition when editing a draft', async () => {
+    const api = createApi({
+      get: vi.fn().mockResolvedValue(registration()),
     });
-    expect(await screen.findByRole('status')).toHaveTextContent('Pendaftaran tersimpan.');
+    renderPage(api, '/portal/pendaftaran/registration-1');
+
+    const selectedCompetition = await screen.findByRole('radio', { name: 'Umum · Colosseum Clash' });
+    expect(selectedCompetition).toHaveAttribute('aria-checked', 'true');
+    expect(selectedCompetition).toHaveAttribute('tabindex', '0');
+    expect(screen.getAllByRole('radio').filter((card) => card.tabIndex === 0)).toEqual([selectedCompetition]);
+    expect(screen.getByText('Kompetisi terpilih')).toBeInTheDocument();
+    expect(screen.getByLabelText('Nama tim')).toHaveValue('Garuda Robotika');
+    expect(api.registrations.create).not.toHaveBeenCalled();
+  });
+
+  it('keeps competition choices disabled when the registration is not editable', async () => {
+    const user = userEvent.setup();
+    const api = createApi({
+      get: vi.fn().mockResolvedValue(registration({ status: 'SUBMITTED' })),
+    });
+    renderPage(api, '/portal/pendaftaran/registration-1');
+
+    const competitionCards = await screen.findAllByRole('radio');
+    competitionCards.forEach((card) => expect(card).toBeDisabled());
+    await user.click(competitionCards[0]);
+
+    expect(competitionCards[0]).toHaveAttribute('aria-checked', 'false');
+    expect(competitionCards[4]).toHaveAttribute('aria-checked', 'true');
+    expect(api.registrations.create).not.toHaveBeenCalled();
+    expect(api.registrations.update).not.toHaveBeenCalled();
+  });
+
+  it('derives member photo choices and completion status from the roster', async () => {
+    const user = userEvent.setup();
+    const api = createApi({
+      get: vi.fn().mockResolvedValue(registration({
+        members: [
+          { id: 'leader-1', name: 'Ari Wijaya', role: 'LEADER' },
+          { id: 'member-1', name: 'Bima Putra', role: 'MEMBER' },
+          { id: 'supervisor-1', name: 'Citra Dewi', role: 'SUPERVISOR' },
+        ],
+        documents: [{
+          id: 'photo-1', category: 'member_photo', originalName: 'ari.jpg', mimeType: 'image/jpeg', size: 100,
+          subjectName: 'ARI WIJAYA', subjectRole: 'PARTICIPANT',
+        }],
+      })),
+    });
+    renderPage(api, '/portal/pendaftaran/registration-1');
+
+    await screen.findByDisplayValue('Garuda Robotika');
+    await user.selectOptions(screen.getByLabelText('Kategori dokumen'), 'MEMBER_PHOTO');
+
+    expect(screen.queryByLabelText('Nama lengkap pemilik foto')).not.toBeInTheDocument();
+    expect(screen.queryByLabelText('Jabatan')).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Ari Wijaya.*Ketua.*Foto lengkap/i })).toBeDisabled();
+    const member = screen.getByRole('button', { name: /Bima Putra.*Peserta.*Belum ada foto/i });
+    await user.click(member);
+    expect(member).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getByLabelText('Berkas dokumen')).toBeEnabled();
+    expect(screen.getByRole('button', { name: /Citra Dewi.*Pembina.*Belum ada foto/i })).toBeEnabled();
+  });
+
+  it('keeps the chosen file visible in the file input until it is uploaded', async () => {
+    const user = userEvent.setup();
+    const api = createApi();
+    renderPage(api, '/portal/pendaftaran/registration-1');
+
+    await screen.findByDisplayValue('Garuda Robotika');
+    const input = screen.getByLabelText('Berkas dokumen') as HTMLInputElement;
+    const file = new File(['%PDF-test'], 'kartu-mahasiswa.pdf', { type: 'application/pdf' });
+    await user.upload(input, file);
+
+    // The input must not be remounted on selection, otherwise the browser resets
+    // it to "No file chosen" and the user cannot tell a file is staged.
+    expect(screen.getByLabelText('Berkas dokumen')).toBe(input);
+    expect(input.files?.[0]).toBe(file);
   });
 
   it('uploads a categorized document then refreshes and displays safe metadata', async () => {
@@ -123,7 +514,7 @@ describe('PortalRegistrationPage', () => {
     };
     const document = {
       id: 'document-1',
-      category: 'STUDENT_CARD',
+      category: 'IDENTITY_CARD',
       originalName: 'kartu-mahasiswa.pdf',
       mimeType: 'application/pdf',
       size: 2_048,
@@ -137,7 +528,7 @@ describe('PortalRegistrationPage', () => {
     renderPage(api, '/portal/pendaftaran/registration-1');
 
     await screen.findByDisplayValue('Garuda Robotika');
-    await user.selectOptions(screen.getByLabelText('Kategori dokumen'), 'STUDENT_CARD');
+    await user.selectOptions(screen.getByLabelText('Kategori dokumen'), 'IDENTITY_CARD');
     const file = new File(['%PDF-test'], 'kartu-mahasiswa.pdf', { type: 'application/pdf' });
     await user.upload(screen.getByLabelText('Berkas dokumen'), file);
     await user.click(screen.getByRole('button', { name: 'Unggah dokumen' }));
@@ -145,7 +536,7 @@ describe('PortalRegistrationPage', () => {
     await waitFor(() => expect(uploadDocument).toHaveBeenCalledTimes(1));
     const formData = uploadDocument.mock.calls[0][1] as FormData;
     expect(uploadDocument).toHaveBeenCalledWith('registration-1', expect.any(FormData));
-    expect(formData.get('category')).toBe('STUDENT_CARD');
+    expect(formData.get('category')).toBe('IDENTITY_CARD');
     expect(formData.get('file')).toBe(file);
     expect(get).toHaveBeenCalledTimes(2);
     expect(await screen.findByText('kartu-mahasiswa.pdf')).toBeInTheDocument();
@@ -182,8 +573,8 @@ describe('PortalRegistrationPage', () => {
     const memberEmail = screen.getByLabelText('Email anggota 1');
     await user.clear(memberEmail);
     await user.type(memberEmail, 'bima.baru@example.test');
-    await user.click(screen.getByRole('button', { name: 'Simpan draft' }));
 
+    // Edits persist through autosave; no explicit save action is needed.
     await waitFor(() => expect(api.registrations.updateMember).toHaveBeenCalledTimes(2));
     expect(api.registrations.updateMember).toHaveBeenNthCalledWith(1, 'registration-1', 'leader-1', {
       name: 'Ari Baru',
@@ -197,6 +588,117 @@ describe('PortalRegistrationPage', () => {
       email: 'bima.baru@example.test',
       phone: '+62 812 2222 2222',
     });
+  });
+
+  it('clears persisted optional member fields explicitly', async () => {
+    const user = userEvent.setup();
+    const member: TeamMemberRecord = {
+      id: 'member-1',
+      name: 'Bima Putra',
+      studentId: '5025211002',
+      email: 'bima@example.test',
+      phone: '+62 812 2222 2222',
+      role: 'MEMBER',
+    };
+    const api = createApi({
+      get: vi.fn().mockResolvedValue(registration({ members: [member] })),
+    });
+    renderPage(api, '/portal/pendaftaran/registration-1');
+
+    await user.clear(await screen.findByLabelText('NIS/NIM anggota 1'));
+    await user.clear(screen.getByLabelText('Email anggota 1'));
+    await user.clear(screen.getByLabelText('Nomor telepon anggota 1'));
+
+    await waitFor(() => expect(api.registrations.updateMember).toHaveBeenCalledWith(
+      'registration-1',
+      'member-1',
+      { name: 'Bima Putra', studentId: null, email: null, phone: null },
+    ));
+  });
+
+  it('waits for a competition change before submitting', async () => {
+    const user = userEvent.setup();
+    let resolveCompetitionUpdate: (() => void) | undefined;
+    const update = vi.fn().mockImplementation((_registrationId, input) => {
+      if ('competitionId' in input) {
+        return new Promise<RegistrationRecord>((resolve) => {
+          resolveCompetitionUpdate = () => resolve(registration({ competitionId: input.competitionId }));
+        });
+      }
+      return Promise.resolve(registration());
+    });
+    let resolveSubmit: (() => void) | undefined;
+    const submit = vi.fn().mockImplementation(() => new Promise<RegistrationRecord>((resolve) => {
+      resolveSubmit = () => resolve(registration({ status: 'SUBMITTED' }));
+    }));
+    const leader: TeamMemberRecord = {
+      id: 'leader-1',
+      name: 'Ari Wijaya',
+      studentId: '5025211001',
+      role: 'LEADER',
+    };
+    const supervisor: TeamMemberRecord = {
+      id: 'supervisor-1',
+      name: 'Citra Dewi',
+      role: 'SUPERVISOR',
+    };
+    const documents: RegistrationDocumentRecord[] = [
+      'IDENTITY_CARD',
+      'REGISTRATION_FORM',
+      'TEAM_PHOTO',
+      'TWIBBON_PROOF',
+    ].map((category, index) => ({
+      id: `document-${index}`,
+      category,
+      originalName: `${category}.pdf`,
+      mimeType: 'application/pdf',
+      size: 100,
+    }));
+    documents.push(
+      {
+        id: 'leader-photo',
+        category: 'MEMBER_PHOTO',
+        originalName: 'ari.jpg',
+        mimeType: 'image/jpeg',
+        size: 100,
+        subjectName: 'Ari Wijaya',
+        subjectRole: 'PARTICIPANT',
+      },
+      {
+        id: 'supervisor-photo',
+        category: 'MEMBER_PHOTO',
+        originalName: 'citra.jpg',
+        mimeType: 'image/jpeg',
+        size: 100,
+        subjectName: 'Citra Dewi',
+        subjectRole: 'SUPERVISOR',
+      },
+    );
+    const api = createApi({
+      update,
+      submit,
+      get: vi.fn().mockResolvedValue(registration({ members: [leader, supervisor], documents })),
+    });
+    renderPage(api, '/portal/pendaftaran/registration-1');
+
+    const competitionButton = await screen.findByRole('radio', { name: 'Umum · Chariot Line' });
+    await user.click(competitionButton);
+    await waitFor(() => expect(update).toHaveBeenCalledWith(
+      'registration-1',
+      { competitionId: 'competition-4' },
+    ));
+    await user.click(screen.getByRole('button', { name: 'Kirim pendaftaran' }));
+    expect(submit).not.toHaveBeenCalled();
+
+    expect(resolveCompetitionUpdate).toBeTypeOf('function');
+    resolveCompetitionUpdate?.();
+    await waitFor(() => expect(submit).toHaveBeenCalledWith('registration-1'));
+    expect(screen.getAllByRole('radio').every((radio) => radio.hasAttribute('disabled'))).toBe(true);
+    await user.click(screen.getByRole('radio', { name: 'Umum · Harpastum Arena' }));
+    expect(update).not.toHaveBeenCalledWith('registration-1', { competitionId: 'competition-6' });
+    expect(resolveSubmit).toBeTypeOf('function');
+    resolveSubmit?.();
+    await waitFor(() => expect(screen.getByTestId('location')).toHaveTextContent('/portal'));
   });
 
   it('removes a persisted non-leader only after the API succeeds', async () => {

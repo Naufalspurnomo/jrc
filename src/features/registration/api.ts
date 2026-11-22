@@ -1,3 +1,7 @@
+import { apiUrl } from './apiOrigin';
+
+export { apiUrl } from './apiOrigin';
+
 export const API_PATHS = {
   auth: {
     csrf: '/api/auth/csrf',
@@ -5,6 +9,10 @@ export const API_PATHS = {
     register: '/api/auth/register',
     login: '/api/auth/login',
     logout: '/api/auth/logout',
+    verifyEmail: '/api/auth/email-verification/verify',
+    resendEmailVerification: '/api/auth/email-verification/resend',
+    forgotPassword: '/api/auth/password/forgot',
+    resetPassword: '/api/auth/password/reset',
   },
   competitions: '/api/competitions',
   registrations: {
@@ -17,6 +25,8 @@ export const API_PATHS = {
     invoice: (registrationId: string) => `/api/registrations/${encodeURIComponent(registrationId)}/invoice`,
     ticket: (registrationId: string) => `/api/registrations/${encodeURIComponent(registrationId)}/ticket`,
     documents: (registrationId: string) => `/api/registrations/${encodeURIComponent(registrationId)}/documents`,
+    document: (registrationId: string, documentId: string) =>
+      `/api/registrations/${encodeURIComponent(registrationId)}/documents/${encodeURIComponent(documentId)}`,
   },
   invoices: {
     proof: (invoiceId: string) => `/api/invoices/${encodeURIComponent(invoiceId)}/proof`,
@@ -27,11 +37,15 @@ export const API_PATHS = {
   gate: {
     inspect: '/api/gate/inspect',
     redeem: '/api/gate/redeem',
+    kit: '/api/gate/kit',
   },
   admin: {
+    googleSheets: {
+      root: '/api/admin/google-sheets',
+      sync: '/api/admin/google-sheets/sync',
+    },
     registrations: {
       root: '/api/admin/registrations',
-      exportCsv: '/api/admin/registrations/export.csv',
       byId: (registrationId: string) => `/api/admin/registrations/${encodeURIComponent(registrationId)}`,
       review: (registrationId: string) => `/api/admin/registrations/${encodeURIComponent(registrationId)}/review`,
     },
@@ -44,14 +58,13 @@ export const API_PATHS = {
         proof: (invoiceId: string) => `/api/admin/finance/invoices/${encodeURIComponent(invoiceId)}/proof`,
       },
     },
+    paidTeams: {
+      root: '/api/admin/paid-teams',
+      byId: (registrationId: string) =>
+        `/api/admin/paid-teams/${encodeURIComponent(registrationId)}`,
+    },
   },
 } as const;
-
-export function apiUrl(path: string, origin = import.meta.env.VITE_API_ORIGIN ?? ''): string {
-  const normalizedOrigin = origin.trim().replace(/\/+$/, '');
-  if (!normalizedOrigin) return path;
-  return `${normalizedOrigin}/${path.replace(/^\/+/, '')}`;
-}
 
 type Fetcher = (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>;
 type RequestBody = FormData | unknown;
@@ -59,6 +72,7 @@ type RequestBody = FormData | unknown;
 export interface ApiRequestInit extends Omit<RequestInit, 'body'> {
   body?: RequestBody;
   csrf?: boolean;
+  responseType?: 'blob';
 }
 
 interface ApiErrorPayload {
@@ -118,7 +132,10 @@ export class ApiClient {
   private csrfToken: string | null = null;
   private csrfRequest: Promise<string> | null = null;
 
-  constructor(private readonly fetcher: Fetcher = globalThis.fetch.bind(globalThis)) {}
+  constructor(
+    private readonly fetcher: Fetcher = globalThis.fetch.bind(globalThis),
+    private readonly apiOrigin?: string,
+  ) {}
 
   clearCsrfToken(): void {
     this.csrfToken = null;
@@ -128,7 +145,7 @@ export class ApiClient {
   private async loadCsrfToken(): Promise<string> {
     if (this.csrfToken) return this.csrfToken;
     if (!this.csrfRequest) {
-      this.csrfRequest = this.fetcher(apiUrl(API_PATHS.auth.csrf), {
+      this.csrfRequest = this.fetcher(apiUrl(API_PATHS.auth.csrf, this.apiOrigin), {
         method: 'GET',
         credentials: 'include',
       }).then(async (response) => {
@@ -147,7 +164,7 @@ export class ApiClient {
   }
 
   async request<T = unknown>(path: string, init: ApiRequestInit = {}): Promise<T> {
-    const { body: requestBody, csrf, ...requestInit } = init;
+    const { body: requestBody, csrf, responseType, ...requestInit } = init;
     const method = (init.method ?? 'GET').toUpperCase();
     const headers: Record<string, string> = {};
     new Headers(init.headers).forEach((value, key) => {
@@ -175,13 +192,14 @@ export class ApiClient {
       }
     }
 
-    const response = await this.fetcher(apiUrl(path), {
+    const response = await this.fetcher(apiUrl(path, this.apiOrigin), {
       ...requestInit,
       body,
       credentials: 'include',
       headers,
       method,
     });
+    if (response.ok && responseType === 'blob') return await response.blob() as T;
     const payload = await parseResponse(response);
     if (!response.ok) throw new ApiError(response.status, payload);
     return payload as T;
@@ -193,6 +211,7 @@ export type AuthRole =
   | 'SUPER_ADMIN'
   | 'REGISTRATION_REVIEWER'
   | 'FINANCE'
+  | 'PAID_TEAM_VIEWER'
   | 'GATE_STAFF'
   | 'SUPPORT';
 
@@ -202,6 +221,7 @@ export interface AuthUser {
   displayName: string;
   role: AuthRole;
   active?: boolean;
+  emailVerified: boolean;
 }
 
 export interface AuthSession {
@@ -232,6 +252,23 @@ export type RegistrationState =
   | 'REJECTED'
   | 'CANCELLED';
 
+export type ReviewReasonCategory =
+  | 'DOCUMENT_INCOMPLETE'
+  | 'DOCUMENT_INVALID'
+  | 'DATA_MISMATCH'
+  | 'ELIGIBILITY'
+  | 'PAYMENT_OR_ADMINISTRATIVE'
+  | 'OTHER';
+
+export const REVIEW_REASON_CATEGORY_LABELS: Record<ReviewReasonCategory, string> = {
+  DOCUMENT_INCOMPLETE: 'Dokumen belum lengkap',
+  DOCUMENT_INVALID: 'Dokumen tidak valid',
+  DATA_MISMATCH: 'Data tidak sesuai',
+  ELIGIBILITY: 'Persyaratan peserta',
+  PAYMENT_OR_ADMINISTRATIVE: 'Pembayaran atau administrasi',
+  OTHER: 'Lainnya',
+};
+
 export type PaymentState =
   | 'NOT_CREATED'
   | 'UNPAID'
@@ -247,7 +284,7 @@ export interface TeamMemberRecord {
   studentId?: string | null;
   email?: string | null;
   phone?: string | null;
-  role?: 'LEADER' | 'MEMBER';
+  role?: 'LEADER' | 'MEMBER' | 'SUPERVISOR';
 }
 
 export interface CompetitionRecord {
@@ -260,7 +297,10 @@ export interface CompetitionRecord {
   eventName?: string;
   fee?: number;
   currency?: string;
+  registrationOpenAt?: string;
   registrationDeadline?: string;
+  serverTime?: string;
+  registrationStatus?: 'UPCOMING' | 'OPEN' | 'CLOSED';
   active?: boolean;
 }
 
@@ -272,6 +312,8 @@ export interface RegistrationDocumentRecord {
   size: number;
   downloadUrl?: string | null;
   createdAt?: string;
+  subjectName?: string | null;
+  subjectRole?: 'PARTICIPANT' | 'SUPERVISOR' | null;
 }
 
 export interface RegistrationRecord {
@@ -285,7 +327,8 @@ export interface RegistrationRecord {
   competition?: Pick<CompetitionRecord, 'id' | 'name' | 'eventId' | 'eventName'>;
   members?: TeamMemberRecord[];
   documents?: RegistrationDocumentRecord[];
-  reviewReason?: string | null;
+  reviewReasonCategory?: ReviewReasonCategory | null;
+  reviewReasonComment?: string | null;
   submittedAt?: string | null;
   paymentStatus?: PaymentState;
   invoice?: Pick<InvoiceRecord, 'id' | 'paymentStatus'> | null;
@@ -301,16 +344,17 @@ export interface RegistrationRecord {
 
 export interface RegistrationPersonInput {
   name: string;
-  studentId?: string;
-  email?: string;
-  phone?: string;
-  role?: 'LEADER' | 'MEMBER';
+  studentId?: string | null;
+  email?: string | null;
+  phone?: string | null;
+  role?: 'LEADER' | 'MEMBER' | 'SUPERVISOR';
 }
 
 export interface RegistrationInput {
   competitionId: string;
-  teamName: string;
-  institution: string;
+  /** A draft can be created empty; `submit` is what requires a filled team name. */
+  teamName?: string;
+  institution?: string;
   phone?: string;
   leader?: RegistrationPersonInput;
 }
@@ -326,6 +370,9 @@ export interface InvoiceRecord {
   instructions: Record<string, string | null>;
   paymentStatus: PaymentState;
   deadline: string;
+  proofUploadAllowed?: boolean;
+  verificationReason: string | null;
+  verifiedAt: string | null;
 }
 
 export interface FinanceInvoiceRecord {
@@ -384,6 +431,24 @@ export interface TicketRequest {
   eventId: string;
 }
 
+export interface GateAttendanceRequest extends TicketRequest {
+  memberIds: string[];
+}
+
+export interface GateOperator {
+  id: string;
+  displayName: string;
+}
+
+export interface GateMember {
+  id: string;
+  name: string;
+  studentId?: string | null;
+  role: 'LEADER' | 'MEMBER' | 'SUPERVISOR';
+  attendedAt: string | null;
+  attendedBy: GateOperator | null;
+}
+
 export interface TicketVerification {
   result: TicketResult;
   teamName?: string;
@@ -392,16 +457,103 @@ export interface TicketVerification {
   registrationNumber?: string;
   eventId?: string;
   eventName?: string;
+  members?: GateMember[];
+  checkedInAt?: string | null;
+  checkedInBy?: GateOperator | null;
+  kitHandedOverAt?: string | null;
+  kitHandedOverBy?: GateOperator | null;
 }
 
 export interface ReviewInput {
   status: RegistrationState;
-  reason?: string;
+  reasonCategory?: ReviewReasonCategory;
+  reasonComment?: string;
 }
 
 export interface PaymentReviewInput {
   status: Extract<PaymentState, 'PAID' | 'REJECTED'>;
   reason: string;
+}
+
+export interface RegistrationDeletionOutcome {
+  deleted: true;
+  cleanupWarnings: string[];
+}
+
+export interface PaidTeamRecord {
+  id: string;
+  registrationNumber: string;
+  teamName: string;
+  institution: string;
+  competition: {
+    id: string;
+    name: string;
+    level: string;
+    discipline: string;
+  };
+  verifiedAt: string | null;
+}
+
+export interface PaidTeamListInput {
+  query?: string;
+  page?: number;
+  pageSize?: number;
+}
+
+export interface PaidTeamListResult {
+  items: PaidTeamRecord[];
+  page: number;
+  pageSize: number;
+  hasNextPage: boolean;
+}
+
+export interface PaidTeamFileRecord {
+  originalName: string;
+  mimeType: string;
+  size: number;
+  viewUrl: string;
+  downloadUrl: string;
+}
+
+export interface PaidTeamDetailRecord {
+  id: string;
+  registrationNumber: string;
+  teamName: string;
+  institution: string;
+  phone: string | null;
+  status: RegistrationState;
+  submittedAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+  owner: {
+    displayName: string;
+    email: string;
+  };
+  competition: {
+    id: string;
+    name: string;
+    level: string;
+    discipline: string;
+    eventName: string;
+  };
+  members: Array<TeamMemberRecord & { photo: (PaidTeamFileRecord & { id: string }) | null }>;
+  payment: {
+    invoiceNumber: string;
+    amount: number;
+    currency: string;
+    verifiedAt: string | null;
+    proof: PaidTeamFileRecord | null;
+  };
+}
+
+export interface GoogleSheetsStatus {
+  enabled: boolean;
+  spreadsheetUrl: string | null;
+  syncing: boolean;
+  lastSyncedAt: string | null;
+  lastError: string | null;
+  registrationCount?: number;
+  attendanceCount?: number;
 }
 
 export interface RegistrationApi {
@@ -410,6 +562,10 @@ export interface RegistrationApi {
     login(input: LoginInput): Promise<AuthSession>;
     register(input: RegisterInput): Promise<AuthSession>;
     logout(): Promise<void>;
+    verifyEmail(token: string): Promise<void>;
+    resendEmailVerification(): Promise<void>;
+    forgotPassword(email: string): Promise<void>;
+    resetPassword(token: string, password: string): Promise<void>;
   };
   competitions: {
     list(): Promise<CompetitionRecord[]>;
@@ -426,6 +582,7 @@ export interface RegistrationApi {
     invoice(registrationId: string): Promise<InvoiceRecord>;
     ticket(registrationId: string): Promise<TicketRecord>;
     uploadDocument(registrationId: string, document: FormData): Promise<RegistrationDocumentRecord>;
+    removeDocument(registrationId: string, documentId: string): Promise<void>;
   };
   invoices: {
     uploadProof(invoiceId: string, proof: FormData): Promise<InvoiceRecord>;
@@ -435,19 +592,37 @@ export interface RegistrationApi {
   };
   gate: {
     inspect(input: TicketRequest): Promise<TicketVerification>;
-    redeem(input: TicketRequest): Promise<TicketVerification>;
+    redeem(input: GateAttendanceRequest): Promise<TicketVerification>;
+    handoverKit(input: TicketRequest): Promise<TicketVerification>;
   };
   admin: {
+    googleSheetsStatus(): Promise<GoogleSheetsStatus>;
+    syncGoogleSheets(): Promise<GoogleSheetsStatus>;
     listRegistrations(): Promise<RegistrationRecord[]>;
     getRegistration(registrationId: string): Promise<RegistrationRecord>;
+    deleteRegistration(registrationId: string): Promise<RegistrationDeletionOutcome>;
     reviewRegistration(registrationId: string, input: ReviewInput): Promise<RegistrationRecord>;
-    exportRegistrations(): Promise<string>;
     listFinanceInvoices(): Promise<FinanceInvoiceRecord[]>;
     verifyPayment(invoiceId: string, input: PaymentReviewInput): Promise<InvoiceRecord>;
+    listPaidTeams(input?: PaidTeamListInput): Promise<PaidTeamListResult>;
+    getPaidTeam(registrationId: string): Promise<PaidTeamDetailRecord>;
   };
 }
 
 export function createRegistrationApi(client = new ApiClient()): RegistrationApi {
+  const listAllAdminRegistrations = async (): Promise<RegistrationRecord[]> => {
+    const pageSize = 100;
+    const registrations: RegistrationRecord[] = [];
+
+    for (let page = 1; ; page += 1) {
+      const batch = await client.request<RegistrationRecord[]>(
+        `${API_PATHS.admin.registrations.root}?page=${page}&pageSize=${pageSize}`,
+      );
+      registrations.push(...batch);
+      if (batch.length < pageSize) return registrations;
+    }
+  };
+
   return {
     auth: {
       me: () => client.request<AuthProbe>(API_PATHS.auth.me),
@@ -459,6 +634,30 @@ export function createRegistrationApi(client = new ApiClient()): RegistrationApi
         } finally {
           client.clearCsrfToken();
         }
+      },
+      verifyEmail: async (token) => {
+        await client.request<void>(API_PATHS.auth.verifyEmail, {
+          method: 'POST',
+          body: { token },
+          csrf: false,
+        });
+        client.clearCsrfToken();
+      },
+      resendEmailVerification: async () => {
+        await client.request<void>(API_PATHS.auth.resendEmailVerification, {
+          method: 'POST',
+        });
+      },
+      forgotPassword: async (email) => {
+        await client.request<void>(API_PATHS.auth.forgotPassword, {
+          method: 'POST', body: { email }, csrf: false,
+        });
+      },
+      resetPassword: async (token, password) => {
+        await client.request<void>(API_PATHS.auth.resetPassword, {
+          method: 'POST', body: { token, password }, csrf: false,
+        });
+        client.clearCsrfToken();
       },
     },
     competitions: {
@@ -498,6 +697,10 @@ export function createRegistrationApi(client = new ApiClient()): RegistrationApi
           body: document,
         },
       ),
+      removeDocument: (registrationId, documentId) => client.request<void>(
+        API_PATHS.registrations.document(registrationId, documentId),
+        { method: 'DELETE' },
+      ),
     },
     invoices: {
       uploadProof: (invoiceId, proof) => client.request<InvoiceRecord>(API_PATHS.invoices.proof(invoiceId), {
@@ -515,20 +718,37 @@ export function createRegistrationApi(client = new ApiClient()): RegistrationApi
     gate: {
       inspect: (input) => client.request<TicketVerification>(API_PATHS.gate.inspect, { method: 'POST', body: input }),
       redeem: (input) => client.request<TicketVerification>(API_PATHS.gate.redeem, { method: 'POST', body: input }),
+      handoverKit: (input) => client.request<TicketVerification>(API_PATHS.gate.kit, { method: 'POST', body: input }),
     },
     admin: {
-      listRegistrations: () => client.request<RegistrationRecord[]>(API_PATHS.admin.registrations.root),
+      googleSheetsStatus: () => client.request<GoogleSheetsStatus>(API_PATHS.admin.googleSheets.root),
+      syncGoogleSheets: () => client.request<GoogleSheetsStatus>(API_PATHS.admin.googleSheets.sync, { method: 'POST' }),
+      listRegistrations: listAllAdminRegistrations,
       getRegistration: (registrationId) => client.request<RegistrationRecord>(API_PATHS.admin.registrations.byId(registrationId)),
+      deleteRegistration: (registrationId) => client.request<RegistrationDeletionOutcome>(
+        API_PATHS.admin.registrations.byId(registrationId),
+        { method: 'DELETE' },
+      ),
       reviewRegistration: (registrationId, input) => client.request<RegistrationRecord>(
         API_PATHS.admin.registrations.review(registrationId),
         { method: 'POST', body: input },
       ),
-      exportRegistrations: () => client.request<string>(API_PATHS.admin.registrations.exportCsv),
       listFinanceInvoices: () => client.request<FinanceInvoiceRecord[]>(API_PATHS.admin.finance.invoices.root),
       verifyPayment: (invoiceId, input) => client.request<InvoiceRecord>(API_PATHS.admin.invoices.verify(invoiceId), {
         method: 'POST',
         body: input,
       }),
+      listPaidTeams: (input = {}) => {
+        const params = new URLSearchParams();
+        if (input.query?.trim()) params.set('query', input.query.trim());
+        if (input.page !== undefined) params.set('page', String(input.page));
+        if (input.pageSize !== undefined) params.set('pageSize', String(input.pageSize));
+        const query = params.toString();
+        return client.request<PaidTeamListResult>(`${API_PATHS.admin.paidTeams.root}${query ? `?${query}` : ''}`);
+      },
+      getPaidTeam: (registrationId) => client.request<PaidTeamDetailRecord>(
+        API_PATHS.admin.paidTeams.byId(registrationId),
+      ),
     },
   };
 }

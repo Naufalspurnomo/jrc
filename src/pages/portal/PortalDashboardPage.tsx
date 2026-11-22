@@ -5,6 +5,7 @@ import { PortalShell } from '../../components/portal/PortalShell';
 import { StatusBadge } from '../../components/portal/StatusBadge';
 import { useAuth } from '../../features/auth/AuthProvider';
 import {
+  REVIEW_REASON_CATEGORY_LABELS,
   registrationApi,
   type RegistrationApi,
   type RegistrationRecord,
@@ -98,11 +99,7 @@ export default function PortalDashboardPage({ api = registrationApi }: PortalDas
             <h1 id="portal-dashboard-title">{user.displayName}</h1>
             <p>Pantau seluruh tim dan tahapan pendaftaran JRC XIV dalam satu tempat.</p>
           </div>
-          {!loading && !error && registrations.length > 0 && (
-            <Link className="portal-button portal-button--primary" to="/portal/pendaftaran/baru">
-              Buat pendaftaran
-            </Link>
-          )}
+
         </section>
 
         {loading && (
@@ -141,6 +138,20 @@ export default function PortalDashboardPage({ api = registrationApi }: PortalDas
           </section>
         )}
 
+        {!loading && !error && registrations.length === 1 && (
+          <section className="portal-notice" aria-labelledby="second-registration-title">
+            <span className="portal-notice__number" aria-hidden="true">II</span>
+            <div>
+              <p className="portal-eyebrow">SECUNDA REGISTRATIO</p>
+              <h2 id="second-registration-title">Masih dapat mendaftarkan satu tim lagi.</h2>
+              <p>Tim kedua wajib memilih cabang lomba berbeda dari tim pertama.</p>
+              <Link className="portal-button portal-button--primary" to="/portal/pendaftaran/baru">
+                Daftarkan tim kedua
+              </Link>
+            </div>
+          </section>
+        )}
+
         {!loading && !error && registrations.length > 0 && (
           <section className="portal-dashboard-grid" aria-label="Daftar pendaftaran">
             {registrations.map((registration) => {
@@ -152,7 +163,7 @@ export default function PortalDashboardPage({ api = registrationApi }: PortalDas
                   <div className="portal-panel-heading">
                     <div>
                       <p className="portal-eyebrow">{registration.registrationNumber}</p>
-                      <h2>{registration.teamName}</h2>
+                      <h2>{registration.teamName || 'Draft tanpa nama'}</h2>
                     </div>
                     <StatusBadge status={statusBadgeStates[registration.status]} />
                   </div>
@@ -161,16 +172,25 @@ export default function PortalDashboardPage({ api = registrationApi }: PortalDas
                     Kompetisi: <strong>{registration.competition?.name ?? registration.competitionId}</strong>
                   </p>
 
+                  {(registration.reviewReasonCategory || registration.reviewReasonComment) && (
+                    <div>
+                      {registration.reviewReasonCategory && (
+                        <strong>{REVIEW_REASON_CATEGORY_LABELS[registration.reviewReasonCategory]}</strong>
+                      )}
+                      {registration.reviewReasonComment && <p>{registration.reviewReasonComment}</p>}
+                    </div>
+                  )}
+
                   {paymentStatus && <PaymentStatusNotice status={paymentStatus} />}
 
                   <div>
                     <Link className="portal-button portal-button--primary" to={detailPath}>
                       {canContinueRegistration(registration.status) ? 'Lanjutkan' : 'Lihat pendaftaran'}{' '}
-                      {registration.teamName} <span aria-hidden="true">→</span>
+                      {registration.teamName || 'draft ini'} <span aria-hidden="true">→</span>
                     </Link>
                     {paymentStatus && (
                       <Link className="portal-button" to={`${detailPath}/pembayaran`}>
-                        Pembayaran {registration.teamName}
+                        Pembayaran {registration.teamName || 'tim ini'}
                       </Link>
                     )}
                     {(registration.ticketStatus === 'ACTIVE'
@@ -178,7 +198,7 @@ export default function PortalDashboardPage({ api = registrationApi }: PortalDas
                       || registration.ticket?.status === 'ACTIVE'
                       || registration.ticket?.status === 'CHECKED_IN') && (
                       <Link className="portal-button" to={`${detailPath}/tiket`}>
-                        Tiket {registration.teamName}
+                        Tiket {registration.teamName || 'tim ini'}
                       </Link>
                     )}
                   </div>

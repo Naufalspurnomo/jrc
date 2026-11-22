@@ -165,4 +165,28 @@ describe('AdminRegistrationDetailPage', () => {
     expect(screen.getByRole('button', { name: 'Minta revisi' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Tolak' })).toBeInTheDocument();
   });
+
+  it('links and focuses the review reason validation error without invalidating network failures', async () => {
+    const api = createApi(detail('UNDER_REVIEW'));
+    const user = userEvent.setup();
+    renderDetail(api);
+
+    const reason = await screen.findByLabelText('Catatan alasan');
+    expect(reason).toHaveAttribute('aria-describedby', 'admin-review-reason-help');
+    expect(reason).not.toHaveAttribute('aria-invalid');
+    await user.click(screen.getByRole('button', { name: 'Minta revisi' }));
+
+    expect(screen.getByRole('alert')).toHaveAttribute('id', 'admin-review-reason-error');
+    expect(reason).toHaveAttribute('aria-invalid', 'true');
+    expect(reason).toHaveAttribute('aria-describedby', 'admin-review-reason-help admin-review-reason-error');
+    expect(reason).toHaveFocus();
+
+    vi.mocked(api.admin.reviewRegistration).mockRejectedValueOnce(new Error('offline'));
+    await user.selectOptions(screen.getByLabelText('Kategori alasan'), 'DOCUMENT_INVALID');
+    await user.type(reason, 'Dokumen identitas tidak terbaca');
+    await user.click(screen.getByRole('button', { name: 'Minta revisi' }));
+    expect(await screen.findByRole('alert')).toHaveTextContent('Keputusan gagal disimpan');
+    expect(reason).not.toHaveAttribute('aria-invalid');
+    expect(reason).toHaveAttribute('aria-describedby', 'admin-review-reason-help admin-review-reason-error');
+  });
 });
