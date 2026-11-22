@@ -1,6 +1,6 @@
 export const pendingAnnouncement = 'Akan diumumkan' as const;
-export const registrationPeriod = '15 September–15 Oktober 2026' as const;
-export const registrationDeadline = '2026-10-15T23:59:59+07:00' as const;
+export const registrationPeriod = '30 September–30 November 2026' as const;
+export const registrationDeadline = '2026-11-30T23:59:59+07:00' as const;
 
 export type CompetitionLevel = 'SD' | 'SMP' | 'SMA' | 'Umum';
 
@@ -280,7 +280,7 @@ export const partnerTiers = [
 export const faqItems = [
   {
     question: 'Kapan pendaftaran dibuka?',
-    answer: 'Pendaftaran JRC XIV dibuka pada 15 September dan ditutup pada 15 Oktober 2026.',
+    answer: 'Pendaftaran JRC XIV dibuka pada 30 September 2026 pukul 08.00 WIB dan ditutup pada 30 November 2026 pukul 23.59 WIB.',
   },
   {
     question: 'Apa saja kategori resmi JRC XIV?',
