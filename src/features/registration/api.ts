@@ -47,7 +47,18 @@ export const API_PATHS = {
   },
 } as const;
 
-export function apiUrl(path: string, origin = import.meta.env.VITE_API_ORIGIN ?? ''): string {
+const PRODUCTION_API_ORIGIN = 'https://api.jrc.pens.ac.id';
+
+function defaultApiOrigin(): string {
+  const configuredOrigin = import.meta.env.VITE_API_ORIGIN?.trim();
+  if (configuredOrigin) return configuredOrigin;
+  if (typeof window !== 'undefined' && window.location.hostname === 'jrc.pens.ac.id') {
+    return PRODUCTION_API_ORIGIN;
+  }
+  return '';
+}
+
+export function apiUrl(path: string, origin = defaultApiOrigin()): string {
   const normalizedOrigin = origin.trim().replace(/\/+$/, '');
   if (!normalizedOrigin) return path;
   return `${normalizedOrigin}/${path.replace(/^\/+/, '')}`;
@@ -79,8 +90,13 @@ function errorMessage(payload: unknown, status: number): string {
       if (messages.length > 0) return messages.join(', ');
     }
   }
-  if (typeof payload === 'string' && payload.trim()) return payload;
-  return `Request failed with status ${status}`;
+  if (typeof payload === 'string' && payload.trim() && !/^\s*<(?:!doctype|html|head|body)\b/i.test(payload)) {
+    return payload;
+  }
+  if (status === 401) return 'Email atau kata sandi salah.';
+  if (status === 403) return 'Akses ditolak. Periksa akun Anda lalu coba lagi.';
+  if (status >= 500) return 'Layanan sedang bermasalah. Silakan coba lagi beberapa saat lagi.';
+  return 'Permintaan tidak dapat diproses. Silakan coba lagi.';
 }
 
 export class ApiError<TDetails = unknown> extends Error {

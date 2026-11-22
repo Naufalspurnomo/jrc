@@ -52,6 +52,20 @@ describe('ApiClient', () => {
     expect(apiUrl('/api/health', 'https://api.example.test/')).toBe('https://api.example.test/api/health');
   });
 
+  it('does not expose an HTML error document as a user-facing API error', async () => {
+    const fetcher = vi.fn<typeof fetch>().mockResolvedValue(new Response(
+      '<!DOCTYPE HTML><html><body><h1>Not Found</h1></body></html>',
+      { status: 404, headers: { 'Content-Type': 'text/html' } },
+    ));
+    const client = new ApiClient(fetcher);
+
+    await expect(client.request('/api/auth/login', { method: 'POST', body: {} }))
+      .rejects.toMatchObject({
+        status: 404,
+        message: 'Permintaan tidak dapat diproses. Silakan coba lagi.',
+      });
+  });
+
   it('uses the dedicated authenticated finance queue and proof paths', async () => {
     const fetcher = vi.fn<typeof fetch>().mockResolvedValue(new Response('[]', {
       status: 200,
