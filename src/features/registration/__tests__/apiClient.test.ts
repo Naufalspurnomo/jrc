@@ -74,6 +74,17 @@ describe('ApiClient', () => {
     expect(apiUrl('/api/health', 'https://api.example.test/')).toBe('https://api.example.test/api/health');
   });
 
+  it('localizes invalid login feedback', async () => {
+    const fetcher = vi.fn<typeof fetch>().mockResolvedValue(new Response(
+      JSON.stringify({ message: 'Invalid email or password' }),
+      { status: 401, headers: { 'Content-Type': 'application/json' } },
+    ));
+    const client = new ApiClient(fetcher);
+
+    await expect(client.request('/api/auth/login', { method: 'POST', body: {} }))
+      .rejects.toMatchObject({ status: 401, message: 'Email atau kata sandi salah.' });
+  });
+
   it('uses the dedicated authenticated finance queue and proof paths', async () => {
     const fetcher = vi.fn<typeof fetch>().mockResolvedValue(new Response('[]', {
       status: 200,

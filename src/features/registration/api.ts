@@ -85,11 +85,20 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
+function localizeApiMessage(message: string): string {
+  if (message === 'Invalid email or password') return 'Email atau kata sandi salah.';
+  return message;
+}
+
 function errorMessage(payload: unknown, status: number): string {
   if (isRecord(payload)) {
-    if (typeof payload.message === 'string' && payload.message.trim()) return payload.message;
+    if (typeof payload.message === 'string' && payload.message.trim()) {
+      return localizeApiMessage(payload.message);
+    }
     if (Array.isArray(payload.message)) {
-      const messages = payload.message.filter((item): item is string => typeof item === 'string');
+      const messages = payload.message
+        .filter((item): item is string => typeof item === 'string')
+        .map(localizeApiMessage);
       if (messages.length > 0) return messages.join(', ');
     }
   }
