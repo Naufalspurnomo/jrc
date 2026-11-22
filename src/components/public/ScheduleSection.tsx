@@ -29,8 +29,7 @@ export function ScheduleSection() {
               <span aria-hidden="true">menuju arena.</span>
             </h2>
             <p>
-              Setiap tim melewati gerbang yang sama. Tanggal resmi akan ditempatkan di sini begitu
-              keputusan panitia diumumkan.
+              Setiap tim melewati gerbang yang sama menuju pertandingan JRC XIV pada 19–20 Desember 2026.
             </p>
           </header>
 

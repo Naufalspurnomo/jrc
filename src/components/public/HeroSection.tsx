@@ -57,7 +57,7 @@ export function HeroSection({ startupReady = true }: { startupReady?: boolean })
       <div className="hero-section__shade" aria-hidden="true" />
       <div className="hero-section__content site-shell page-shell">
         <p className="hero-section__serial">
-          <span>Est. 2012</span>
+          <span>Est. 2009</span>
           <span aria-hidden="true" />
           <span>XIV Edition</span>
         </p>

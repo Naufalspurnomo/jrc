@@ -75,14 +75,55 @@ export class RuntimeConfigValidator implements OnModuleInit {
     ) {
       invalidVariables.push('TICKET_SECRET');
     }
-    if (!process.env.STORAGE_PATH?.trim()) {
-      invalidVariables.push('STORAGE_PATH');
+    const storageDriver = process.env.STORAGE_DRIVER?.trim().toLowerCase() || 'local';
+    if (storageDriver === 'local') {
+      if (!process.env.STORAGE_PATH?.trim()) invalidVariables.push('STORAGE_PATH');
+    } else if (storageDriver === 'supabase') {
+      try {
+        const supabaseUrl = new URL(process.env.SUPABASE_URL ?? '');
+        if (
+          supabaseUrl.protocol !== 'https:' ||
+          supabaseUrl.username ||
+          supabaseUrl.password ||
+          supabaseUrl.search ||
+          supabaseUrl.hash
+        ) {
+          invalidVariables.push('SUPABASE_URL');
+        }
+      } catch {
+        invalidVariables.push('SUPABASE_URL');
+      }
+      if (!process.env.SUPABASE_SERVICE_ROLE_KEY?.trim()) {
+        invalidVariables.push('SUPABASE_SERVICE_ROLE_KEY');
+      }
+      if (!process.env.SUPABASE_STORAGE_BUCKET?.trim()) {
+        invalidVariables.push('SUPABASE_STORAGE_BUCKET');
+      }
+    } else {
+      invalidVariables.push('STORAGE_DRIVER');
     }
     if (!hasSafeVerificationUrl(process.env.PUBLIC_VERIFICATION_URL)) {
       invalidVariables.push('PUBLIC_VERIFICATION_URL');
     }
+    if (!hasSafeVerificationUrl(process.env.PUBLIC_EMAIL_VERIFICATION_URL)) {
+      invalidVariables.push('PUBLIC_EMAIL_VERIFICATION_URL');
+    }
+    if (!hasSafeVerificationUrl(process.env.PUBLIC_PASSWORD_RESET_URL)) {
+      invalidVariables.push('PUBLIC_PASSWORD_RESET_URL');
+    }
+    if (!hasSafeVerificationUrl(process.env.PUBLIC_FRONTEND_URL)) {
+      invalidVariables.push('PUBLIC_FRONTEND_URL');
+    }
     if (!process.env.DATABASE_URL?.trim()) {
       invalidVariables.push('DATABASE_URL');
+    }
+    if ((process.env.GOOGLE_SHEETS_ENABLED ?? '').trim().toLowerCase() === 'true') {
+      if (!process.env.GOOGLE_SHEETS_SPREADSHEET_ID?.trim()) {
+        invalidVariables.push('GOOGLE_SHEETS_SPREADSHEET_ID');
+      }
+      if (!process.env.GOOGLE_SERVICE_ACCOUNT_JSON?.trim()) {
+        invalidVariables.push('GOOGLE_SERVICE_ACCOUNT_JSON');
+      }
     }
 
     if (invalidVariables.length > 0) {

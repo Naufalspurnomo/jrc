@@ -10,6 +10,9 @@ const VALID_PRODUCTION_ENV = {
   TICKET_SECRET: 'a-production-ticket-secret-with-32-characters',
   STORAGE_PATH: '/srv/jrc/private',
   PUBLIC_VERIFICATION_URL: 'https://jrc.example.test/ticket/verify',
+  PUBLIC_EMAIL_VERIFICATION_URL: 'https://jrc.example.test/portal/verifikasi-email',
+  PUBLIC_PASSWORD_RESET_URL: 'https://jrc.example.test/portal/reset-kata-sandi',
+  PUBLIC_FRONTEND_URL: 'https://jrc.example.test',
   DATABASE_URL: 'postgresql://jrc@example.test:5432/jrc',
 };
 
@@ -32,6 +35,64 @@ describe('RuntimeConfigValidator', () => {
     expect(() => new RuntimeConfigValidator().onModuleInit()).not.toThrow();
   });
 
+  it('requires a safe password reset URL in production', () => {
+    delete process.env.PUBLIC_PASSWORD_RESET_URL;
+
+    expect(() => new RuntimeConfigValidator().onModuleInit()).toThrowError(
+      /PUBLIC_PASSWORD_RESET_URL/,
+    );
+  });
+
+  it.each(['strict', 'lax', 'none'])(
+    'accepts production COOKIE_SAME_SITE value %j',
+    (value) => {
+      process.env.COOKIE_SAME_SITE = value;
+
+      expect(() => new RuntimeConfigValidator().onModuleInit()).not.toThrow();
+    },
+  );
+
+  it.each(['', 'invalid', 'cross-site'])(
+    'rejects invalid production COOKIE_SAME_SITE value %j',
+    (value) => {
+      process.env.COOKIE_SAME_SITE = value;
+
+      expect(() => new RuntimeConfigValidator().onModuleInit()).toThrowError(
+        /COOKIE_SAME_SITE/,
+      );
+    },
+  );
+
+  it('accepts Supabase storage without STORAGE_PATH', () => {
+    process.env.STORAGE_DRIVER = 'supabase';
+    delete process.env.STORAGE_PATH;
+    process.env.SUPABASE_URL = 'https://project.supabase.co';
+    process.env.SUPABASE_SERVICE_ROLE_KEY = 'service-role-secret';
+    process.env.SUPABASE_STORAGE_BUCKET = 'jrc-private';
+
+    expect(() => new RuntimeConfigValidator().onModuleInit()).not.toThrow();
+  });
+
+  it('requires complete Supabase storage configuration', () => {
+    process.env.STORAGE_DRIVER = 'supabase';
+    delete process.env.STORAGE_PATH;
+    process.env.SUPABASE_URL = 'http://project.supabase.co';
+    delete process.env.SUPABASE_SERVICE_ROLE_KEY;
+    delete process.env.SUPABASE_STORAGE_BUCKET;
+
+    expect(() => new RuntimeConfigValidator().onModuleInit()).toThrowError(
+      /SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, SUPABASE_STORAGE_BUCKET/,
+    );
+  });
+
+  it('rejects unknown storage drivers', () => {
+    process.env.STORAGE_DRIVER = 'unknown';
+
+    expect(() => new RuntimeConfigValidator().onModuleInit()).toThrowError(
+      /STORAGE_DRIVER/,
+    );
+  });
+
   it('lists every missing required variable without exposing values', () => {
     process.env = {
       NODE_ENV: 'production',
@@ -41,6 +102,8 @@ describe('RuntimeConfigValidator', () => {
       TICKET_SECRET: 'replace-me-secret-value',
       STORAGE_PATH: '   ',
       PUBLIC_VERIFICATION_URL: 'not-a-secret-value',
+      PUBLIC_EMAIL_VERIFICATION_URL: 'not-an-email-verification-url',
+      PUBLIC_PASSWORD_RESET_URL: 'not-a-password-reset-url',
       DATABASE_URL: '',
     };
 
@@ -57,6 +120,8 @@ describe('RuntimeConfigValidator', () => {
     expect(message).toMatch(/TICKET_SECRET/);
     expect(message).toMatch(/STORAGE_PATH/);
     expect(message).toMatch(/PUBLIC_VERIFICATION_URL/);
+    expect(message).toMatch(/PUBLIC_EMAIL_VERIFICATION_URL/);
+    expect(message).toMatch(/PUBLIC_PASSWORD_RESET_URL/);
     expect(message).toMatch(/DATABASE_URL/);
     expect(message).not.toContain('replace-me-secret-value');
     expect(message).not.toContain('not-a-secret-value');
@@ -138,4 +203,14 @@ describe('RuntimeConfigValidator', () => {
       /PUBLIC_VERIFICATION_URL/,
     );
   });
+
+  it.each(['', 'not-a-url', 'http://jrc.example.test', 'https://user:password@jrc.example.test'])(
+    'rejects unsafe PUBLIC_FRONTEND_URL value %j',
+    (value) => {
+      process.env.PUBLIC_FRONTEND_URL = value;
+      expect(() => new RuntimeConfigValidator().onModuleInit()).toThrowError(
+        /PUBLIC_FRONTEND_URL/,
+      );
+    },
+  );
 });

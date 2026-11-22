@@ -10,10 +10,13 @@ interface ValidationErrors {
   passwordConfirmation?: string;
 }
 
+const SIGNUP_FALLBACK_ERROR = 'Tidak dapat membuat akun. Periksa koneksi lalu coba lagi.';
+
 function getErrorMessage(error: unknown): string {
-  return error instanceof Error && error.message.trim()
-    ? error.message
-    : 'Tidak dapat membuat akun. Periksa data Anda lalu coba lagi.';
+  if (!(error instanceof Error)) return SIGNUP_FALLBACK_ERROR;
+  const message = error.message.trim();
+  if (!message || /^<!doctype|^<html|<body[\s>]/i.test(message)) return SIGNUP_FALLBACK_ERROR;
+  return message;
 }
 
 function isValidEmail(email: string): boolean {
@@ -30,8 +33,9 @@ export default function PortalSignupPage() {
   const [validationErrors, setValidationErrors] = useState<ValidationErrors>({});
   const [serverError, setServerError] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const [signupNavigationPending, setSignupNavigationPending] = useState(false);
 
-  if (!authLoading && user?.role === 'PARTICIPANT') {
+  if (!authLoading && user?.role === 'PARTICIPANT' && !signupNavigationPending) {
     return <Navigate replace to="/portal" />;
   }
 
@@ -54,14 +58,16 @@ export default function PortalSignupPage() {
     if (Object.keys(nextErrors).length > 0) return;
 
     setSubmitting(true);
+    setSignupNavigationPending(true);
     try {
       await register({
         displayName: trimmedDisplayName,
         email: trimmedEmail,
         password,
       });
-      navigate('/portal', { replace: true });
+      navigate('/portal/verifikasi-email', { replace: true });
     } catch (error) {
+      setSignupNavigationPending(false);
       setServerError(getErrorMessage(error));
     } finally {
       setSubmitting(false);
@@ -77,6 +83,18 @@ export default function PortalSignupPage() {
         <p className="portal-auth__lead">
           Daftarkan akun untuk mengelola tim, pembayaran, dan tiket Anda.
         </p>
+        <div className="portal-auth__registration-guide" role="note">
+          <p>Baca alur resmi terlebih dahulu agar data tim dan berkas yang disiapkan sesuai.</p>
+          <a
+            className="portal-button portal-button--ghost"
+            href="https://intip.in/AlurPendaftaranJRC14"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            Lihat alur pendaftaran
+            <span aria-hidden="true">↗</span>
+          </a>
+        </div>
 
         <form className="portal-auth__form" onSubmit={submit} noValidate>
           <label htmlFor="portal-signup-name">Nama lengkap</label>
@@ -141,7 +159,7 @@ export default function PortalSignupPage() {
         <p className="portal-eyebrow">JRC XIV · IMPERIUM MACHINA</p>
         <blockquote>Siapkan timmu untuk memasuki arena.</blockquote>
         <dl className="portal-auth__facts">
-          <div><dt>Pendaftaran</dt><dd>Beberapa tim</dd></div>
+          <div><dt>Pendaftaran</dt><dd>Maksimal dua tim · cabang berbeda</dd></div>
           <div><dt>Berkas</dt><dd>Unggah aman</dd></div>
           <div><dt>Pembayaran</dt><dd>Verifikasi panitia</dd></div>
         </dl>

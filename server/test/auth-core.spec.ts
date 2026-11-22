@@ -1,7 +1,7 @@
 import { Role } from '@prisma/client';
-import type { Request } from 'express';
+import type { Request, Response } from 'express';
 import { describe, expect, it, vi } from 'vitest';
-import { AuthService, hashToken, sessionCookieOptions } from '../src/auth';
+import { AuthController, AuthService, hashToken, sessionCookieOptions } from '../src/auth';
 import {
   constantTimeHashEquals,
   createSessionSecrets,
@@ -49,6 +49,8 @@ describe('optional session probe', () => {
   it('hashes the cookie, requires a live active session, and sanitizes the user', async () => {
     const token = 'valid-session-token';
     const findFirst = vi.fn().mockResolvedValue({
+      id: 'session-id',
+      expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1_000),
       user: {
         id: 'user-id',
         email: 'user@example.test',
@@ -56,6 +58,7 @@ describe('optional session probe', () => {
         passwordHash: 'secret-hash',
         role: Role.PARTICIPANT,
         active: true,
+        emailVerifiedAt: null,
         createdAt: new Date('2026-01-01T00:00:00.000Z'),
         updatedAt: new Date('2026-01-02T00:00:00.000Z'),
       },
@@ -73,6 +76,7 @@ describe('optional session probe', () => {
         email: 'user@example.test',
         displayName: 'User',
         role: Role.PARTICIPANT,
+        emailVerified: false,
       },
     });
     expect(findFirst).toHaveBeenCalledWith({
@@ -95,6 +99,94 @@ describe('optional session probe', () => {
       cookies: { jrc_session: 'invalid-or-expired-token' },
       headers: {},
     } as unknown as Request)).resolves.toEqual({ user: null });
+  });
+  it('renews a valid session below half of its configured lifetime', async () => {
+    const previousTtl = process.env.SESSION_TTL_SECONDS;
+    process.env.SESSION_TTL_SECONDS = '100';
+    const token = 'near-expiry-token';
+    const updateMany = vi.fn().mockResolvedValue({ count: 1 });
+    const auth = new AuthService({
+      session: {
+        findFirst: vi.fn().mockResolvedValue({
+          id: 'session-id',
+          expiresAt: new Date(Date.now() + 40_000),
+          user: {
+            id: 'user-id', email: 'user@example.test', displayName: 'User',
+            role: Role.PARTICIPANT, active: true, emailVerifiedAt: null,
+          },
+        }),
+        updateMany,
+      },
+    } as unknown as PrismaService);
+
+    try {
+      const result = await auth.probeSession({
+        cookies: { jrc_session: token }, headers: {},
+      } as unknown as Request);
+      expect(result.renewedSession).toEqual({ token, maxAge: 100_000 });
+      expect(updateMany).toHaveBeenCalledWith({
+        where: {
+          id: 'session-id', revokedAt: null, expiresAt: { gt: expect.any(Date) },
+          user: { active: true },
+        },
+        data: { expiresAt: expect.any(Date) },
+      });
+    } finally {
+      if (previousTtl === undefined) delete process.env.SESSION_TTL_SECONDS;
+      else process.env.SESSION_TTL_SECONDS = previousTtl;
+    }
+  });
+
+  it('does not write when a valid session has at least half its lifetime remaining', async () => {
+    const previousTtl = process.env.SESSION_TTL_SECONDS;
+    process.env.SESSION_TTL_SECONDS = '100';
+    const updateMany = vi.fn();
+    const auth = new AuthService({
+      session: {
+        findFirst: vi.fn().mockResolvedValue({
+          id: 'session-id', expiresAt: new Date(Date.now() + 60_000),
+          user: {
+            id: 'user-id', email: 'user@example.test', displayName: 'User',
+            role: Role.PARTICIPANT, active: true, emailVerifiedAt: null,
+          },
+        }),
+        updateMany,
+      },
+    } as unknown as PrismaService);
+
+    try {
+      const result = await auth.probeSession({
+        cookies: { jrc_session: 'long-lived-token' }, headers: {},
+      } as unknown as Request);
+      expect(result.renewedSession).toBeUndefined();
+      expect(updateMany).not.toHaveBeenCalled();
+    } finally {
+      if (previousTtl === undefined) delete process.env.SESSION_TTL_SECONDS;
+      else process.env.SESSION_TTL_SECONDS = previousTtl;
+    }
+  });
+});
+
+describe('session probe controller', () => {
+  it('sets the same opaque cookie only when the session was renewed', async () => {
+    const user = {
+      id: 'user-id', email: 'user@example.test', displayName: 'User',
+      role: Role.PARTICIPANT, emailVerified: false,
+    };
+    const probeSession = vi.fn()
+      .mockResolvedValueOnce({ user, renewedSession: { token: 'same-token', maxAge: 1234 } })
+      .mockResolvedValueOnce({ user });
+    const controller = new AuthController({ probeSession } as unknown as AuthService);
+    const response = { cookie: vi.fn() } as unknown as Response;
+    const request = { headers: {} } as Request;
+
+    await expect(controller.me(request, response)).resolves.toEqual({ user });
+    expect(response.cookie).toHaveBeenCalledWith(
+      'jrc_session', 'same-token', expect.objectContaining({ maxAge: 1234 }),
+    );
+    vi.mocked(response.cookie).mockClear();
+    await expect(controller.me(request, response)).resolves.toEqual({ user });
+    expect(response.cookie).not.toHaveBeenCalled();
   });
 });
 
@@ -158,7 +250,7 @@ describe('competition serialization', () => {
     const competition = serializeCompetition({
       id: 'competition-id',
       slug: 'wacky-rally-line-follower-mikro',
-      name: 'Wacky Rally — Line Follower Mikro',
+      name: 'Chariot Line',
       level: 'Umum',
       discipline: 'Line Follower Mikro',
       description: null,
@@ -167,6 +259,7 @@ describe('competition serialization', () => {
       fee: 250000,
       currency: 'IDR',
       active: true,
+      registrationOpenAt: new Date('2026-09-30T01:00:00.000Z'),
       registrationDeadline: new Date('2026-12-01T00:00:00.000Z'),
       createdAt: new Date('2026-01-01T00:00:00.000Z'),
       updatedAt: new Date('2026-01-02T00:00:00.000Z'),
@@ -175,7 +268,7 @@ describe('competition serialization', () => {
     expect(competition).toEqual({
       id: 'competition-id',
       slug: 'wacky-rally-line-follower-mikro',
-      name: 'Wacky Rally — Line Follower Mikro',
+      name: 'Chariot Line',
       level: 'Umum',
       discipline: 'Line Follower Mikro',
       description: null,
@@ -183,8 +276,11 @@ describe('competition serialization', () => {
       eventName: 'JRC XIV 2026',
       fee: 250000,
       currency: 'IDR',
+      registrationOpenAt: '2026-09-30T01:00:00.000Z',
       registrationDeadline: '2026-12-01T00:00:00.000Z',
+      serverTime: expect.any(String),
     });
+    expect(Number.isNaN(Date.parse(competition.serverTime))).toBe(false);
     expect(JSON.stringify(competition)).not.toMatch(/active|createdAt|updatedAt/);
   });
 });

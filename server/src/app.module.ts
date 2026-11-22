@@ -9,7 +9,7 @@ import {
   ServiceUnavailableException,
 } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
-import { APP_GUARD } from '@nestjs/core';
+import { APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
 import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 import { randomUUID } from 'node:crypto';
 import { NextFunction, Request, Response } from 'express';
@@ -19,6 +19,10 @@ import {
   AdminRegistrationsService,
   InvoiceController,
 } from './admin-registrations';
+import {
+  AdminParticipantsController,
+  AdminParticipantsService,
+} from './admin-participants';
 import {
   AuthController,
   AuthGuard,
@@ -35,7 +39,15 @@ import {
 } from './documents';
 import { EmailOutboxService } from './email-outbox';
 import { FinanceController, FinanceService } from './finance';
+import {
+  GoogleApiSheetsPublisher,
+  GoogleSheetsController,
+  GoogleSheetsMutationInterceptor,
+  GoogleSheetsPublisher,
+  GoogleSheetsSyncService,
+} from './google-sheets-sync';
 import { ManualPaymentProvider } from './payments/manual-payment.provider';
+import { PaidTeamsController, PaidTeamsService } from './paid-teams';
 import {
   FinanceVerificationController,
   ParticipantTicketController,
@@ -44,6 +56,7 @@ import {
   PaymentVerificationService,
 } from './payment-verification';
 import { PrismaService } from './prisma.service';
+import { PrivateStorageService } from './private-storage';
 import {
   RegistrationsController,
   RegistrationsService,
@@ -58,6 +71,55 @@ import {
 interface RequestWithId extends Request {
   id: string;
   requestId?: string;
+}
+
+type LogRequest = {
+  id?: unknown;
+  method?: unknown;
+  url?: unknown;
+  remoteAddress?: unknown;
+  remotePort?: unknown;
+  [key: string]: unknown;
+};
+
+type SerializedLogRequest = {
+  id?: string | number | object;
+  method?: string;
+  url: string;
+  remoteAddress?: string;
+  remotePort?: number;
+};
+
+export function serializeRequestForLog(
+  request: LogRequest,
+): SerializedLogRequest {
+  const serialized: SerializedLogRequest = { url: '/' };
+
+  if (
+    typeof request.url === 'string' &&
+    request.url.startsWith('/') &&
+    !request.url.startsWith('//')
+  ) {
+    const pathname = request.url.split(/[?#]/, 1)[0];
+    try {
+      decodeURI(pathname);
+      serialized.url = pathname || '/';
+    } catch {
+      // Keep the fail-closed root pathname.
+    }
+  }
+  if (typeof request.id === 'string' || typeof request.id === 'number') {
+    serialized.id = request.id;
+  }
+  if (typeof request.method === 'string') serialized.method = request.method;
+  if (typeof request.remoteAddress === 'string') {
+    serialized.remoteAddress = request.remoteAddress;
+  }
+  if (typeof request.remotePort === 'number') {
+    serialized.remotePort = request.remotePort;
+  }
+
+  return serialized;
 }
 
 const UUID_PATTERN =
@@ -75,6 +137,43 @@ const configuredLogLevel = process.env.LOG_LEVEL ?? 'info';
 const pinoLogLevel = PINO_LOG_LEVELS.has(configuredLogLevel)
   ? configuredLogLevel
   : 'info';
+const CANONICAL_COMPETITION_SLUGS = [
+  'donatopia-transporter',
+  'nightmaze-rescue-transporter',
+  'pirate-clash-transporter-shooter',
+  'wacky-rally-line-follower-mikro',
+  'ring-rumble-sumo',
+  'goal-rush-soccer',
+] as const;
+const COMPETITION_SLUG_RANK = new Map<string, number>(
+  CANONICAL_COMPETITION_SLUGS.map((slug, index) => [slug, index]),
+);
+
+type OrderableCompetition = {
+  slug: string;
+  registrationDeadline: Date;
+};
+
+function compareCompetitions(
+  first: OrderableCompetition,
+  second: OrderableCompetition,
+): number {
+  const deadlineOrder =
+    first.registrationDeadline.getTime() -
+    second.registrationDeadline.getTime();
+  if (deadlineOrder !== 0) return deadlineOrder;
+
+  const firstRank = COMPETITION_SLUG_RANK.get(first.slug);
+  const secondRank = COMPETITION_SLUG_RANK.get(second.slug);
+  if (firstRank !== undefined && secondRank !== undefined) {
+    return firstRank - secondRank;
+  }
+  if (firstRank !== undefined) return -1;
+  if (secondRank !== undefined) return 1;
+  if (first.slug < second.slug) return -1;
+  if (first.slug > second.slug) return 1;
+  return 0;
+}
 
 @Injectable()
 export class RequestIdMiddleware implements NestMiddleware {
@@ -100,10 +199,10 @@ export class CompetitionsController {
   constructor(private readonly prisma: PrismaService) {}
 
   @Get()
-  list() {
-    return this.prisma.competition.findMany({
+  async list() {
+    const competitions = await this.prisma.competition.findMany({
       where: { active: true },
-      orderBy: [{ registrationDeadline: 'asc' }, { name: 'asc' }],
+      orderBy: [{ registrationDeadline: 'asc' }, { slug: 'asc' }],
       select: {
         id: true,
         slug: true,
@@ -116,9 +215,19 @@ export class CompetitionsController {
         fee: true,
         currency: true,
         active: true,
+        registrationOpenAt: true,
         registrationDeadline: true,
       },
     });
+
+    const serverTime = new Date();
+    return competitions.sort(compareCompetitions).map((competition) => ({
+      ...competition,
+      serverTime: serverTime.toISOString(),
+      registrationStatus: serverTime < competition.registrationOpenAt
+        ? 'UPCOMING'
+        : serverTime >= competition.registrationDeadline ? 'CLOSED' : 'OPEN',
+    }));
   }
 }
 
@@ -130,6 +239,13 @@ export class HealthController {
   @Get('live')
   live(): { status: 'ok' } {
     return { status: 'ok' };
+  }
+
+  @Get('release')
+  release(): { commit: string } {
+    return {
+      commit: process.env.RENDER_GIT_COMMIT?.trim() || process.env.RELEASE_SHA?.trim() || 'unknown',
+    };
   }
 
   @Get('ready')
@@ -149,6 +265,7 @@ export class HealthController {
     LoggerModule.forRoot({
       pinoHttp: {
         level: pinoLogLevel,
+        serializers: { req: serializeRequestForLog },
         genReqId: (request, response) => {
           const supplied = request.headers['x-request-id'];
           const candidate = Array.isArray(supplied) ? supplied[0] : supplied;
@@ -182,6 +299,7 @@ export class HealthController {
   ],
   controllers: [
     AdminDocumentsController,
+    AdminParticipantsController,
     AdminRegistrationsController,
     AuthController,
     CompetitionsController,
@@ -189,34 +307,45 @@ export class HealthController {
     HealthController,
     FinanceController,
     FinanceVerificationController,
+    GoogleSheetsController,
     InvoiceController,
     ParticipantTicketController,
     PaymentProofController,
     ParticipantDocumentsController,
+    PaidTeamsController,
     RegistrationsController,
     TicketVerificationController,
   ],
   providers: [
     RuntimeConfigValidator,
     PrismaService,
+    PrivateStorageService,
     AuthService,
+    AdminParticipantsService,
     AdminRegistrationsService,
     DocumentsService,
     DocumentUploadInterceptor,
     EmailOutboxService,
     FinanceService,
+    GoogleSheetsSyncService,
+    {
+      provide: GoogleSheetsPublisher,
+      useClass: GoogleApiSheetsPublisher,
+    },
     {
       provide: ManualPaymentProvider,
       useFactory: () => new ManualPaymentProvider(),
     },
     PaymentProofUploadInterceptor,
     PaymentVerificationService,
+    PaidTeamsService,
     RegistrationsService,
     TicketGateService,
     { provide: APP_GUARD, useClass: ThrottlerGuard },
     { provide: APP_GUARD, useClass: AuthGuard },
     { provide: APP_GUARD, useClass: RolesGuard },
     { provide: APP_GUARD, useClass: CsrfGuard },
+    { provide: APP_INTERCEPTOR, useClass: GoogleSheetsMutationInterceptor },
   ],
   exports: [PrismaService, AuthService],
 })

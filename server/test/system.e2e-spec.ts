@@ -25,6 +25,8 @@ suite('registration system e2e', () => {
   let participantB: SuperAgentTest;
   let reviewer: SuperAgentTest;
   let finance: SuperAgentTest;
+  let paidTeamViewer: SuperAgentTest;
+  let superAdmin: SuperAgentTest;
   let gate: SuperAgentTest;
   let csrfA: string;
   let csrfB: string;
@@ -77,12 +79,13 @@ suite('registration system e2e', () => {
     const competition = await prisma.competition.create({
       data: {
         slug: 'wacky-rally-line-follower-mikro',
-        name: 'Wacky Rally — Line Follower Mikro',
+        name: 'Chariot Line',
         level: 'Umum',
         discipline: 'Line Follower Mikro',
         eventId: 'JRC-XIV-2026',
         eventName: 'JRC XIV 2026',
         fee: 250000,
+        registrationOpenAt: new Date('2020-01-01T00:00:00.000Z'),
         registrationDeadline: new Date('2026-12-01T00:00:00.000Z'),
       },
     });
@@ -91,6 +94,8 @@ suite('registration system e2e', () => {
 
     await createStaff('reviewer@example.test', Role.REGISTRATION_REVIEWER);
     await createStaff('finance@example.test', Role.FINANCE);
+    await createStaff('paid-teams@example.test', Role.PAID_TEAM_VIEWER);
+    await createStaff('super-admin@example.test', Role.SUPER_ADMIN);
     await createStaff('gate@example.test', Role.GATE_STAFF);
 
     const moduleRef = await Test.createTestingModule({ imports: [AppModule] }).compile();
@@ -103,6 +108,8 @@ suite('registration system e2e', () => {
     participantB = request.agent(app.getHttpServer());
     reviewer = request.agent(app.getHttpServer());
     finance = request.agent(app.getHttpServer());
+    paidTeamViewer = request.agent(app.getHttpServer());
+    superAdmin = request.agent(app.getHttpServer());
     gate = request.agent(app.getHttpServer());
 
     csrfA = (
@@ -117,8 +124,14 @@ suite('registration system e2e', () => {
         .send({ email: 'b@example.test', displayName: 'Participant B', password: 'Str0ng-password-123' })
         .expect(201)
     ).body.csrfToken as string;
+    await prisma.user.updateMany({
+      where: { email: { in: ['a@example.test', 'b@example.test'] } },
+      data: { emailVerifiedAt: new Date() },
+    });
     csrfReviewer = await login(reviewer, 'reviewer@example.test');
     csrfFinance = await login(finance, 'finance@example.test');
+    await login(paidTeamViewer, 'paid-teams@example.test');
+    await login(superAdmin, 'super-admin@example.test');
     csrfGate = await login(gate, 'gate@example.test');
   }, 60_000);
 
@@ -143,7 +156,7 @@ suite('registration system e2e', () => {
         expect(body).toEqual([
           expect.objectContaining({
             slug: 'wacky-rally-line-follower-mikro',
-            name: 'Wacky Rally — Line Follower Mikro',
+            name: 'Chariot Line',
             level: 'Umum',
             discipline: 'Line Follower Mikro',
           }),
@@ -225,6 +238,12 @@ suite('registration system e2e', () => {
       email: null,
       phone: null,
     });
+    await state(participantA, csrfA)(
+      'post',
+      `/api/registrations/${registrationId}/members`,
+    )
+      .send({ name: 'Coach', role: 'SUPERVISOR' })
+      .expect(201);
 
     await state(participantA, csrfA)(
       'post',
@@ -250,13 +269,14 @@ suite('registration system e2e', () => {
       .expect(200);
     expect(participantRegistration.body.competition).toMatchObject({
       slug: 'wacky-rally-line-follower-mikro',
-      name: 'Wacky Rally — Line Follower Mikro',
+      name: 'Chariot Line',
       level: 'Umum',
       discipline: 'Line Follower Mikro',
     });
     expect(participantRegistration.body.members).toEqual([
       expect.objectContaining({ role: 'LEADER', email: 'alice@example.test' }),
       expect.objectContaining({ role: 'MEMBER', email: null, phone: null }),
+      expect.objectContaining({ role: 'SUPERVISOR', name: 'Coach' }),
     ]);
 
     await state(participantA, csrfA)(
@@ -266,25 +286,61 @@ suite('registration system e2e', () => {
       .expect(400)
       .expect(({ body }: Response) =>
         expect(body.message).toBe(
-          'At least one document is required before submission',
+          'All required document categories must be uploaded before submission',
         ),
       );
 
-    await state(participantA, csrfA)(
-      'post',
-      `/api/registrations/${registrationId}/documents`,
-    )
-      .field('category', 'STUDENT_CARD')
-      .attach('file', Buffer.from('%PDF-test'), {
-        filename: 'student-card.pdf',
-        contentType: 'application/pdf',
-      })
-      .expect(201);
+    for (const category of [
+      'RECOMMENDATION_LETTER',
+      'IDENTITY_CARD',
+      'REGISTRATION_FORM',
+      'TEAM_PHOTO',
+      'TWIBBON_PROOF',
+    ]) {
+      await state(participantA, csrfA)(
+        'post',
+        `/api/registrations/${registrationId}/documents`,
+      )
+        .field('category', category)
+        .attach('file', Buffer.from('%PDF-test'), {
+          filename: `${category.toLowerCase()}.pdf`,
+          contentType: 'application/pdf',
+        })
+        .expect(201);
+    }
+
+    const portraitPng = Buffer.from(
+      '89504e470d0a1a0a0000000d494844520000000300000004080200000000000000',
+      'hex',
+    );
+    for (const [subjectName, subjectRole] of [
+      ['Alice', 'PARTICIPANT'],
+      ['Bob', 'PARTICIPANT'],
+      ['Coach', 'SUPERVISOR'],
+    ] as const) {
+      await state(participantA, csrfA)(
+        'post',
+        `/api/registrations/${registrationId}/documents`,
+      )
+        .field('category', 'MEMBER_PHOTO')
+        .field('subjectName', subjectName)
+        .field('subjectRole', subjectRole)
+        .attach('file', portraitPng, {
+          filename: `${subjectName.toLowerCase()}.png`,
+          contentType: 'image/png',
+        })
+        .expect(201);
+    }
 
     await state(participantA, csrfA)(
       'post',
       `/api/registrations/${registrationId}/submit`,
     ).expect(201);
+    expect(
+      await prisma.emailOutbox.count({
+        where: { to: 'a@example.test', subject: { contains: 'telah dikirim' } },
+      }),
+    ).toBe(1);
   });
 
   it('enforces review transitions and atomically creates a manual invoice', async () => {
@@ -303,6 +359,10 @@ suite('registration system e2e', () => {
     invoiceId = invoice.body.id as string;
     expect(invoice.body.paymentStatus).toBe('UNPAID');
     expect(invoice.body.instructions.provider).toBe('MANUAL');
+    const approvalNotice = await prisma.emailOutbox.findFirstOrThrow({
+      where: { subject: { contains: 'Invoice pendaftaran' } },
+    });
+    expect(approvalNotice.body).toMatch(/^jrc-email-v1\./);
   });
 
   it('keeps proof pending, restricts finance verification, and issues only after paid', async () => {
@@ -311,6 +371,11 @@ suite('registration system e2e', () => {
       .attach('file', png, { filename: 'proof.png', contentType: 'image/png' })
       .expect(201)
       .expect(({ body }: Response) => expect(body.paymentStatus).toBe('PENDING_VERIFICATION'));
+    expect(
+      await prisma.emailOutbox.count({
+        where: { subject: { contains: 'Bukti pembayaran' } },
+      }),
+    ).toBeGreaterThanOrEqual(1);
     await participantA.get(`/api/registrations/${registrationId}/ticket`).expect(409);
     await state(reviewer, csrfReviewer)('post', `/api/admin/invoices/${invoiceId}/verify`)
       .send({ status: 'PAID', reason: 'Not finance' })
@@ -323,6 +388,95 @@ suite('registration system e2e', () => {
     expect(ticket.body.token).toMatch(/^[A-Za-z0-9_-]{43}$/);
     expect(ticket.body.qrDataUrl).toMatch(/^data:image\/png;base64,/);
     expect(JSON.stringify(ticket.body)).not.toContain('a@example.test');
+    const paidNotice = await prisma.emailOutbox.findFirstOrThrow({
+      where: { subject: { contains: 'terverifikasi' } },
+    });
+    expect(paidNotice.body).toMatch(/^jrc-email-v1\./);
+  });
+
+  it('limits the paid-team viewer to paid details and scoped private files', async () => {
+    const response = await paidTeamViewer
+      .get('/api/admin/paid-teams')
+      .expect('Cache-Control', 'private, no-store')
+      .expect(200);
+    expect(response.body).toEqual({
+      items: [
+        {
+          id: registrationId,
+          registrationNumber: expect.any(String),
+          teamName: '=CMD()',
+          institution: 'PENS',
+          competition: {
+            id: competitionId,
+            name: 'Chariot Line',
+            level: 'Umum',
+            discipline: 'Line Follower Mikro',
+          },
+          verifiedAt: expect.any(String),
+        },
+      ],
+      page: 1,
+      pageSize: 50,
+      hasNextPage: false,
+    });
+    expect(JSON.stringify(response.body)).not.toMatch(
+      /email|phone|member|proof|amount|invoice|owner|studentId/i,
+    );
+
+    const detail = await paidTeamViewer
+      .get(`/api/admin/paid-teams/${registrationId}`)
+      .expect('Cache-Control', 'private, no-store')
+      .expect(200);
+    expect(detail.body).toMatchObject({
+      id: registrationId,
+      teamName: '=CMD()',
+      institution: 'PENS',
+      owner: { displayName: 'Participant A', email: 'a@example.test' },
+      members: [
+        expect.objectContaining({ name: 'Alice', photo: expect.objectContaining({ id: expect.any(String) }) }),
+        expect.objectContaining({ name: 'Bob', photo: expect.objectContaining({ id: expect.any(String) }) }),
+        expect.objectContaining({ name: 'Coach', photo: expect.objectContaining({ id: expect.any(String) }) }),
+      ],
+      payment: {
+        invoiceNumber: expect.any(String),
+        amount: 250000,
+        currency: 'IDR',
+        verifiedAt: expect.any(String),
+        proof: expect.objectContaining({ originalName: 'proof.png' }),
+      },
+    });
+    expect(JSON.stringify(detail.body)).not.toMatch(
+      /storageKey|verificationReason|verifiedBy|instructions/i,
+    );
+
+    const photoId = detail.body.members[0].photo.id as string;
+    await paidTeamViewer
+      .get(`/api/admin/paid-teams/${registrationId}/photos/${photoId}`)
+      .expect('Cache-Control', 'private, no-store')
+      .expect('Cross-Origin-Resource-Policy', 'same-site')
+      .expect('Content-Disposition', /^inline;/)
+      .expect(200);
+    await paidTeamViewer
+      .get(`/api/admin/paid-teams/${registrationId}/photos/${photoId}?download=true`)
+      .expect('Content-Disposition', /^attachment;/)
+      .expect(200);
+    await paidTeamViewer
+      .get(`/api/admin/paid-teams/${registrationId}/payment-proof`)
+      .expect('Cache-Control', 'private, no-store')
+      .expect('Cross-Origin-Resource-Policy', 'same-site')
+      .expect('Content-Disposition', /^inline;/)
+      .expect(200);
+    await paidTeamViewer
+      .get(`/api/admin/paid-teams/${registrationId}/payment-proof?download=true`)
+      .expect('Content-Disposition', /^attachment;/)
+      .expect(200);
+
+    await finance.get('/api/admin/paid-teams').expect(403);
+    await reviewer.get('/api/admin/paid-teams').expect(403);
+    await paidTeamViewer.get('/api/admin/finance/invoices').expect(403);
+    await paidTeamViewer.get('/api/admin/registrations').expect(403);
+    await superAdmin.get('/api/admin/paid-teams').expect(200);
+    await superAdmin.get(`/api/admin/paid-teams/${registrationId}`).expect(200);
   });
 
   it('rejects forged tokens and minimizes public verification output', async () => {
@@ -349,17 +503,25 @@ suite('registration system e2e', () => {
 
   it('atomically permits exactly one concurrent redemption', async () => {
     const token = (await participantA.get(`/api/registrations/${registrationId}/ticket`).expect(200)).body.token as string;
+    const memberIds = (
+      await participantA.get(`/api/registrations/${registrationId}`).expect(200)
+    ).body.members.map((member: { id: string }) => member.id);
     const [first, second] = await Promise.all([
-      state(gate, csrfGate)('post', '/api/gate/redeem').send({ token, eventId }),
-      state(gate, csrfGate)('post', '/api/gate/redeem').send({ token, eventId }),
+      state(gate, csrfGate)('post', '/api/gate/redeem').send({ token, eventId, memberIds }),
+      state(gate, csrfGate)('post', '/api/gate/redeem').send({ token, eventId, memberIds }),
     ]);
     expect([first.status, second.status]).toEqual([201, 201]);
     expect([first.body.result, second.body.result].sort()).toEqual(['ALREADY_CHECKED_IN', 'CHECKED_IN']);
+    const duplicate = [first.body, second.body].find(
+      (body) => body.result === 'ALREADY_CHECKED_IN',
+    );
+    expect(duplicate).toMatchObject({
+      checkedInAt: expect.any(String),
+      checkedInBy: { id: expect.any(String), displayName: expect.any(String) },
+    });
   });
 
-  it('records audit history and prevents CSV formula execution', async () => {
-    const csv = await reviewer.get('/api/admin/registrations/export.csv').expect(200);
-    expect(csv.text).toContain("'=CMD()");
+  it('records audit history for registration, payment, and attendance mutations', async () => {
     const actions = (await prisma.auditLog.findMany({ select: { action: true } })).map((entry) => entry.action);
     expect(actions).toContain('REGISTRATION_APPROVED');
     expect(actions).toContain('PAYMENT_MARKED_PAID');

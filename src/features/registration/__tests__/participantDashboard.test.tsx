@@ -12,6 +12,7 @@ const session: AuthSession = {
     displayName: 'Ari Wijaya',
     email: 'ari@example.test',
     role: 'PARTICIPANT',
+    emailVerified: true,
   },
 };
 
@@ -20,7 +21,7 @@ function registration(id: string, teamName: string, status: RegistrationRecord['
     id,
     registrationNumber: `JRC-${id}`,
     competitionId: 'competition-1',
-    competition: { id: 'competition-1', name: 'Ring Rumble — Sumo' },
+    competition: { id: 'competition-1', name: 'Colosseum Clash' },
     teamName,
     institution: 'PENS',
     status,
@@ -83,5 +84,39 @@ describe('PortalDashboardPage', () => {
       'href',
       '/portal/pendaftaran/baru',
     );
+  });
+
+  it('offers a second team while the account has one registration', async () => {
+    renderDashboard(createApi([
+      registration('001', 'Garuda Robotika', 'SUBMITTED'),
+    ]));
+
+    expect(await screen.findByRole('link', { name: 'Daftarkan tim kedua' })).toHaveAttribute(
+      'href',
+      '/portal/pendaftaran/baru',
+    );
+    expect(screen.getByText(/cabang lomba berbeda/i)).toBeInTheDocument();
+  });
+
+  it('hides the create action after the account reaches two registrations', async () => {
+    renderDashboard(createApi([
+      registration('001', 'Garuda Robotika', 'DRAFT'),
+      registration('002', 'Rajawali Mesin', 'APPROVED'),
+    ]));
+
+    expect(await screen.findByRole('heading', { name: 'Garuda Robotika' })).toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: 'Daftarkan tim kedua' })).not.toBeInTheDocument();
+  });
+
+  it('shows structured review feedback on the registration card', async () => {
+    const record = {
+      ...registration('003', 'Elang Mekatronika', 'REVISION_REQUESTED'),
+      reviewReasonCategory: 'DATA_MISMATCH' as const,
+      reviewReasonComment: 'Nama ketua tidak sesuai dokumen.',
+    };
+    renderDashboard(createApi([record]));
+
+    expect(await screen.findByText('Data tidak sesuai')).toBeInTheDocument();
+    expect(screen.getByText('Nama ketua tidak sesuai dokumen.')).toBeInTheDocument();
   });
 });
