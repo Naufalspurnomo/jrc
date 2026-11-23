@@ -87,7 +87,7 @@ describe('participant registration account policy', () => {
   it('retries a serialization conflict and rechecks the concurrent winner', async () => {
     const { service, prisma, transaction } = createService({ count: 1 });
     prisma.$transaction.mockRejectedValueOnce(new Prisma.PrismaClientKnownRequestError('conflict', { code: 'P2034', clientVersion: '6.19.2' }));
-    transaction.registration.count.mockResolvedValue(2);
+    transaction.registration.count.mockResolvedValue(5);
     await expect(rejectedResponse(service.create(OWNER_ID, { competitionId: SECOND_COMPETITION_ID }))).resolves.toMatchObject({ code: 'REGISTRATION_LIMIT_REACHED' });
     expect(prisma.$transaction).toHaveBeenCalledTimes(2);
     expect(transaction.registration.create).not.toHaveBeenCalled();
@@ -95,7 +95,7 @@ describe('participant registration account policy', () => {
 
   it('maps PostgreSQL trigger errors returned as UnknownRequestError', async () => {
     const { service, transaction } = createService({ count: 1 });
-    transaction.registration.create.mockRejectedValueOnce(new Prisma.PrismaClientUnknownRequestError('constraint registrations_owner_max_two violated', { clientVersion: '6.19.2' }));
+    transaction.registration.create.mockRejectedValueOnce(new Prisma.PrismaClientUnknownRequestError('constraint registrations_owner_max_five violated', { clientVersion: '6.19.2' }));
     await expect(rejectedResponse(service.create(OWNER_ID, { competitionId: SECOND_COMPETITION_ID }))).resolves.toMatchObject({ code: 'REGISTRATION_LIMIT_REACHED' });
   });
 
@@ -122,65 +122,30 @@ describe('participant registration account policy', () => {
     );
   });
 
-  it('rejects another team in a competition already used by the account', async () => {
-    const { service, transaction } = createService({
-      count: 1,
-      duplicateCompetition: true,
-    });
+  it('allows another team in a competition already used by the account', async () => {
+    const { service, transaction } = createService({ count: 1, duplicateCompetition: true });
 
-    await expect(
-      rejectedResponse(service.create(OWNER_ID, { competitionId: SECOND_COMPETITION_ID })),
-    ).resolves.toEqual({
-      code: 'COMPETITION_ALREADY_REGISTERED',
-      message: 'Akun ini sudah memiliki tim pada cabang lomba tersebut',
+    await expect(service.create(OWNER_ID, { competitionId: SECOND_COMPETITION_ID })).resolves.toMatchObject({
+      competitionId: SECOND_COMPETITION_ID,
+      status: RegistrationStatus.DRAFT,
     });
-    expect(transaction.registration.create).not.toHaveBeenCalled();
+    expect(transaction.registration.create).toHaveBeenCalledOnce();
   });
 
-  it('rejects a third team even when it uses another competition', async () => {
-    const { service, transaction } = createService({ count: 2 });
+  it('allows five teams per account', async () => {
+    const { service, transaction } = createService({ count: 4 });
+    await expect(service.create(OWNER_ID, { competitionId: FIRST_COMPETITION_ID })).resolves.toMatchObject({
+      status: RegistrationStatus.DRAFT,
+    });
+    expect(transaction.registration.create).toHaveBeenCalledOnce();
+  });
 
-    await expect(
-      rejectedResponse(service.create(OWNER_ID, { competitionId: FIRST_COMPETITION_ID })),
-    ).resolves.toEqual({
+  it('rejects a sixth team', async () => {
+    const { service, transaction } = createService({ count: 5 });
+    await expect(rejectedResponse(service.create(OWNER_ID, { competitionId: FIRST_COMPETITION_ID }))).resolves.toEqual({
       code: 'REGISTRATION_LIMIT_REACHED',
-      message: 'Satu akun hanya dapat mendaftarkan maksimal dua tim',
+      message: 'Satu akun hanya dapat mendaftarkan maksimal lima tim',
     });
     expect(transaction.registration.create).not.toHaveBeenCalled();
-  });
-
-  it('rejects moving an existing team into the account other competition', async () => {
-    const transaction = {
-      registration: {
-        findFirst: vi.fn()
-          .mockResolvedValueOnce({ status: RegistrationStatus.DRAFT })
-          .mockResolvedValueOnce({ id: 'other-registration' }),
-        updateMany: vi.fn(),
-      },
-    };
-    const prisma = {
-      registration: {
-        findFirst: vi.fn().mockResolvedValue({ status: RegistrationStatus.DRAFT }),
-      },
-      competition: {
-        findFirst: vi.fn().mockResolvedValue({ id: SECOND_COMPETITION_ID }),
-      },
-      $transaction: vi.fn(
-        async (operation: (client: typeof transaction) => Promise<unknown>) => operation(transaction),
-      ),
-    };
-    const service = new RegistrationsService(prisma as unknown as PrismaService);
-
-    await expect(
-      rejectedResponse(service.update(
-        OWNER_ID,
-        '18a46e52-63ee-439d-8a77-280f126d82e6',
-        { competitionId: SECOND_COMPETITION_ID },
-      )),
-    ).resolves.toEqual({
-      code: 'COMPETITION_ALREADY_REGISTERED',
-      message: 'Akun ini sudah memiliki tim pada cabang lomba tersebut',
-    });
-    expect(transaction.registration.updateMany).not.toHaveBeenCalled();
   });
 });

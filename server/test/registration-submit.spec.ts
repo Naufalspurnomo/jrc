@@ -9,8 +9,8 @@ const AUDIT = { requestId: 'request-id', ipAddress: '127.0.0.1' };
 
 function currentRegistration(documents: number) {
   const members = [
-    { name: 'Leader One', role: TeamMemberRole.LEADER },
-    { name: 'Supervisor One', role: TeamMemberRole.SUPERVISOR },
+    { name: 'Leader One', role: TeamMemberRole.LEADER, email: 'leader@example.test', phone: '081234567890' },
+    { name: 'Supervisor One', role: TeamMemberRole.SUPERVISOR, email: null, phone: null },
   ];
   return {
     status: RegistrationStatus.DRAFT,

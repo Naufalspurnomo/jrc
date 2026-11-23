@@ -48,7 +48,7 @@ import { encryptRichEmail } from './email-outbox';
 import { buildRegistrationPortalUrl, renderTransactionalEmail } from './email-template';
 
 const MAX_PARTICIPANTS = 3;
-const MAX_REGISTRATIONS_PER_ACCOUNT = 2;
+const MAX_REGISTRATIONS_PER_ACCOUNT = 5;
 const REGISTRATION_NUMBER_ATTEMPTS = 5;
 const EDITABLE_STATUSES: RegistrationStatus[] = [
   RegistrationStatus.DRAFT,
@@ -383,14 +383,6 @@ export class RegistrationsService {
             throw this.registrationLimitError();
           }
 
-          const duplicateCompetition = await transaction.registration.findFirst({
-            where: { ownerId, competitionId: dto.competitionId },
-            select: { id: true },
-          });
-          if (duplicateCompetition) {
-            throw this.duplicateCompetitionError();
-          }
-
           const registration = await transaction.registration.create({
             data: {
               registrationNumber: this.newRegistrationNumber(),
@@ -407,9 +399,6 @@ export class RegistrationsService {
           isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
         });
       } catch (error: unknown) {
-        if (this.isUniqueConstraintError(error, 'competition_id')) {
-          throw this.duplicateCompetitionError();
-        }
         if (this.isRegistrationLimitConstraintError(error)) {
           throw this.registrationLimitError();
         }
@@ -450,25 +439,10 @@ export class RegistrationsService {
       await this.requireOpenCompetition(dto.competitionId);
     }
 
-    try {
-      return await this.withSerializableRetry(async (transaction) => {
-        if (dto.competitionId !== undefined) {
-          const duplicateCompetition = await transaction.registration.findFirst({
-            where: {
-              ownerId,
-              competitionId: dto.competitionId,
-              id: { not: id },
-            },
-            select: { id: true },
-          });
-          if (duplicateCompetition) {
-            throw this.duplicateCompetitionError();
-          }
-        }
-
-        const updated = await transaction.registration.updateMany({
-          where: { id, ownerId, status: { in: EDITABLE_STATUSES } },
-          data: {
+    return this.withSerializableRetry(async (transaction) => {
+      const updated = await transaction.registration.updateMany({
+        where: { id, ownerId, status: { in: EDITABLE_STATUSES } },
+        data: {
             ...(dto.competitionId === undefined
               ? {}
               : { competitionId: dto.competitionId }),
@@ -496,12 +470,6 @@ export class RegistrationsService {
         if (!registration) throw new NotFoundException('Registration not found');
         return serializeRegistration(registration);
       });
-    } catch (error: unknown) {
-      if (this.isUniqueConstraintError(error, 'competition_id')) {
-        throw this.duplicateCompetitionError();
-      }
-      throw error;
-    }
   }
 
   async addMember(
@@ -675,7 +643,7 @@ export class RegistrationsService {
           registrationNumber: true,
           owner: { select: { email: true, displayName: true } },
           documents: { select: { category: true, subjectName: true, subjectRole: true } },
-          members: { select: { name: true, role: true } },
+          members: { select: { name: true, role: true, email: true, phone: true } },
         },
       });
       if (!current) throw new NotFoundException('Registration not found');
@@ -706,6 +674,10 @@ export class RegistrationsService {
         throw new BadRequestException(
           'Team, institution, and competition are required',
         );
+      }
+      const leader = current.members.find((member) => member.role === TeamMemberRole.LEADER);
+      if (!leader?.email?.trim() || !leader.phone?.trim()) {
+        throw new BadRequestException('Team leader email and phone are required');
       }
       const recommendationLetterLevels = new Set(['SD', 'SMP', 'SMA']);
       const requiredCategories = [
@@ -857,17 +829,10 @@ export class RegistrationsService {
     return `JRC14-${year}-${suffix}`;
   }
 
-  private duplicateCompetitionError(): BadRequestException {
-    return new BadRequestException({
-      code: 'COMPETITION_ALREADY_REGISTERED',
-      message: 'Akun ini sudah memiliki tim pada cabang lomba tersebut',
-    });
-  }
-
   private registrationLimitError(): BadRequestException {
     return new BadRequestException({
       code: 'REGISTRATION_LIMIT_REACHED',
-      message: 'Satu akun hanya dapat mendaftarkan maksimal dua tim',
+      message: 'Satu akun hanya dapat mendaftarkan maksimal lima tim',
     });
   }
 
@@ -884,7 +849,7 @@ export class RegistrationsService {
       prismaError.meta?.constraint,
       prismaError.meta?.database_error,
     ].filter((value): value is string => typeof value === 'string');
-    return details.some((value) => value.includes('registrations_owner_max_two'));
+    return details.some((value) => value.includes('registrations_owner_max_five'));
   }
 
   private isUniqueConstraintError(error: unknown, field?: string): boolean {
