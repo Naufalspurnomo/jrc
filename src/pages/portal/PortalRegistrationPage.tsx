@@ -33,12 +33,11 @@ interface PortalRegistrationPageProps {
 interface MemberDraft {
   id?: string;
   name: string;
-  studentId: string;
   email: string;
   phone: string;
 }
 
-const emptyMember = (): MemberDraft => ({ name: '', studentId: '', email: '', phone: '' });
+const emptyMember = (): MemberDraft => ({ name: '', email: '', phone: '' });
 
 const editableStatuses: RegistrationState[] = ['DRAFT', 'REVISION_REQUESTED'];
 const MAX_UPLOAD_BYTES = 5 * 1024 * 1024;
@@ -104,7 +103,6 @@ export default function PortalRegistrationPage({ api = registrationApi }: Portal
   const [competitionId, setCompetitionId] = useState('');
   const [teamName, setTeamName] = useState('');
   const [institution, setInstitution] = useState('');
-  const [phone, setPhone] = useState('');
   const [leader, setLeader] = useState<MemberDraft>(emptyMember);
   const [members, setMembers] = useState<MemberDraft[]>([]);
   const [supervisor, setSupervisor] = useState<MemberDraft>(emptyMember);
@@ -157,8 +155,8 @@ export default function PortalRegistrationPage({ api = registrationApi }: Portal
 
   // Snapshot of the values the autosave effect should react to.
   const formSnapshot = useMemo(
-    () => JSON.stringify({ teamName, institution, phone, leader, members, supervisor }),
-    [teamName, institution, phone, leader, members, supervisor],
+    () => JSON.stringify({ teamName, institution, leader, members, supervisor }),
+    [teamName, institution, leader, members, supervisor],
   );
   const lastSavedSnapshot = useRef(formSnapshot);
 
@@ -198,16 +196,9 @@ export default function PortalRegistrationPage({ api = registrationApi }: Portal
         serverClockBaseline.current = Date.now();
         setNow(serverClockBaseline.current);
         const registrations = Array.isArray(registrationRecords) ? registrationRecords : [];
-        const usedCompetitionIds = new Set(
-          registrations
-            .filter((registration) => registration.id !== existingRegistrationId)
-            .map((registration) => registration.competitionId),
-        );
-        setCompetitions(
-          competitionRecords.filter((competition) => !usedCompetitionIds.has(competition.id)),
-        );
+        setCompetitions(competitionRecords);
 
-        if (!existingRegistrationId && registrations.length >= 2) {
+        if (!existingRegistrationId && registrations.length >= 5) {
           navigate('/portal', { replace: true });
           return;
         }
@@ -218,7 +209,7 @@ export default function PortalRegistrationPage({ api = registrationApi }: Portal
           setCompetitionId(existingRegistration.competitionId);
           setTeamName(existingRegistration.teamName);
           setInstitution(existingRegistration.institution);
-          setPhone(existingRegistration.phone ?? '');
+
           setStatus(existingRegistration.status);
           setDocuments(existingRegistration.documents ?? []);
           setReviewReasonCategory(existingRegistration.reviewReasonCategory ?? null);
@@ -230,7 +221,6 @@ export default function PortalRegistrationPage({ api = registrationApi }: Portal
           const toDraft = (member: TeamMemberRecord): MemberDraft => ({
             id: member.id,
             name: member.name,
-            studentId: member.studentId ?? '',
             email: member.email ?? '',
             phone: member.phone ?? '',
           });
@@ -242,7 +232,6 @@ export default function PortalRegistrationPage({ api = registrationApi }: Portal
           lastSavedSnapshot.current = JSON.stringify({
             teamName: existingRegistration.teamName,
             institution: existingRegistration.institution,
-            phone: existingRegistration.phone ?? '',
             leader: existingLeader ? toDraft(existingLeader) : emptyMember(),
             members: existingMembers.filter((member) => member.role === 'MEMBER').map(toDraft),
             supervisor: existingSupervisor ? toDraft(existingSupervisor) : emptyMember(),
@@ -288,12 +277,12 @@ export default function PortalRegistrationPage({ api = registrationApi }: Portal
     // Snapshot of exactly what this run sends. Marking *this* (not the latest
     // keystrokes) as saved keeps the autosave effect honest: anything typed
     // while the request was in flight still differs and gets its own save.
-    const snapshotBeingSaved = JSON.stringify({ teamName, institution, phone, leader, members, supervisor });
+    const snapshotBeingSaved = JSON.stringify({ teamName, institution, leader, members, supervisor });
 
     const registration = await api.registrations.update(registrationId, {
       teamName: teamName.trim(),
       institution: institution.trim(),
-      phone: phone.trim(),
+
     });
     setStatus(registration.status);
 
@@ -308,14 +297,12 @@ export default function PortalRegistrationPage({ api = registrationApi }: Portal
 
       // The API validates email/phone when present, so optional fields are
       // omitted rather than sent as empty strings (which fail validation).
-      const studentId = person.studentId.trim();
       const email = person.email.trim();
       const phone = person.phone.trim();
 
       if (person.id) {
         await api.registrations.updateMember(registration.id, person.id, {
           name,
-          studentId: studentId || null,
           email: email || null,
           phone: phone || null,
         });
@@ -325,7 +312,6 @@ export default function PortalRegistrationPage({ api = registrationApi }: Portal
       const createdMember = await api.registrations.addMember(registration.id, {
         name,
         role,
-        ...(studentId ? { studentId } : {}),
         ...(email ? { email } : {}),
         ...(phone ? { phone } : {}),
       });
@@ -341,7 +327,7 @@ export default function PortalRegistrationPage({ api = registrationApi }: Portal
     }
 
     lastSavedSnapshot.current = snapshotBeingSaved;
-  }, [api, registrationId, teamName, institution, phone, leader, members, supervisor]);
+  }, [api, registrationId, teamName, institution, leader, members, supervisor]);
 
   const autosave = useAutosave({ save: persist, enabled: editable && created });
   const { schedule: scheduleAutosave, flush: flushAutosave } = autosave;
@@ -382,7 +368,7 @@ export default function PortalRegistrationPage({ api = registrationApi }: Portal
       // instead of silently creating a second one.
       navigate(`/portal/pendaftaran/${registration.id}`, { replace: true });
     } catch (error) {
-      setError(error instanceof ApiError && ['COMPETITION_ALREADY_REGISTERED', 'REGISTRATION_LIMIT_REACHED'].includes(error.code ?? '')
+      setError(error instanceof ApiError && ['REGISTRATION_LIMIT_REACHED'].includes(error.code ?? '')
         ? error.message
         : 'Draft gagal dibuat. Periksa koneksi lalu coba lagi.');
       setCompetitionId('');
@@ -692,9 +678,9 @@ export default function PortalRegistrationPage({ api = registrationApi }: Portal
     competitionId,
     teamName,
     institution,
-    phone,
     leaderName: leader.name,
-    leaderStudentId: leader.studentId,
+    leaderEmail: leader.email,
+    leaderPhone: leader.phone,
     documentCategories: documents.map((document) => document.category),
     competitionLevel: selectedCompetition?.level,
     hasSupervisor: Boolean(supervisor.name.trim()),
@@ -915,17 +901,7 @@ export default function PortalRegistrationPage({ api = registrationApi }: Portal
                         onChange={(event) => setInstitution(event.target.value)}
                       />
                     </label>
-                    <label>
-                      Nomor WhatsApp tim
-                      <input
-                        id="field-team-phone"
-                        className={isHighlighted('phone') && !phone.trim() ? 'portal-field--attention' : undefined}
-                        disabled={!editable}
-                        inputMode="tel"
-                        value={phone}
-                        onChange={(event) => setPhone(event.target.value)}
-                      />
-                    </label>
+
                   </fieldset>
 
                   <fieldset className="portal-fieldset">
@@ -941,29 +917,25 @@ export default function PortalRegistrationPage({ api = registrationApi }: Portal
                       />
                     </label>
                     <label>
-                      NIS/NIM ketua
+                      Email ketua <span aria-hidden="true">*</span>
                       <input
-                        id="field-leader-student-id"
-                        className={isHighlighted('leaderStudentId') && !leader.studentId.trim() ? 'portal-field--attention' : undefined}
-                        disabled={!editable}
-                        value={leader.studentId}
-                        onChange={(event) => setLeader((current) => ({ ...current, studentId: event.target.value }))}
-                      />
-                    </label>
-                    <label>
-                      Email ketua
-                      <input
+                        id="field-leader-email"
+                        className={isHighlighted('leaderEmail') && !leader.email.trim() ? 'portal-field--attention' : undefined}
                         disabled={!editable}
                         type="email"
+                        required
                         value={leader.email}
                         onChange={(event) => setLeader((current) => ({ ...current, email: event.target.value }))}
                       />
                     </label>
                     <label>
-                      Nomor telepon ketua
+                      Nomor telepon ketua <span aria-hidden="true">*</span>
                       <input
+                        id="field-leader-phone"
+                        className={isHighlighted('leaderPhone') && !leader.phone.trim() ? 'portal-field--attention' : undefined}
                         disabled={!editable}
                         inputMode="tel"
+                        required
                         value={leader.phone}
                         onChange={(event) => setLeader((current) => ({ ...current, phone: event.target.value }))}
                       />
@@ -986,15 +958,7 @@ export default function PortalRegistrationPage({ api = registrationApi }: Portal
                           />
                         </label>
                         <label>
-                          NIS/NIM anggota {index + 1}
-                          <input
-                            disabled={!editable}
-                            value={member.studentId}
-                            onChange={(event) => updateMember(index, 'studentId', event.target.value)}
-                          />
-                        </label>
-                        <label>
-                          Email anggota {index + 1}
+                          Email anggota {index + 1} (opsional)
                           <input
                             disabled={!editable}
                             type="email"
@@ -1003,7 +967,7 @@ export default function PortalRegistrationPage({ api = registrationApi }: Portal
                           />
                         </label>
                         <label>
-                          Nomor telepon anggota {index + 1}
+                          Nomor telepon anggota {index + 1} (opsional)
                           <input
                             disabled={!editable}
                             inputMode="tel"
@@ -1048,7 +1012,7 @@ export default function PortalRegistrationPage({ api = registrationApi }: Portal
                       />
                     </label>
                     <label>
-                      Email pembina
+                      Email pembina (opsional)
                       <input
                         disabled={!editable}
                         type="email"
@@ -1057,7 +1021,7 @@ export default function PortalRegistrationPage({ api = registrationApi }: Portal
                       />
                     </label>
                     <label>
-                      Nomor telepon pembina
+                      Nomor telepon pembina (opsional)
                       <input
                         disabled={!editable}
                         inputMode="tel"
@@ -1309,9 +1273,9 @@ export default function PortalRegistrationPage({ api = registrationApi }: Portal
                       competitionId,
                       teamName,
                       institution,
-                      phone,
                       leaderName: leader.name,
-                      leaderStudentId: leader.studentId,
+                      leaderEmail: leader.email,
+                      leaderPhone: leader.phone,
                       documentCategories: documents.map((document) => document.category),
                       competitionLevel: selectedCompetition?.level,
                       hasSupervisor: Boolean(supervisor.name.trim()),

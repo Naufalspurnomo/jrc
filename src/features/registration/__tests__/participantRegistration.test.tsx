@@ -114,7 +114,7 @@ function LocationProbe() {
 describe('PortalRegistrationPage', () => {
   beforeEach(() => sessionStorage.clear());
 
-  it('excludes the competition already used by the first team when creating a second team', async () => {
+  it('keeps every competition available when creating another team', async () => {
     const firstRegistration = registration({
       id: 'registration-first',
       competitionId: 'competition-1',
@@ -125,15 +125,18 @@ describe('PortalRegistrationPage', () => {
     renderPage(api);
 
     expect(await screen.findByRole('radio', { name: /Robo Chiper/i })).toBeInTheDocument();
-    expect(screen.queryByRole('radio', { name: /Castra Guardian/i })).not.toBeInTheDocument();
+    expect(screen.getByRole('radio', { name: /Castra Guardian/i })).toBeInTheDocument();
     expect(api.registrations.list).toHaveBeenCalledOnce();
   });
 
-  it('redirects to the dashboard instead of offering a third registration', async () => {
+  it('redirects to the dashboard after five registrations', async () => {
     const api = createApi({
       list: vi.fn().mockResolvedValue([
-        registration({ id: 'registration-first', competitionId: 'competition-1' }),
-        registration({ id: 'registration-second', competitionId: 'competition-2' }),
+        registration({ id: 'registration-1', competitionId: 'competition-1' }),
+        registration({ id: 'registration-2', competitionId: 'competition-2' }),
+        registration({ id: 'registration-3', competitionId: 'competition-3' }),
+        registration({ id: 'registration-4', competitionId: 'competition-4' }),
+        registration({ id: 'registration-5', competitionId: 'competition-5' }),
       ]),
     });
 
@@ -394,12 +397,11 @@ describe('PortalRegistrationPage', () => {
 
     await user.type(await screen.findByLabelText('Nama tim'), 'Nova');
     await user.type(screen.getByLabelText('Institusi'), 'ITS');
-    await user.type(screen.getByLabelText('Nomor WhatsApp tim'), '081234567890');
     await user.type(screen.getByLabelText('Nama ketua'), 'Ari Wijaya');
-    await user.type(screen.getByLabelText('NIS/NIM ketua'), '5025211001');
+    await user.type(screen.getByLabelText(/Email ketua/), 'ari@example.test');
+    await user.type(screen.getByLabelText(/Nomor telepon ketua/), '081234567890');
     await user.click(screen.getByRole('button', { name: 'Tambah anggota' }));
     await user.type(screen.getByLabelText('Nama anggota 1'), 'Bima Putra');
-    await user.type(screen.getByLabelText('NIS/NIM anggota 1'), '5025211002');
 
     // Typing is persisted without an explicit save action.
     await waitFor(() => expect(api.registrations.update).toHaveBeenCalledWith(
@@ -409,12 +411,12 @@ describe('PortalRegistrationPage', () => {
     await waitFor(() => expect(api.registrations.addMember).toHaveBeenCalledWith('registration-1', {
       name: 'Ari Wijaya',
       role: 'LEADER',
-      studentId: '5025211001',
+      email: 'ari@example.test',
+      phone: '081234567890',
     }));
     await waitFor(() => expect(api.registrations.addMember).toHaveBeenCalledWith('registration-1', {
       name: 'Bima Putra',
       role: 'MEMBER',
-      studentId: '5025211002',
     }));
     expect(competitionCard).toHaveAttribute('aria-checked', 'true');
   });
@@ -577,7 +579,7 @@ describe('PortalRegistrationPage', () => {
     const leaderName = await screen.findByLabelText('Nama ketua');
     await user.clear(leaderName);
     await user.type(leaderName, 'Ari Baru');
-    const memberEmail = screen.getByLabelText('Email anggota 1');
+    const memberEmail = screen.getByLabelText(/Email anggota 1/);
     await user.clear(memberEmail);
     await user.type(memberEmail, 'bima.baru@example.test');
 
@@ -585,13 +587,11 @@ describe('PortalRegistrationPage', () => {
     await waitFor(() => expect(api.registrations.updateMember).toHaveBeenCalledTimes(2));
     expect(api.registrations.updateMember).toHaveBeenNthCalledWith(1, 'registration-1', 'leader-1', {
       name: 'Ari Baru',
-      studentId: '5025211001',
       email: 'ari@example.test',
       phone: '+62 812 1111 1111',
     });
     expect(api.registrations.updateMember).toHaveBeenNthCalledWith(2, 'registration-1', 'member-1', {
       name: 'Bima Putra',
-      studentId: '5025211002',
       email: 'bima.baru@example.test',
       phone: '+62 812 2222 2222',
     });
@@ -612,14 +612,13 @@ describe('PortalRegistrationPage', () => {
     });
     renderPage(api, '/portal/pendaftaran/registration-1');
 
-    await user.clear(await screen.findByLabelText('NIS/NIM anggota 1'));
-    await user.clear(screen.getByLabelText('Email anggota 1'));
-    await user.clear(screen.getByLabelText('Nomor telepon anggota 1'));
+    await user.clear(await screen.findByLabelText('Email anggota 1 (opsional)'));
+    await user.clear(screen.getByLabelText(/Nomor telepon anggota 1/));
 
     await waitFor(() => expect(api.registrations.updateMember).toHaveBeenCalledWith(
       'registration-1',
       'member-1',
-      { name: 'Bima Putra', studentId: null, email: null, phone: null },
+      { name: 'Bima Putra', email: null, phone: null },
     ));
   });
 
@@ -642,6 +641,8 @@ describe('PortalRegistrationPage', () => {
       id: 'leader-1',
       name: 'Ari Wijaya',
       studentId: '5025211001',
+      email: 'ari@example.test',
+      phone: '081234567890',
       role: 'LEADER',
     };
     const supervisor: TeamMemberRecord = {

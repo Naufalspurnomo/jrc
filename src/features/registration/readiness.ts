@@ -9,9 +9,9 @@ export interface RegistrationReadinessInput {
   competitionId: string;
   teamName: string;
   institution: string;
-  phone: string;
   leaderName: string;
-  leaderStudentId: string;
+  leaderEmail: string;
+  leaderPhone: string;
   documentCategories?: string[];
   documentCount?: number;
   competitionLevel?: string | null;
@@ -105,15 +105,6 @@ export function registrationGaps(input: RegistrationReadinessInput): Registratio
     });
   }
 
-  if (!input.phone.trim()) {
-    gaps.push({
-      key: 'phone',
-      label: 'Nomor WhatsApp tim',
-      detail: 'Nomor WhatsApp yang bisa dihubungi panitia belum diisi.',
-      targetId: 'field-team-phone',
-    });
-  }
-
   if (!input.leaderName.trim()) {
     gaps.push({
       key: 'leaderName',
@@ -123,12 +114,21 @@ export function registrationGaps(input: RegistrationReadinessInput): Registratio
     });
   }
 
-  if (!input.leaderStudentId.trim()) {
+  if (!input.leaderEmail.trim()) {
     gaps.push({
-      key: 'leaderStudentId',
-      label: 'NIS/NIM ketua',
-      detail: 'NIS atau NIM ketua tim belum diisi.',
-      targetId: 'field-leader-student-id',
+      key: 'leaderEmail',
+      label: 'Email ketua',
+      detail: 'Email ketua tim belum diisi.',
+      targetId: 'field-leader-email',
+    });
+  }
+
+  if (!input.leaderPhone.trim()) {
+    gaps.push({
+      key: 'leaderPhone',
+      label: 'Nomor telepon ketua',
+      detail: 'Nomor telepon ketua tim belum diisi.',
+      targetId: 'field-leader-phone',
     });
   }
 

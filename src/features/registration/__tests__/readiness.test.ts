@@ -14,9 +14,9 @@ const complete: RegistrationReadinessInput = {
   competitionLevel: 'SMA',
   teamName: 'Garuda Robotika',
   institution: 'PENS',
-  phone: '081234567890',
   leaderName: 'Ari Wijaya',
-  leaderStudentId: '5025211001',
+  leaderEmail: 'ari@example.test',
+  leaderPhone: '081234567890',
   documentCategories: [
     'RECOMMENDATION_LETTER',
     'IDENTITY_CARD',
@@ -36,13 +36,15 @@ describe('registrationGaps', () => {
       ...complete,
       emailVerified: false,
       teamName: '   ',
-      leaderStudentId: '',
+      leaderEmail: '',
+      leaderPhone: '',
       documentCategories: [],
     });
 
     expect(gaps.map((gap) => gap.key)).toEqual([
       'teamName',
-      'leaderStudentId',
+      'leaderEmail',
+      'leaderPhone',
       'documents',
       'emailVerified',
     ]);
@@ -99,14 +101,16 @@ describe('registrationGaps', () => {
       ...complete,
       teamName: '  ',
       institution: '\t',
-      phone: ' ',
+      leaderEmail: ' ',
+      leaderPhone: ' ',
       leaderName: '\n',
     });
     expect(gaps.map((gap) => gap.key)).toEqual([
       'teamName',
       'institution',
-      'phone',
       'leaderName',
+      'leaderEmail',
+      'leaderPhone',
     ]);
   });
 });
@@ -117,12 +121,12 @@ describe('describeGaps', () => {
       ...complete,
       teamName: count > 0 ? '' : complete.teamName,
       institution: count > 1 ? '' : complete.institution,
-      phone: count > 2 ? '' : complete.phone,
+      leaderEmail: count > 2 ? '' : complete.leaderEmail,
     });
 
     expect(describeGaps(build(1))).toBe('Nama tim');
     expect(describeGaps(build(2))).toBe('Nama tim dan Institusi');
-    expect(describeGaps(build(3))).toBe('Nama tim, Institusi, dan Nomor WhatsApp tim');
+    expect(describeGaps(build(3))).toBe('Nama tim, Institusi, dan Email ketua');
   });
 });
 

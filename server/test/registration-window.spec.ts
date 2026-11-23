@@ -36,8 +36,8 @@ function currentRegistration(level = 'SMA', documents = BASE_DOCUMENTS) {
       registrationDeadline: DEADLINE,
     },
     members: [
-      { name: 'Leader One', role: TeamMemberRole.LEADER },
-      { name: 'Supervisor One', role: TeamMemberRole.SUPERVISOR },
+      { name: 'Leader One', role: TeamMemberRole.LEADER, email: 'leader@example.test', phone: '081234567890' },
+      { name: 'Supervisor One', role: TeamMemberRole.SUPERVISOR, email: null, phone: null },
     ],
     documents,
   };

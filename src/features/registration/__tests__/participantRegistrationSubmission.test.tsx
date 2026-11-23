@@ -28,7 +28,14 @@ function registration(status: RegistrationState, overrides: Partial<Registration
     phone: '081234567890',
     status,
     members: [
-      { id: 'leader-1', name: 'Ari Wijaya', studentId: '5025211001', role: 'LEADER' },
+      {
+        id: 'leader-1',
+        name: 'Ari Wijaya',
+        studentId: '5025211001',
+        email: 'ari@example.test',
+        phone: '081234567890',
+        role: 'LEADER',
+      },
       { id: 'supervisor-1', name: 'Rina Pembina', role: 'SUPERVISOR' },
     ],
     documents: [
