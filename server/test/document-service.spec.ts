@@ -407,6 +407,64 @@ describe('DocumentsService', () => {
   });
 });
 
+describe('Admin document replacement', () => {
+  it('appends a replacement version, preserves the original, and audits the change', async () => {
+    const original = documentRecord({ originalName: 'old-card.pdf', createdAt: new Date('2026-11-24T10:00:00.000Z') });
+    const created = documentRecord({
+      id: '5fe8fb90-e44b-42c4-a4c4-4c671f1e34c7',
+      originalName: 'correct-card.pdf',
+      storageKey: 'c'.repeat(64),
+      createdAt: new Date('2026-11-24T11:00:00.000Z'),
+    });
+    const transaction = {
+      document: {
+        findFirst: vi.fn().mockResolvedValue(original),
+        create: vi.fn().mockResolvedValue(created),
+      },
+      auditLog: { create: vi.fn().mockResolvedValue({}) },
+    };
+    const prisma = {
+      document: { findFirst: vi.fn().mockResolvedValue(original) },
+      $transaction: vi.fn((operation: (client: typeof transaction) => Promise<unknown>) => operation(transaction)),
+    };
+    const storage = {
+      upload: vi.fn().mockResolvedValue('c'.repeat(64)),
+      delete: vi.fn(),
+    };
+    const service = new DocumentsService(
+      prisma as unknown as PrismaService,
+      storage as unknown as PrivateStorageService,
+    );
+
+    const result = await service.replaceForAdmin(
+      OWNER_ID,
+      REGISTRATION_ID,
+      DOCUMENT_ID,
+      uploadFile({ originalname: 'correct-card.pdf' }),
+      { requestId: 'replace-request', ipAddress: '127.0.0.1' },
+    );
+
+    expect(result).toMatchObject({ id: created.id, originalName: 'correct-card.pdf' });
+    expect(transaction.document.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        registrationId: REGISTRATION_ID,
+        category: 'IDENTITY_CARD',
+        storageKey: 'c'.repeat(64),
+      }),
+    });
+    expect(transaction.document.create).not.toHaveBeenCalledWith(expect.objectContaining({ data: expect.objectContaining({ id: DOCUMENT_ID }) }));
+    expect(transaction.auditLog.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        action: 'DOCUMENT_REPLACED_BY_ADMIN',
+        entityId: created.id,
+        before: expect.objectContaining({ id: DOCUMENT_ID, originalName: 'old-card.pdf' }),
+        after: expect.objectContaining({ replacedDocumentId: DOCUMENT_ID }),
+      }),
+    });
+    expect(storage.delete).not.toHaveBeenCalled();
+  });
+});
+
 describe('AdminDocumentsController authorization metadata', () => {
   it('allows registration reviewers and support staff', () => {
     expect(Reflect.getMetadata(ROLES_KEY, AdminDocumentsController)).toEqual([

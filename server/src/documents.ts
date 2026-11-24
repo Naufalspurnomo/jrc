@@ -408,6 +408,76 @@ export class DocumentsService {
     return this.openDocument(document);
   }
 
+  async replaceForAdmin(
+    actorId: string,
+    registrationId: string,
+    documentId: string,
+    file: Express.Multer.File | undefined,
+    audit: AuditContext,
+  ): Promise<SerializedDocument & { active: true }> {
+    if (!file) throw new BadRequestException('Document file is required');
+    assertUploadSize(file.buffer.length, 'Document');
+
+    const original = await this.prisma.document.findFirst({
+      where: { id: documentId, registrationId },
+    });
+    if (!original) throw new NotFoundException('Document not found');
+    validateDocument(file);
+    if (original.category === 'MEMBER_PHOTO') {
+      if (!['image/jpeg', 'image/png'].includes(file.mimetype)) {
+        throw new BadRequestException('Member photo must be a JPEG or PNG image');
+      }
+      validateMemberPhotoAspectRatio(file.mimetype, file.buffer);
+    }
+
+    const stored = await this.storeDocument(file);
+    try {
+      return await this.prisma.$transaction(async (transaction) => {
+        const latest = await transaction.document.findFirst({
+          where: {
+            registrationId,
+            category: original.category,
+            subjectName: original.subjectName,
+            subjectRole: original.subjectRole,
+          },
+          orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+        });
+        if (!latest || latest.id !== documentId) {
+          throw new BadRequestException('Dokumen sudah memiliki versi pengganti');
+        }
+        const created = await transaction.document.create({
+          data: {
+            registrationId,
+            category: original.category,
+            originalName: safeOriginalName(file.originalname),
+            mimeType: file.mimetype,
+            size: file.buffer.length,
+            storageKey: stored.storageKey,
+            subjectName: original.subjectName,
+            subjectRole: original.subjectRole,
+          },
+        });
+        await transaction.auditLog.create({
+          data: {
+            actorId,
+            action: 'DOCUMENT_REPLACED_BY_ADMIN',
+            entityType: 'Document',
+            entityId: created.id,
+            before: serializeDocument(original),
+            after: { ...serializeDocument(created), replacedDocumentId: original.id },
+            reason: 'Admin replaced participant document while preserving the original as history',
+            requestId: audit.requestId,
+            ipAddress: audit.ipAddress,
+          },
+        });
+        return { ...serializeDocument(created), active: true as const };
+      });
+    } catch (error: unknown) {
+      try { await this.removeStoredDocument(stored.storageKey); } catch { this.logger.error('Failed to remove replacement document after transaction rollback'); }
+      throw error;
+    }
+  }
+
   async delete(
     ownerId: string,
     registrationId: string,
@@ -597,6 +667,24 @@ export class AdminDocumentsController {
     return asDownload(
       await this.documents.getAdminDocument(registrationId, documentId),
       response,
+    );
+  }
+
+  @Post(':registrationId/documents/:documentId/replace')
+  @UseInterceptors(DocumentUploadInterceptor)
+  async replace(
+    @CurrentUser() user: AuthPrincipal,
+    @Param('registrationId', new ParseUUIDPipe()) registrationId: string,
+    @Param('documentId', new ParseUUIDPipe()) documentId: string,
+    @UploadedFile() file: Express.Multer.File | undefined,
+    @Req() request: AuthenticatedRequest,
+  ): Promise<SerializedDocument & { active: true }> {
+    return this.documents.replaceForAdmin(
+      user.id,
+      registrationId,
+      documentId,
+      file,
+      auditContext(request),
     );
   }
 }

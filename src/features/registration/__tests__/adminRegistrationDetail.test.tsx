@@ -68,6 +68,7 @@ function detail(
         originalName: 'kartu-mahasiswa.pdf',
         mimeType: 'application/pdf',
         size: 2_048,
+        active: true,
         downloadUrl: '/api/admin/documents/document-1/download',
       },
       {
@@ -98,6 +99,7 @@ function createApi(registration: AdminRegistrationFixture): RegistrationApi {
     admin: {
       getRegistration: vi.fn().mockResolvedValue(registration),
       editRegistration: vi.fn().mockResolvedValue(registration),
+      replaceRegistrationDocument: vi.fn().mockResolvedValue(registration.documents?.[0]),
       reviewRegistration: vi.fn(),
     },
   } as unknown as RegistrationApi;
@@ -192,6 +194,47 @@ describe('AdminRegistrationDetailPage', () => {
     expect(reason).toHaveAttribute('aria-describedby', 'admin-review-reason-help admin-review-reason-error');
   });
 
+  it('uploads a replacement document while keeping the registration approved and paid', async () => {
+    const paidInvoice: InvoiceRecord = {
+      id: 'invoice-1',
+      invoiceNumber: 'JRC-INV-2026-1',
+      amount: 100000,
+      currency: 'IDR',
+      provider: 'MANUAL',
+      instructions: {},
+      paymentStatus: 'PAID',
+      deadline: '2026-11-30T00:00:00.000Z',
+      verificationReason: null,
+      verifiedAt: '2026-11-24T00:00:00.000Z',
+    };
+    const original = detail('APPROVED', paidInvoice);
+    const updated = detail('APPROVED', paidInvoice);
+    const originalDocuments = original.documents ?? [];
+    updated.documents = [
+      ...originalDocuments,
+      { ...originalDocuments[0], id: 'document-3', originalName: 'kartu-baru.pdf', active: true },
+    ];
+    updated.invoice = original.invoice;
+    const api = createApi(original);
+    vi.mocked(api.admin.replaceRegistrationDocument).mockResolvedValue(updated.documents?.[1] as NonNullable<RegistrationRecord['documents']>[number]);
+    vi.mocked(api.admin.getRegistration).mockResolvedValue(updated);
+    const user = userEvent.setup();
+    renderDetail(api);
+
+    await screen.findByRole('heading', { name: 'Garuda Robotika' });
+    const replaceInput = screen.getAllByLabelText('Ganti dokumen')[0] as HTMLInputElement;
+    const file = new File(['%PDF-correct'], 'kartu-baru.pdf', { type: 'application/pdf' });
+    await user.upload(replaceInput, file);
+
+    await waitFor(() => expect(api.admin.replaceRegistrationDocument).toHaveBeenCalledWith(
+      'registration-1',
+      'document-1',
+      expect.any(FormData),
+    ));
+    expect(await screen.findByText('Aktif')).toBeInTheDocument();
+    expect(screen.getByText('Lunas')).toBeInTheDocument();
+  });
+
   it('edits participant data without changing the review panel workflow', async () => {
     const original = detail('APPROVED');
     const edited = detail('APPROVED');
@@ -208,6 +251,8 @@ describe('AdminRegistrationDetailPage', () => {
     await user.click(screen.getByRole('button', { name: 'Simpan koreksi' }));
 
     expect(api.admin.editRegistration).toHaveBeenCalledWith('registration-1', {
+      ownerDisplayName: 'Ayu Peserta',
+      ownerEmail: 'ayu@example.test',
       teamName: 'Garuda Robotika Baru',
       institution: 'PENS',
       phone: '081234567890',

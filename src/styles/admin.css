@@ -140,8 +140,15 @@
 .admin-member-list { gap: 1px; background: var(--admin-line); }
 .admin-member-list article { padding: 16px; background: var(--admin-surface); }
 .admin-member-list strong { margin: 6px 0; font-family: var(--font-sans); font-size: .95rem; }
-.admin-document { min-height: 64px; grid-template-columns: 40px minmax(0,1fr) auto; border-color: var(--admin-line); }
+.admin-document { min-height: 64px; grid-template-columns: 40px minmax(0,1fr) minmax(150px,auto); border-color: var(--admin-line); }
 .admin-document a,.admin-proof a { display: inline-flex; min-height: 44px; align-items: center; color: var(--admin-accent); font-size: .78rem; font-weight: 750; }
+.admin-document__actions { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 8px; }
+.admin-document__replace { display: inline-flex; min-height: 44px; align-items: center; color: var(--admin-accent); cursor: pointer; font-size: .75rem; font-weight: 750; }
+.admin-document__replace input { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; }
+.admin-document__replace input:focus-visible + span { outline: 3px solid #b98929; outline-offset: 3px; }
+.admin-document__history,.admin-document__active { display: inline-flex; align-items: center; min-height: 24px; padding: 3px 7px; border-radius: 999px; font-size: .62rem; font-weight: 700; white-space: nowrap; }
+.admin-document__history { background: #eeeae5; color: var(--admin-muted); }
+.admin-document__active { background: #e3f0e6; color: var(--admin-success); }
 .admin-review-panel { top: 24px; padding: 24px; border-radius: 8px; background: #282321; }
 .admin-review-panel h2 { margin: 6px 0 10px; font-size: 1.4rem; }
 .admin-review-panel textarea { min-height: 112px; background: #fff; color: var(--admin-text); }
@@ -237,7 +244,8 @@
   .admin-table-wrap td { grid-template-columns: minmax(88px,.7fr) minmax(0,1.3fr); }
   .admin-detail-grid,.admin-member-list { grid-template-columns: 1fr; }
   .admin-document { grid-template-columns: 36px minmax(0,1fr); }
-  .admin-document a { grid-column: 2; }
+  .admin-document__actions { grid-column: 2; justify-content: flex-start; }
+  .admin-document a { grid-column: auto; }
   .admin-detail-actions { display: grid; }
   .admin-detail-actions .admin-action { width: 100%; }
   .admin-camera video { aspect-ratio: 3/4; }

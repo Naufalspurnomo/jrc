@@ -48,6 +48,8 @@ export const API_PATHS = {
       root: '/api/admin/registrations',
       byId: (registrationId: string) => `/api/admin/registrations/${encodeURIComponent(registrationId)}`,
       review: (registrationId: string) => `/api/admin/registrations/${encodeURIComponent(registrationId)}/review`,
+      replaceDocument: (registrationId: string, documentId: string) =>
+        `/api/admin/registrations/${encodeURIComponent(registrationId)}/documents/${encodeURIComponent(documentId)}/replace`,
     },
     invoices: {
       verify: (invoiceId: string) => `/api/admin/invoices/${encodeURIComponent(invoiceId)}/verify`,
@@ -323,6 +325,7 @@ export interface RegistrationDocumentRecord {
   createdAt?: string;
   subjectName?: string | null;
   subjectRole?: 'PARTICIPANT' | 'SUPERVISOR' | null;
+  active?: boolean;
 }
 
 export interface RegistrationRecord {
@@ -488,6 +491,8 @@ export interface AdminEditRegistrationMemberInput {
 }
 
 export interface AdminEditRegistrationInput {
+  ownerDisplayName?: string;
+  ownerEmail?: string;
   teamName?: string;
   institution?: string;
   phone?: string | null;
@@ -625,6 +630,7 @@ export interface RegistrationApi {
     listRegistrations(): Promise<RegistrationRecord[]>;
     getRegistration(registrationId: string): Promise<RegistrationRecord>;
     editRegistration(registrationId: string, input: AdminEditRegistrationInput): Promise<RegistrationRecord>;
+    replaceRegistrationDocument(registrationId: string, documentId: string, file: FormData): Promise<RegistrationDocumentRecord>;
     deleteRegistration(registrationId: string): Promise<RegistrationDeletionOutcome>;
     reviewRegistration(registrationId: string, input: ReviewInput): Promise<RegistrationRecord>;
     listFinanceInvoices(): Promise<FinanceInvoiceRecord[]>;
@@ -753,6 +759,10 @@ export function createRegistrationApi(client = new ApiClient()): RegistrationApi
       editRegistration: (registrationId, input) => client.request<RegistrationRecord>(
         API_PATHS.admin.registrations.byId(registrationId),
         { method: 'PATCH', body: input },
+      ),
+      replaceRegistrationDocument: (registrationId, documentId, file) => client.request<RegistrationDocumentRecord>(
+        API_PATHS.admin.registrations.replaceDocument(registrationId, documentId),
+        { method: 'POST', body: file },
       ),
       deleteRegistration: (registrationId) => client.request<RegistrationDeletionOutcome>(
         API_PATHS.admin.registrations.byId(registrationId),

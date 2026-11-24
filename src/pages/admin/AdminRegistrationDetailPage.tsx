@@ -107,6 +107,7 @@ export default function AdminRegistrationDetailPage({ api = registrationApi }: A
   const [mutationError, setMutationError] = useState<string | null>(null);
   const [editMode, setEditMode] = useState(false);
   const [editForm, setEditForm] = useState<AdminEditRegistrationInput>({});
+  const [replacingDocumentId, setReplacingDocumentId] = useState<string | null>(null);
   const reviewReasonRef = useRef<HTMLTextAreaElement>(null);
 
   const loadRegistration = useCallback(async () => {
@@ -145,10 +146,12 @@ export default function AdminRegistrationDetailPage({ api = registrationApi }: A
   const startEdit = () => {
     if (!registration) return;
     setEditForm({
+      ownerDisplayName: registration.owner?.displayName ?? '',
+      ownerEmail: registration.owner?.email ?? '',
       teamName: registration.teamName,
       institution: registration.institution,
       phone: registration.phone ?? '',
-      members: members.map((member) => ({
+      members: (registration.members ?? []).map((member) => ({
         id: member.id,
         name: member.name,
         studentId: member.studentId ?? '',
@@ -174,6 +177,24 @@ export default function AdminRegistrationDetailPage({ api = registrationApi }: A
       showToast('Koreksi data gagal disimpan.', 'error');
     } finally {
       setMutationLoading(false);
+    }
+  };
+
+  const replaceDocument = async (documentId: string, file: File | null) => {
+    if (!registrationId || !file) return;
+    setReplacingDocumentId(documentId);
+    setMutationError(null);
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      await api.admin.replaceRegistrationDocument(registrationId, documentId, formData);
+      setRegistration(await loadRegistration());
+      showToast('Dokumen pengganti berhasil disimpan. Dokumen lama tetap menjadi riwayat.', 'success');
+    } catch {
+      setMutationError('Dokumen pengganti gagal disimpan. Periksa format dan ukuran berkas.');
+      showToast('Dokumen pengganti gagal disimpan.', 'error');
+    } finally {
+      setReplacingDocumentId(null);
     }
   };
 
@@ -304,11 +325,28 @@ export default function AdminRegistrationDetailPage({ api = registrationApi }: A
                         <small>{document.category || 'Kategori tidak tersedia'} · {Math.max(1, Math.round(document.size / 1024))} KB</small>
                         {document.subjectName && <small>{document.subjectName} · {document.subjectRole === 'SUPERVISOR' ? 'Pembina' : 'Peserta'}</small>}
                       </div>
-                      {document.downloadUrl && (
-                        <a href={apiUrl(document.downloadUrl)} aria-label={`Unduh ${document.originalName}`}>
-                          Unduh
-                        </a>
-                      )}
+                      <div className="admin-document__actions">
+                        {document.downloadUrl && (
+                          <a href={apiUrl(document.downloadUrl)} aria-label={`Unduh ${document.originalName}`}>
+                            Unduh
+                          </a>
+                        )}
+                        <label className="admin-document__replace">
+                          <span>{replacingDocumentId === document.id ? 'Mengunggah…' : 'Ganti dokumen'}</span>
+                          <input
+                            type="file"
+                            accept="application/pdf,image/jpeg,image/png"
+                            disabled={replacingDocumentId !== null}
+                            onChange={(event) => {
+                              const file = event.target.files?.[0] ?? null;
+                              event.currentTarget.value = '';
+                              void replaceDocument(document.id, file);
+                            }}
+                          />
+                        </label>
+                        {document.active === false && <small className="admin-document__history">Riwayat lama</small>}
+                        {document.active !== false && <small className="admin-document__active">Versi aktif</small>}
+                      </div>
                     </article>
                   )) : <p className="admin-muted">Belum ada dokumen.</p>}
                 </section>
@@ -335,7 +373,22 @@ export default function AdminRegistrationDetailPage({ api = registrationApi }: A
                   </button>
                 ) : (
                   <section className="admin-edit-panel" aria-labelledby="admin-edit-title">
-                    <h3 id="admin-edit-title">Koreksi data</h3>
+                    <h3 id="admin-edit-title">Koreksi data lengkap</h3>
+                    <label htmlFor="admin-edit-owner-name">Nama pemilik</label>
+                    <input
+                      id="admin-edit-owner-name"
+                      value={editForm.ownerDisplayName ?? ''}
+                      disabled={mutationLoading}
+                      onChange={(event) => setEditForm((current) => ({ ...current, ownerDisplayName: event.target.value }))}
+                    />
+                    <label htmlFor="admin-edit-owner-email">Email pemilik</label>
+                    <input
+                      id="admin-edit-owner-email"
+                      type="email"
+                      value={editForm.ownerEmail ?? ''}
+                      disabled={mutationLoading}
+                      onChange={(event) => setEditForm((current) => ({ ...current, ownerEmail: event.target.value }))}
+                    />
                     <label htmlFor="admin-edit-team-name">Nama tim</label>
                     <input
                       id="admin-edit-team-name"

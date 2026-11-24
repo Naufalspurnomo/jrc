@@ -167,6 +167,19 @@ export class AdminEditRegistrationDto {
   @IsOptional()
   @Transform(trim)
   @IsString()
+  @MinLength(1)
+  @MaxLength(100)
+  ownerDisplayName?: string;
+
+  @IsOptional()
+  @Transform(trim)
+  @IsEmail()
+  @MaxLength(254)
+  ownerEmail?: string;
+
+  @IsOptional()
+  @Transform(trim)
+  @IsString()
   @MaxLength(150)
   teamName?: string;
 
@@ -328,7 +341,13 @@ function serializeInvoice(invoice: InvoiceRecord) {
   };
 }
 
+function documentIdentity(document: Pick<AdminRegistrationRecord['documents'][number], 'category' | 'subjectName' | 'subjectRole'>): string {
+  return [document.category, document.subjectName ?? '', document.subjectRole ?? ''].join('|').toLocaleLowerCase('id-ID');
+}
+
 function serializeAdminRegistration(registration: AdminRegistrationRecord) {
+  const latestDocumentIds = new Map<string, string>();
+  for (const document of registration.documents) latestDocumentIds.set(documentIdentity(document), document.id);
   return {
     id: registration.id,
     registrationNumber: registration.registrationNumber,
@@ -380,6 +399,7 @@ function serializeAdminRegistration(registration: AdminRegistrationRecord) {
       size: document.size,
       subjectName: document.subjectName,
       subjectRole: document.subjectRole,
+      active: latestDocumentIds.get(documentIdentity(document)) === document.id,
       createdAt: document.createdAt.toISOString(),
       downloadUrl: `/api/admin/registrations/${encodeURIComponent(registration.id)}/documents/${encodeURIComponent(document.id)}`,
     })),
@@ -588,7 +608,8 @@ export class AdminRegistrationsService {
     audit: AuditContext,
   ): Promise<SerializedAdminRegistration> {
     const hasRegistrationChange =
-      dto.teamName !== undefined || dto.institution !== undefined || dto.phone !== undefined;
+      dto.teamName !== undefined || dto.institution !== undefined || dto.phone !== undefined
+      || dto.ownerDisplayName !== undefined || dto.ownerEmail !== undefined;
     const hasMemberChange = (dto.members?.length ?? 0) > 0;
     if (!hasRegistrationChange && !hasMemberChange) {
       throw new BadRequestException('At least one participant field must be changed');
@@ -609,6 +630,7 @@ export class AdminRegistrationsService {
           },
           invoice: { select: { id: true, paymentStatus: true } },
           ticket: { select: { id: true, status: true } },
+          owner: { select: { id: true, email: true, displayName: true } },
         },
       });
       if (!current) throw new NotFoundException('Registration not found');
@@ -644,6 +666,25 @@ export class AdminRegistrationsService {
         if (updated.count !== 1) {
           throw new BadRequestException('Registration changed before the edit was saved');
         }
+      }
+
+      if (dto.ownerEmail !== undefined && dto.ownerEmail !== current.owner.email) {
+        const existingOwner = await transaction.user.findUnique({
+          where: { email: dto.ownerEmail },
+          select: { id: true },
+        });
+        if (existingOwner && existingOwner.id !== current.owner.id) {
+          throw new BadRequestException('Email pemilik sudah digunakan akun lain');
+        }
+      }
+      if (dto.ownerDisplayName !== undefined || dto.ownerEmail !== undefined) {
+        await transaction.user.update({
+          where: { id: current.owner.id },
+          data: {
+            ...(dto.ownerDisplayName !== undefined ? { displayName: dto.ownerDisplayName } : {}),
+            ...(dto.ownerEmail !== undefined ? { email: dto.ownerEmail } : {}),
+          },
+        });
       }
 
       for (const member of dto.members ?? []) {
