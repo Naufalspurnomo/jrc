@@ -484,6 +484,7 @@ export interface ReviewInput {
 
 export interface AdminEditRegistrationMemberInput {
   id: string;
+  role?: 'LEADER' | 'MEMBER' | 'SUPERVISOR';
   name?: string;
   studentId?: string | null;
   email?: string | null;

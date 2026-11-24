@@ -89,6 +89,10 @@ function setup(current = registration(), updated = registration()) {
     teamMember: {
       updateMany: vi.fn().mockResolvedValue({ count: 1 }),
     },
+    user: {
+      findUnique: vi.fn().mockResolvedValue(null),
+      update: vi.fn().mockResolvedValue({}),
+    },
     auditLog: { create: vi.fn().mockResolvedValue({ id: 'audit-1' }) },
   };
   const prisma = {
@@ -115,7 +119,7 @@ describe('Admin registration data editing', () => {
       teamName: 'Tim Benar',
       institution: 'Institusi Benar',
       phone: '082222222222',
-      members: [{ id: memberId, name: 'Ketua Benar', studentId: 'NISN-BENAR', email: 'benar@example.test', phone: '082222222222' }],
+      members: [{ id: memberId, role: 'LEADER', name: 'Ketua Benar', studentId: 'NISN-BENAR', email: 'benar@example.test', phone: '082222222222' }],
     });
 
     const result = await service.edit(actorId, id, dto, audit);
@@ -125,6 +129,7 @@ describe('Admin registration data editing', () => {
     expect(tx.teamMember.updateMany).toHaveBeenCalledWith({
       where: { id: memberId, registrationId: id },
       data: {
+        role: 'LEADER',
         name: 'Ketua Benar',
         studentId: 'NISN-BENAR',
         email: 'benar@example.test',

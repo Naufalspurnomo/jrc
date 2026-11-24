@@ -153,6 +153,7 @@ export default function AdminRegistrationDetailPage({ api = registrationApi }: A
       phone: registration.phone ?? '',
       members: (registration.members ?? []).map((member) => ({
         id: member.id,
+        role: member.role,
         name: member.name,
         studentId: member.studentId ?? '',
         email: member.email ?? '',
@@ -331,19 +332,21 @@ export default function AdminRegistrationDetailPage({ api = registrationApi }: A
                             Unduh
                           </a>
                         )}
-                        <label className="admin-document__replace">
-                          <span>{replacingDocumentId === document.id ? 'Mengunggah…' : 'Ganti dokumen'}</span>
-                          <input
-                            type="file"
-                            accept="application/pdf,image/jpeg,image/png"
-                            disabled={replacingDocumentId !== null}
-                            onChange={(event) => {
-                              const file = event.target.files?.[0] ?? null;
-                              event.currentTarget.value = '';
-                              void replaceDocument(document.id, file);
-                            }}
-                          />
-                        </label>
+                        {document.active !== false && (
+                          <label className="admin-document__replace">
+                            <span>{replacingDocumentId === document.id ? 'Mengunggah…' : 'Ganti dokumen'}</span>
+                            <input
+                              type="file"
+                              accept="application/pdf,image/jpeg,image/png"
+                              disabled={replacingDocumentId !== null}
+                              onChange={(event) => {
+                                const file = event.target.files?.[0] ?? null;
+                                event.currentTarget.value = '';
+                                void replaceDocument(document.id, file);
+                              }}
+                            />
+                          </label>
+                        )}
                         {document.active === false && <small className="admin-document__history">Riwayat lama</small>}
                         {document.active !== false && <small className="admin-document__active">Versi aktif</small>}
                       </div>
@@ -413,6 +416,20 @@ export default function AdminRegistrationDetailPage({ api = registrationApi }: A
                     {(editForm.members ?? []).map((member, index) => (
                       <fieldset key={member.id} className="admin-edit-member">
                         <legend>{members[index]?.role === 'LEADER' ? 'Ketua' : members[index]?.role === 'SUPERVISOR' ? 'Pembina' : 'Anggota'}</legend>
+                        <label htmlFor={`admin-edit-member-role-${member.id}`}>Peran</label>
+                        <select
+                          id={`admin-edit-member-role-${member.id}`}
+                          value={member.role ?? 'MEMBER'}
+                          disabled={mutationLoading}
+                          onChange={(event) => setEditForm((current) => ({
+                            ...current,
+                            members: current.members?.map((item) => item.id === member.id ? { ...item, role: event.target.value as 'LEADER' | 'MEMBER' | 'SUPERVISOR' } : item),
+                          }))}
+                        >
+                          <option value="LEADER">Ketua</option>
+                          <option value="MEMBER">Anggota</option>
+                          <option value="SUPERVISOR">Pembina</option>
+                        </select>
                         <label htmlFor={`admin-edit-member-name-${member.id}`}>Nama</label>
                         <input
                           id={`admin-edit-member-name-${member.id}`}

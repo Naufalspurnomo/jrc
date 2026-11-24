@@ -13,7 +13,7 @@ import {
   Query,
   Req,
 } from '@nestjs/common';
-import { Prisma, RegistrationStatus, Role } from '@prisma/client';
+import { Prisma, RegistrationStatus, Role, TeamMemberRole } from '@prisma/client';
 import { Transform, TransformFnParams, Type } from 'class-transformer';
 import {
   ArrayMaxSize,
@@ -134,6 +134,10 @@ export class ReviewRegistrationDto {
 export class AdminRegistrationMemberEditDto {
   @IsUUID()
   id!: string;
+
+  @IsOptional()
+  @IsEnum(TeamMemberRole)
+  role?: TeamMemberRole;
 
   @IsOptional()
   @Transform(trim)
@@ -644,6 +648,17 @@ export class AdminRegistrationsService {
         throw new NotFoundException('Member not found in this registration');
       }
 
+      if (dto.members !== undefined) {
+        const requestedById = new Map(dto.members.map((member) => [member.id, member]));
+        const projectedRoles = current.members.map((member) => requestedById.get(member.id)?.role ?? member.role);
+        const leaderCount = projectedRoles.filter((role) => role === TeamMemberRole.LEADER).length;
+        const memberCount = projectedRoles.filter((role) => role === TeamMemberRole.MEMBER).length;
+        const supervisorCount = projectedRoles.filter((role) => role === TeamMemberRole.SUPERVISOR).length;
+        if (leaderCount !== 1) throw new BadRequestException('A registration must have exactly one team leader');
+        if (memberCount > 2) throw new BadRequestException('A registration may have at most two team members');
+        if (supervisorCount > 1) throw new BadRequestException('A registration may have at most one supervisor');
+      }
+
       const before = {
         status: current.status,
         teamName: current.teamName,
@@ -689,6 +704,7 @@ export class AdminRegistrationsService {
 
       for (const member of dto.members ?? []) {
         const memberData: Prisma.TeamMemberUpdateManyMutationInput = {};
+        if (member.role !== undefined) memberData.role = member.role;
         if (member.name !== undefined) memberData.name = member.name;
         if (member.studentId !== undefined) memberData.studentId = member.studentId?.trim() || null;
         if (member.email !== undefined) memberData.email = member.email?.trim() || null;

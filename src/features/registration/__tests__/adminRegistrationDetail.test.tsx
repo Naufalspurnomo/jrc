@@ -56,9 +56,9 @@ function detail(
     members: [
       {
         id: 'member-1',
+        role: 'LEADER',
         name: 'Budi Ketua',
         studentId: 'NRP-001',
-        role: 'LEADER',
       },
     ],
     documents: [
@@ -256,7 +256,7 @@ describe('AdminRegistrationDetailPage', () => {
       teamName: 'Garuda Robotika Baru',
       institution: 'PENS',
       phone: '081234567890',
-      members: [{ id: 'member-1', name: 'Budi Ketua', studentId: 'NRP-001', email: '', phone: '' }],
+      members: [{ id: 'member-1', role: 'LEADER', name: 'Budi Ketua', studentId: 'NRP-001', email: '', phone: '' }],
     });
     expect(await screen.findByRole('heading', { name: 'Garuda Robotika Baru' })).toBeInTheDocument();
     expect(screen.getByText('Aktif')).toBeInTheDocument();
