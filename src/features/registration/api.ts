@@ -479,6 +479,21 @@ export interface ReviewInput {
   reasonComment?: string;
 }
 
+export interface AdminEditRegistrationMemberInput {
+  id: string;
+  name?: string;
+  studentId?: string | null;
+  email?: string | null;
+  phone?: string | null;
+}
+
+export interface AdminEditRegistrationInput {
+  teamName?: string;
+  institution?: string;
+  phone?: string | null;
+  members?: AdminEditRegistrationMemberInput[];
+}
+
 export interface PaymentReviewInput {
   status: Extract<PaymentState, 'PAID' | 'REJECTED'>;
   reason: string;
@@ -609,6 +624,7 @@ export interface RegistrationApi {
     syncGoogleSheets(): Promise<GoogleSheetsStatus>;
     listRegistrations(): Promise<RegistrationRecord[]>;
     getRegistration(registrationId: string): Promise<RegistrationRecord>;
+    editRegistration(registrationId: string, input: AdminEditRegistrationInput): Promise<RegistrationRecord>;
     deleteRegistration(registrationId: string): Promise<RegistrationDeletionOutcome>;
     reviewRegistration(registrationId: string, input: ReviewInput): Promise<RegistrationRecord>;
     listFinanceInvoices(): Promise<FinanceInvoiceRecord[]>;
@@ -734,6 +750,10 @@ export function createRegistrationApi(client = new ApiClient()): RegistrationApi
       syncGoogleSheets: () => client.request<GoogleSheetsStatus>(API_PATHS.admin.googleSheets.sync, { method: 'POST' }),
       listRegistrations: listAllAdminRegistrations,
       getRegistration: (registrationId) => client.request<RegistrationRecord>(API_PATHS.admin.registrations.byId(registrationId)),
+      editRegistration: (registrationId, input) => client.request<RegistrationRecord>(
+        API_PATHS.admin.registrations.byId(registrationId),
+        { method: 'PATCH', body: input },
+      ),
       deleteRegistration: (registrationId) => client.request<RegistrationDeletionOutcome>(
         API_PATHS.admin.registrations.byId(registrationId),
         { method: 'DELETE' },

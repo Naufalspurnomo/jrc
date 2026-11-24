@@ -8,6 +8,7 @@ import { useAuth } from '../../features/auth';
 import {
   REVIEW_REASON_CATEGORY_LABELS,
   registrationApi,
+  type AdminEditRegistrationInput,
   type AuthUser,
   type InvoiceRecord,
   type RegistrationApi,
@@ -104,6 +105,8 @@ export default function AdminRegistrationDetailPage({ api = registrationApi }: A
   const [reviewReasonComment, setReviewReasonComment] = useState('');
   const [mutationLoading, setMutationLoading] = useState(false);
   const [mutationError, setMutationError] = useState<string | null>(null);
+  const [editMode, setEditMode] = useState(false);
+  const [editForm, setEditForm] = useState<AdminEditRegistrationInput>({});
   const reviewReasonRef = useRef<HTMLTextAreaElement>(null);
 
   const loadRegistration = useCallback(async () => {
@@ -137,6 +140,41 @@ export default function AdminRegistrationDetailPage({ api = registrationApi }: A
 
   const signOut = () => {
     void logout().catch(() => undefined);
+  };
+
+  const startEdit = () => {
+    if (!registration) return;
+    setEditForm({
+      teamName: registration.teamName,
+      institution: registration.institution,
+      phone: registration.phone ?? '',
+      members: members.map((member) => ({
+        id: member.id,
+        name: member.name,
+        studentId: member.studentId ?? '',
+        email: member.email ?? '',
+        phone: member.phone ?? '',
+      })),
+    });
+    setMutationError(null);
+    setEditMode(true);
+  };
+
+  const saveEdit = async () => {
+    if (!registrationId) return;
+    setMutationLoading(true);
+    setMutationError(null);
+    try {
+      const updated = await api.admin.editRegistration(registrationId, editForm);
+      setRegistration(updated as AdminRegistrationRecord);
+      setEditMode(false);
+      showToast('Koreksi data peserta berhasil disimpan.', 'success');
+    } catch {
+      setMutationError('Koreksi data gagal disimpan. Silakan coba lagi.');
+      showToast('Koreksi data gagal disimpan.', 'error');
+    } finally {
+      setMutationLoading(false);
+    }
   };
 
   const updateReviewStatus = async (status: RegistrationState) => {
@@ -290,6 +328,91 @@ export default function AdminRegistrationDetailPage({ api = registrationApi }: A
                 <p className="admin-eyebrow">TINDAKAN</p>
                 <h2 id="admin-review-title">Keputusan pendaftaran</h2>
                 <p>Status saat ini: <strong>{statusLabels[registration.status]}</strong></p>
+                <p className="admin-field-help">Koreksi data tidak mengubah status pembayaran, invoice, dokumen, atau tiket.</p>
+                {!editMode ? (
+                  <button className="admin-action" type="button" disabled={mutationLoading} onClick={startEdit}>
+                    Koreksi data peserta
+                  </button>
+                ) : (
+                  <section className="admin-edit-panel" aria-labelledby="admin-edit-title">
+                    <h3 id="admin-edit-title">Koreksi data</h3>
+                    <label htmlFor="admin-edit-team-name">Nama tim</label>
+                    <input
+                      id="admin-edit-team-name"
+                      value={editForm.teamName ?? ''}
+                      disabled={mutationLoading}
+                      onChange={(event) => setEditForm((current) => ({ ...current, teamName: event.target.value }))}
+                    />
+                    <label htmlFor="admin-edit-institution">Institusi</label>
+                    <input
+                      id="admin-edit-institution"
+                      value={editForm.institution ?? ''}
+                      disabled={mutationLoading}
+                      onChange={(event) => setEditForm((current) => ({ ...current, institution: event.target.value }))}
+                    />
+                    <label htmlFor="admin-edit-phone">Telepon tim</label>
+                    <input
+                      id="admin-edit-phone"
+                      value={editForm.phone ?? ''}
+                      disabled={mutationLoading}
+                      onChange={(event) => setEditForm((current) => ({ ...current, phone: event.target.value }))}
+                    />
+                    {(editForm.members ?? []).map((member, index) => (
+                      <fieldset key={member.id} className="admin-edit-member">
+                        <legend>{members[index]?.role === 'LEADER' ? 'Ketua' : members[index]?.role === 'SUPERVISOR' ? 'Pembina' : 'Anggota'}</legend>
+                        <label htmlFor={`admin-edit-member-name-${member.id}`}>Nama</label>
+                        <input
+                          id={`admin-edit-member-name-${member.id}`}
+                          value={member.name ?? ''}
+                          disabled={mutationLoading}
+                          onChange={(event) => setEditForm((current) => ({
+                            ...current,
+                            members: current.members?.map((item) => item.id === member.id ? { ...item, name: event.target.value } : item),
+                          }))}
+                        />
+                        <label htmlFor={`admin-edit-member-student-${member.id}`}>NIS/NIM/NISN</label>
+                        <input
+                          id={`admin-edit-member-student-${member.id}`}
+                          value={member.studentId ?? ''}
+                          disabled={mutationLoading}
+                          onChange={(event) => setEditForm((current) => ({
+                            ...current,
+                            members: current.members?.map((item) => item.id === member.id ? { ...item, studentId: event.target.value } : item),
+                          }))}
+                        />
+                        <label htmlFor={`admin-edit-member-email-${member.id}`}>Email</label>
+                        <input
+                          id={`admin-edit-member-email-${member.id}`}
+                          type="email"
+                          value={member.email ?? ''}
+                          disabled={mutationLoading}
+                          onChange={(event) => setEditForm((current) => ({
+                            ...current,
+                            members: current.members?.map((item) => item.id === member.id ? { ...item, email: event.target.value } : item),
+                          }))}
+                        />
+                        <label htmlFor={`admin-edit-member-phone-${member.id}`}>Nomor HP</label>
+                        <input
+                          id={`admin-edit-member-phone-${member.id}`}
+                          value={member.phone ?? ''}
+                          disabled={mutationLoading}
+                          onChange={(event) => setEditForm((current) => ({
+                            ...current,
+                            members: current.members?.map((item) => item.id === member.id ? { ...item, phone: event.target.value } : item),
+                          }))}
+                        />
+                      </fieldset>
+                    ))}
+                    <div className="admin-detail-actions">
+                      <button className="admin-action admin-action--primary" type="button" disabled={mutationLoading} onClick={() => void saveEdit()}>
+                        {mutationLoading ? 'Menyimpan…' : 'Simpan koreksi'}
+                      </button>
+                      <button className="admin-action" type="button" disabled={mutationLoading} onClick={() => setEditMode(false)}>
+                        Batal
+                      </button>
+                    </div>
+                  </section>
+                )}
                 {registration.reviewReasonCategory && (
                   <p>Kategori alasan: <strong>{REVIEW_REASON_CATEGORY_LABELS[registration.reviewReasonCategory]}</strong></p>
                 )}

@@ -18,6 +18,7 @@ const adminSession: AuthSession = {
     displayName: 'Rina Reviewer',
     email: 'rina@example.test',
     role: 'REGISTRATION_REVIEWER',
+    emailVerified: true,
   },
 };
 
@@ -96,6 +97,7 @@ function createApi(registration: AdminRegistrationFixture): RegistrationApi {
     },
     admin: {
       getRegistration: vi.fn().mockResolvedValue(registration),
+      editRegistration: vi.fn().mockResolvedValue(registration),
       reviewRegistration: vi.fn(),
     },
   } as unknown as RegistrationApi;
@@ -188,5 +190,30 @@ describe('AdminRegistrationDetailPage', () => {
     expect(await screen.findByRole('alert')).toHaveTextContent('Keputusan gagal disimpan');
     expect(reason).not.toHaveAttribute('aria-invalid');
     expect(reason).toHaveAttribute('aria-describedby', 'admin-review-reason-help admin-review-reason-error');
+  });
+
+  it('edits participant data without changing the review panel workflow', async () => {
+    const original = detail('APPROVED');
+    const edited = detail('APPROVED');
+    edited.teamName = 'Garuda Robotika Baru';
+    const api = createApi(original);
+    vi.mocked(api.admin.editRegistration).mockResolvedValue(edited);
+    const user = userEvent.setup();
+    renderDetail(api);
+
+    await user.click(await screen.findByRole('button', { name: 'Koreksi data peserta' }));
+    const teamName = screen.getByLabelText('Nama tim');
+    await user.clear(teamName);
+    await user.type(teamName, 'Garuda Robotika Baru');
+    await user.click(screen.getByRole('button', { name: 'Simpan koreksi' }));
+
+    expect(api.admin.editRegistration).toHaveBeenCalledWith('registration-1', {
+      teamName: 'Garuda Robotika Baru',
+      institution: 'PENS',
+      phone: '081234567890',
+      members: [{ id: 'member-1', name: 'Budi Ketua', studentId: 'NRP-001', email: '', phone: '' }],
+    });
+    expect(await screen.findByRole('heading', { name: 'Garuda Robotika Baru' })).toBeInTheDocument();
+    expect(screen.getByText('Aktif')).toBeInTheDocument();
   });
 });

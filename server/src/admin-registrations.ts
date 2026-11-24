@@ -6,6 +6,7 @@ import {
   Get,
   Injectable,
   NotFoundException,
+  Patch,
   Param,
   ParseUUIDPipe,
   Post,
@@ -15,6 +16,9 @@ import {
 import { Prisma, RegistrationStatus, Role } from '@prisma/client';
 import { Transform, TransformFnParams, Type } from 'class-transformer';
 import {
+  ArrayMaxSize,
+  IsArray,
+  IsEmail,
   IsEnum,
   IsIn,
   IsInt,
@@ -25,6 +29,8 @@ import {
   MaxLength,
   Min,
   MinLength,
+  Matches,
+  ValidateNested,
 } from 'class-validator';
 import { randomUUID } from 'node:crypto';
 
@@ -43,6 +49,12 @@ import { buildRegistrationPortalUrl, renderTransactionalEmail } from './email-te
 
 const trim = ({ value }: TransformFnParams): unknown =>
   typeof value === 'string' ? value.trim() : value;
+
+const trimNullable = ({ value }: TransformFnParams): unknown => {
+  if (typeof value !== 'string') return value;
+  const normalized = value.trim();
+  return normalized || null;
+};
 
 const REVIEW_STATUSES = [
   RegistrationStatus.UNDER_REVIEW,
@@ -117,6 +129,65 @@ export class ReviewRegistrationDto {
   @IsOptional()
   @IsIn([...REVIEW_REASON_CATEGORIES])
   reasonCategory?: ReviewReasonCategory;
+}
+
+export class AdminRegistrationMemberEditDto {
+  @IsUUID()
+  id!: string;
+
+  @IsOptional()
+  @Transform(trim)
+  @IsString()
+  @MinLength(1)
+  @MaxLength(150)
+  name?: string;
+
+  @IsOptional()
+  @Transform(trimNullable)
+  @IsString()
+  @MinLength(1)
+  @MaxLength(100)
+  studentId?: string | null;
+
+  @IsOptional()
+  @Transform(trimNullable)
+  @IsEmail()
+  @MaxLength(254)
+  email?: string | null;
+
+  @IsOptional()
+  @Transform(trimNullable)
+  @IsString()
+  @MaxLength(32)
+  @Matches(/^\+?[0-9][0-9 ()-]*[0-9]$/)
+  phone?: string | null;
+}
+
+export class AdminEditRegistrationDto {
+  @IsOptional()
+  @Transform(trim)
+  @IsString()
+  @MaxLength(150)
+  teamName?: string;
+
+  @IsOptional()
+  @Transform(trim)
+  @IsString()
+  @MaxLength(200)
+  institution?: string;
+
+  @IsOptional()
+  @Transform(trim)
+  @IsString()
+  @MaxLength(32)
+  phone?: string | null;
+
+  @IsOptional()
+  @IsArray()
+  @ArrayMaxSize(4)
+  @ValidateNested({ each: true })
+  @Type(() => AdminRegistrationMemberEditDto)
+  members?: AdminRegistrationMemberEditDto[];
 }
 
 const invoiceSelect = {
@@ -510,6 +581,128 @@ export class AdminRegistrationsService {
   }
 
 
+  async edit(
+    actorId: string,
+    id: string,
+    dto: AdminEditRegistrationDto,
+    audit: AuditContext,
+  ): Promise<SerializedAdminRegistration> {
+    const hasRegistrationChange =
+      dto.teamName !== undefined || dto.institution !== undefined || dto.phone !== undefined;
+    const hasMemberChange = (dto.members?.length ?? 0) > 0;
+    if (!hasRegistrationChange && !hasMemberChange) {
+      throw new BadRequestException('At least one participant field must be changed');
+    }
+
+    return this.prisma.$transaction(async (transaction) => {
+      const current = await transaction.registration.findUnique({
+        where: { id },
+        select: {
+          id: true,
+          status: true,
+          teamName: true,
+          institution: true,
+          phone: true,
+          members: {
+            orderBy: [{ createdAt: 'asc' }, { id: 'asc' }],
+            select: { id: true, name: true, studentId: true, role: true, email: true, phone: true },
+          },
+          invoice: { select: { id: true, paymentStatus: true } },
+          ticket: { select: { id: true, status: true } },
+        },
+      });
+      if (!current) throw new NotFoundException('Registration not found');
+
+      const currentMemberIds = new Set(current.members.map((member) => member.id));
+      const requestedMemberIds = dto.members?.map((member) => member.id) ?? [];
+      if (new Set(requestedMemberIds).size !== requestedMemberIds.length) {
+        throw new BadRequestException('A member may only be edited once per request');
+      }
+      if (requestedMemberIds.some((memberId) => !currentMemberIds.has(memberId))) {
+        throw new NotFoundException('Member not found in this registration');
+      }
+
+      const before = {
+        status: current.status,
+        teamName: current.teamName,
+        institution: current.institution,
+        phone: current.phone,
+        members: current.members,
+        payment: current.invoice,
+        ticket: current.ticket,
+      };
+
+      const registrationData: Prisma.RegistrationUpdateInput = {};
+      if (dto.teamName !== undefined) registrationData.teamName = dto.teamName;
+      if (dto.institution !== undefined) registrationData.institution = dto.institution;
+      if (dto.phone !== undefined) registrationData.phone = dto.phone?.trim() || null;
+      if (Object.keys(registrationData).length > 0) {
+        const updated = await transaction.registration.updateMany({
+          where: { id, status: current.status },
+          data: registrationData,
+        });
+        if (updated.count !== 1) {
+          throw new BadRequestException('Registration changed before the edit was saved');
+        }
+      }
+
+      for (const member of dto.members ?? []) {
+        const memberData: Prisma.TeamMemberUpdateManyMutationInput = {};
+        if (member.name !== undefined) memberData.name = member.name;
+        if (member.studentId !== undefined) memberData.studentId = member.studentId?.trim() || null;
+        if (member.email !== undefined) memberData.email = member.email?.trim() || null;
+        if (member.phone !== undefined) memberData.phone = member.phone?.trim() || null;
+        if (Object.keys(memberData).length === 0) continue;
+        const updated = await transaction.teamMember.updateMany({
+          where: { id: member.id, registrationId: id },
+          data: memberData,
+        });
+        if (updated.count !== 1) throw new NotFoundException('Member not found');
+      }
+
+      const updatedRegistration = await transaction.registration.findUnique({
+        where: { id },
+        select: adminRegistrationSelect,
+      });
+      if (!updatedRegistration) throw new NotFoundException('Registration not found');
+
+      const after = {
+        status: updatedRegistration.status,
+        teamName: updatedRegistration.teamName,
+        institution: updatedRegistration.institution,
+        phone: updatedRegistration.phone,
+        members: updatedRegistration.members.map((member) => ({
+          id: member.id,
+          name: member.name,
+          studentId: member.studentId,
+          role: member.role,
+          email: member.email,
+          phone: member.phone,
+        })),
+        payment: updatedRegistration.invoice
+          ? { id: updatedRegistration.invoice.id, paymentStatus: updatedRegistration.invoice.paymentStatus }
+          : null,
+        ticket: updatedRegistration.ticket,
+      };
+
+      await transaction.auditLog.create({
+        data: {
+          actorId,
+          action: 'REGISTRATION_DATA_EDITED',
+          entityType: 'Registration',
+          entityId: id,
+          before,
+          after,
+          reason: 'Admin corrected participant-submitted data without changing payment or ticket state',
+          requestId: audit.requestId,
+          ipAddress: audit.ipAddress,
+        },
+      });
+
+      return serializeAdminRegistration(updatedRegistration);
+    });
+  }
+
   async review(
     actorId: string,
     id: string,
@@ -713,6 +906,20 @@ export class AdminRegistrationsController {
     @Param('id', new ParseUUIDPipe()) id: string,
   ): Promise<SerializedAdminRegistration> {
     return this.registrations.get(id);
+  }
+
+  @Roles(Role.REGISTRATION_REVIEWER, Role.SUPPORT)
+  @Patch(':id')
+  editRegistration(
+    @CurrentUser() user: AuthPrincipal,
+    @Param('id', new ParseUUIDPipe()) id: string,
+    @Body() dto: AdminEditRegistrationDto,
+    @Req() request: AuthenticatedRequest,
+  ): Promise<SerializedAdminRegistration> {
+    return this.registrations.edit(user.id, id, dto, {
+      requestId: request.requestId ?? randomUUID(),
+      ipAddress: request.ip || request.socket.remoteAddress || null,
+    });
   }
 
   @Roles(Role.REGISTRATION_REVIEWER)

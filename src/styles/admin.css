@@ -149,6 +149,12 @@
 .admin-review-panel .admin-action--danger { border-color: #c56e6e; background: transparent; color: #ffd4d4; }
 .admin-field-help { margin: 4px 0 8px; color: var(--admin-muted); font-size: .72rem; line-height: 1.5; }
 .admin-review-panel .admin-field-help { color: #bdb5ae; }
+.admin-edit-panel { display: grid; gap: 8px; margin-top: 16px; padding-top: 16px; border-top: 1px solid #5b514c; }
+.admin-edit-panel h3 { margin: 0 0 4px; font-size: 1rem; }
+.admin-edit-panel input { width: 100%; min-height: 42px; padding: 9px 10px; border: 1px solid #bcb7b1; border-radius: 5px; background: #fff; color: var(--admin-text); }
+.admin-edit-member { display: grid; gap: 8px; margin: 8px 0 0; padding: 12px; border: 1px solid #5b514c; border-radius: 6px; }
+.admin-edit-member legend { padding: 0 4px; color: #e8c875; font-size: .75rem; font-weight: 700; }
+.admin-edit-member label,.admin-edit-panel > label { color: #bdb5ae; font-size: .72rem; }
 .admin-finance-list { display: grid; margin-top: 16px; }
 .admin-finance-list > article { padding: 28px 0; }
 .admin-finance-list h3 { margin: 4px 0; font-size: 1.35rem; }
