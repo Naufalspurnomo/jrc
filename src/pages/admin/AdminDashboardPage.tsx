@@ -171,10 +171,10 @@ export default function AdminDashboardPage({ api = registrationApi }: AdminDashb
             <p className="admin-page-description">Pantau status dan tindak lanjuti data tim.</p>
           </div>
           <div className="admin-page-heading__actions">
-            {sheets?.spreadsheetUrl && (
+            {(
               <a
                 className="admin-export"
-                href={sheets.spreadsheetUrl}
+                href={sheets?.spreadsheetUrl || 'https://docs.google.com/spreadsheets/d/11u-EE8EdEj8xySc5r9m7c7fK9vM-UC6sHc2w4hykD_w/edit'}
                 target="_blank"
                 rel="noreferrer"
               >
