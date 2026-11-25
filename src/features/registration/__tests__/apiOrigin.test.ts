@@ -26,8 +26,8 @@ describe('resolveApiOrigin', () => {
     expect(resolveApiOrigin('https://api.example.com', 'https://jrc.pens.ac.id')).toBe('https://api.example.com');
   });
 
-  it('uses the public production API on the official JRC host when the build value is blank', () => {
-    expect(resolveApiOrigin(undefined, 'https://jrc.pens.ac.id')).toBe('https://api.jrc.pens.ac.id');
+  it('keeps production API requests same-origin when the build value is blank', () => {
+    expect(resolveApiOrigin(undefined, 'https://jrc.pens.ac.id')).toBe('');
   });
 
   it('keeps relative API URLs for non-official hosts when the build value is blank', () => {

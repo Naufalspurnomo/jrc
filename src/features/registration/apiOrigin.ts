@@ -1,6 +1,4 @@
 const API_PATH_PREFIX = '/api';
-const OFFICIAL_FRONTEND_ORIGIN = 'https://jrc.pens.ac.id';
-const OFFICIAL_API_ORIGIN = 'https://api.jrc.pens.ac.id';
 const ERROR_MESSAGE = 'VITE_API_ORIGIN must be an exact HTTPS origin';
 
 export function normalizeApiOrigin(value: string | undefined): string {
@@ -33,9 +31,12 @@ export function resolveApiOrigin(
   configuredOrigin: string | undefined,
   frontendOrigin: string | undefined,
 ): string {
+  void frontendOrigin;
   const normalizedConfiguredOrigin = normalizeApiOrigin(configuredOrigin);
   if (normalizedConfiguredOrigin) return normalizedConfiguredOrigin;
-  return frontendOrigin === OFFICIAL_FRONTEND_ORIGIN ? OFFICIAL_API_ORIGIN : '';
+  // Production routes /api through the current frontend host. Same-origin
+  // sessions remain reliable even when browsers block third-party cookies.
+  return '';
 }
 
 const BROWSER_ORIGIN = typeof window === 'undefined' ? undefined : window.location.origin;

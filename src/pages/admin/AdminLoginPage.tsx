@@ -27,7 +27,7 @@ function getErrorMessage(error: unknown): string {
 }
 
 export default function AdminLoginPage() {
-  const { loading: authLoading, login, logout, user } = useAuth();
+  const { loading: authLoading, login, logout, sessionExpired, user } = useAuth();
   const navigate = useNavigate();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -91,6 +91,11 @@ export default function AdminLoginPage() {
             onChange={(event) => setPassword(event.target.value)}
           />
           {error && <p className="portal-form-error" role="alert">{error}</p>}
+          {sessionExpired && !error && (
+            <p className="portal-form-error" role="alert">
+              Sesi admin Anda telah berakhir. Masuk kembali untuk melanjutkan.
+            </p>
+          )}
           <button
             className="portal-button portal-button--primary"
             type="submit"

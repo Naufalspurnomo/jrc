@@ -85,6 +85,39 @@ describe('ApiClient', () => {
       .rejects.toMatchObject({ status: 401, message: 'Email atau kata sandi salah.' });
   });
 
+  it('notifies auth listeners for protected 401 responses while preserving credentials', async () => {
+    const fetcher = vi.fn<typeof fetch>().mockResolvedValue(new Response(
+      JSON.stringify({ message: 'Authentication required' }),
+      { status: 401, headers: { 'Content-Type': 'application/json' } },
+    ));
+    const client = new ApiClient(fetcher);
+    const onUnauthorized = vi.fn();
+    client.onUnauthorized(onUnauthorized);
+
+    await expect(client.request('/api/admin/registrations')).rejects.toMatchObject({ status: 401 });
+
+    expect(onUnauthorized).toHaveBeenCalledOnce();
+    expect(fetcher).toHaveBeenCalledWith(
+      '/api/admin/registrations',
+      expect.objectContaining({ credentials: 'include' }),
+    );
+  });
+
+  it('does not treat invalid login credentials as an expired existing session', async () => {
+    const fetcher = vi.fn<typeof fetch>().mockResolvedValue(new Response(
+      JSON.stringify({ message: 'Invalid email or password' }),
+      { status: 401, headers: { 'Content-Type': 'application/json' } },
+    ));
+    const client = new ApiClient(fetcher);
+    const onUnauthorized = vi.fn();
+    client.onUnauthorized(onUnauthorized);
+
+    await expect(client.request(API_PATHS.auth.login, { method: 'POST', body: {}, csrf: false }))
+      .rejects.toMatchObject({ status: 401 });
+
+    expect(onUnauthorized).not.toHaveBeenCalled();
+  });
+
   it('uses the dedicated authenticated finance queue and proof paths', async () => {
     const fetcher = vi.fn<typeof fetch>().mockResolvedValue(new Response('[]', {
       status: 200,

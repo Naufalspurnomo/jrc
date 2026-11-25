@@ -6,7 +6,9 @@ describe('official static hosting policy', () => {
   it('ships the SPA fallback and browser security headers with the build', async () => {
     const policy = await readFile(`${process.cwd()}/public/.htaccess`, 'utf8');
 
+    expect(policy).toContain('RewriteRule ^api(?:/.*)?$ api/index.php [END]');
     expect(policy).toContain('RewriteRule ^ index.html [L]');
+    expect(policy).not.toContain('[P,L');
     expect(policy).toContain('Strict-Transport-Security');
     expect(policy).toContain('Content-Security-Policy');
     expect(policy).toContain("img-src 'self' data: blob: https:");

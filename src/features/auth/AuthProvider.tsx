@@ -4,6 +4,7 @@ import {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
   type ReactNode,
 } from 'react';
@@ -20,6 +21,7 @@ export interface AuthContextValue {
   user: AuthUser | null;
   session: AuthSession | null;
   loading: boolean;
+  sessionExpired: boolean;
   login(input: LoginInput): Promise<AuthSession>;
   register(input: RegisterInput): Promise<AuthSession>;
   logout(): Promise<void>;
@@ -40,6 +42,8 @@ function isUnauthorized(error: unknown): boolean {
 export function AuthProvider({ api = registrationApi, children }: AuthProviderProps) {
   const [session, setSession] = useState<AuthSession | null>(null);
   const [loading, setLoading] = useState(true);
+  const [sessionExpired, setSessionExpired] = useState(false);
+  const hasEstablishedSession = useRef(false);
 
   const refresh = useCallback(async (): Promise<AuthSession | null> => {
     setLoading(true);
@@ -51,6 +55,8 @@ export function AuthProvider({ api = registrationApi, children }: AuthProviderPr
       }
       const nextSession: AuthSession = { ...probe, user: probe.user };
       setSession(nextSession);
+      hasEstablishedSession.current = true;
+      setSessionExpired(false);
       return nextSession;
     } catch (error) {
       if (isUnauthorized(error)) {
@@ -67,11 +73,21 @@ export function AuthProvider({ api = registrationApi, children }: AuthProviderPr
     void refresh().catch(() => undefined);
   }, [refresh]);
 
+  useEffect(() => {
+    const unsubscribe = api.auth.onUnauthorized?.(() => {
+      setSession(null);
+      if (hasEstablishedSession.current) setSessionExpired(true);
+    });
+    return unsubscribe;
+  }, [api]);
+
   const login = useCallback(async (input: LoginInput) => {
     setLoading(true);
     try {
       const nextSession = await api.auth.login(input);
       setSession(nextSession);
+      hasEstablishedSession.current = true;
+      setSessionExpired(false);
       return nextSession;
     } finally {
       setLoading(false);
@@ -83,6 +99,8 @@ export function AuthProvider({ api = registrationApi, children }: AuthProviderPr
     try {
       const nextSession = await api.auth.register(input);
       setSession(nextSession);
+      hasEstablishedSession.current = true;
+      setSessionExpired(false);
       return nextSession;
     } finally {
       setLoading(false);
@@ -95,6 +113,8 @@ export function AuthProvider({ api = registrationApi, children }: AuthProviderPr
       await api.auth.logout();
     } finally {
       setSession(null);
+      hasEstablishedSession.current = false;
+      setSessionExpired(false);
       setLoading(false);
     }
   }, [api]);
@@ -107,7 +127,8 @@ export function AuthProvider({ api = registrationApi, children }: AuthProviderPr
     register,
     logout,
     refresh,
-  }), [loading, login, logout, refresh, register, session]);
+    sessionExpired,
+  }), [loading, login, logout, refresh, register, session, sessionExpired]);
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }

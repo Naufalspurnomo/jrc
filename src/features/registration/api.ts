@@ -139,18 +139,38 @@ async function parseResponse(response: Response): Promise<unknown> {
   return text || undefined;
 }
 
+const AUTHENTICATION_REQUESTS_WITHOUT_EXISTING_SESSION: ReadonlySet<string> = new Set([
+  API_PATHS.auth.login,
+  API_PATHS.auth.register,
+  API_PATHS.auth.verifyEmail,
+  API_PATHS.auth.forgotPassword,
+  API_PATHS.auth.resetPassword,
+]);
+
 export class ApiClient {
   private csrfToken: string | null = null;
   private csrfRequest: Promise<string> | null = null;
+  private readonly unauthorizedListeners = new Set<() => void>();
 
   constructor(
     private readonly fetcher: Fetcher = globalThis.fetch.bind(globalThis),
     private readonly apiOrigin?: string,
   ) {}
 
+  onUnauthorized(listener: () => void): () => void {
+    this.unauthorizedListeners.add(listener);
+    return () => this.unauthorizedListeners.delete(listener);
+  }
+
   clearCsrfToken(): void {
     this.csrfToken = null;
     this.csrfRequest = null;
+  }
+
+  private notifyUnauthorized(path: string): void {
+    if (AUTHENTICATION_REQUESTS_WITHOUT_EXISTING_SESSION.has(path)) return;
+    this.clearCsrfToken();
+    for (const listener of this.unauthorizedListeners) listener();
   }
 
   private async loadCsrfToken(): Promise<string> {
@@ -161,7 +181,10 @@ export class ApiClient {
         credentials: 'include',
       }).then(async (response) => {
         const payload = await parseResponse(response);
-        if (!response.ok) throw new ApiError(response.status, payload);
+        if (!response.ok) {
+          if (response.status === 401) this.notifyUnauthorized(API_PATHS.auth.csrf);
+          throw new ApiError(response.status, payload);
+        }
         if (!isRecord(payload) || typeof payload.csrfToken !== 'string' || !payload.csrfToken) {
           throw new Error('The CSRF endpoint returned no token');
         }
@@ -212,7 +235,10 @@ export class ApiClient {
     });
     if (response.ok && responseType === 'blob') return await response.blob() as T;
     const payload = await parseResponse(response);
-    if (!response.ok) throw new ApiError(response.status, payload);
+    if (!response.ok) {
+      if (response.status === 401) this.notifyUnauthorized(path);
+      throw new ApiError(response.status, payload);
+    }
     return payload as T;
   }
 }
@@ -589,6 +615,7 @@ export interface GoogleSheetsStatus {
 export interface RegistrationApi {
   auth: {
     me(): Promise<AuthProbe>;
+    onUnauthorized?(listener: () => void): () => void;
     login(input: LoginInput): Promise<AuthSession>;
     register(input: RegisterInput): Promise<AuthSession>;
     logout(): Promise<void>;
@@ -658,6 +685,7 @@ export function createRegistrationApi(client = new ApiClient()): RegistrationApi
   return {
     auth: {
       me: () => client.request<AuthProbe>(API_PATHS.auth.me),
+      onUnauthorized: (listener) => client.onUnauthorized(listener),
       login: (input) => client.request<AuthSession>(API_PATHS.auth.login, { method: 'POST', body: input, csrf: false }),
       register: (input) => client.request<AuthSession>(API_PATHS.auth.register, { method: 'POST', body: input, csrf: false }),
       logout: async () => {

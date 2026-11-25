@@ -6,7 +6,10 @@ RewriteCond %{HTTPS} !=on
 RewriteCond %{HTTP_HOST} ^(?:www\.)?jrc\.pens\.ac\.id$ [NC]
 RewriteRule ^ https://jrc.pens.ac.id%{REQUEST_URI} [R=301,L,NE]
 
-RewriteCond %{REQUEST_URI} !^/api(?:/|$)
+# Keep authenticated API traffic same-origin so browsers reliably retain
+# the secure session cookie while the canonical API host is unavailable.
+RewriteRule ^api(?:/.*)?$ api/index.php [END]
+
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
 RewriteRule ^ index.html [L]
