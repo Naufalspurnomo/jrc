@@ -205,7 +205,13 @@ export class ApiClient {
       headers[key] = value;
     });
     const formDataBody = requestBody instanceof FormData;
+    const sameOriginRelay = !this.apiOrigin;
+    const relayedMethod = sameOriginRelay && ['PUT', 'PATCH', 'DELETE'].includes(method);
     const shouldUseCsrf = csrf ?? MUTATING_METHODS.has(method);
+
+    if (relayedMethod) {
+      headers['X-JRC-Upstream-Method'] = method;
+    }
 
     if (shouldUseCsrf && MUTATING_METHODS.has(method)) {
       headers['X-CSRF-Token'] = await this.loadCsrfToken();
@@ -231,7 +237,7 @@ export class ApiClient {
       body,
       credentials: 'include',
       headers,
-      method,
+      method: relayedMethod ? 'POST' : method,
     });
     if (response.ok && responseType === 'blob') return await response.blob() as T;
     const payload = await parseResponse(response);

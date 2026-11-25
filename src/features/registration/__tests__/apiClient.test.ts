@@ -69,6 +69,30 @@ describe('ApiClient', () => {
     expect(headers.get('X-CSRF-Token')).toBe('csrf-123');
   });
 
+  it('tunnels blocked mutating methods through the same-origin relay', async () => {
+    const fetcher = vi.fn<typeof fetch>()
+      .mockResolvedValueOnce(new Response(JSON.stringify({ csrfToken: 'csrf-123' }), {
+        headers: { 'Content-Type': 'application/json' },
+      }))
+      .mockResolvedValueOnce(new Response(null, { status: 204 }));
+    const client = new ApiClient(fetcher);
+    const body = new FormData();
+    body.append('file', new File(['replacement'], 'replacement.pdf', { type: 'application/pdf' }));
+
+    await client.request('/api/admin/registrations/reg-1/documents/doc-1', {
+      method: 'PATCH',
+      body,
+    });
+
+    const init = fetcher.mock.calls[1]?.[1];
+    const headers = new Headers(init?.headers);
+    expect(init?.method).toBe('POST');
+    expect(init?.body).toBe(body);
+    expect(headers.has('Content-Type')).toBe(false);
+    expect(headers.get('X-CSRF-Token')).toBe('csrf-123');
+    expect(headers.get('X-JRC-Upstream-Method')).toBe('PATCH');
+  });
+
   it('builds cross-origin API URLs without changing relative defaults', () => {
     expect(apiUrl('/api/health', '')).toBe('/api/health');
     expect(apiUrl('/api/health', 'https://api.example.test/')).toBe('https://api.example.test/api/health');
@@ -212,8 +236,11 @@ describe('ApiClient', () => {
       '/api/admin/registrations/registration%2F1',
       expect.objectContaining({
         credentials: 'include',
-        method: 'DELETE',
-        headers: expect.objectContaining({ 'X-CSRF-Token': 'csrf-123' }),
+        method: 'POST',
+        headers: expect.objectContaining({
+          'X-CSRF-Token': 'csrf-123',
+          'X-JRC-Upstream-Method': 'DELETE',
+        }),
       }),
     );
   });

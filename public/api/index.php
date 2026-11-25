@@ -18,7 +18,16 @@ if (strpos($requestUri, '/api') !== 0) {
     failProxy(400, 'Invalid API path');
 }
 
-$method = strtoupper($_SERVER['REQUEST_METHOD'] ?? 'GET');
+$clientMethod = strtoupper($_SERVER['REQUEST_METHOD'] ?? 'GET');
+$overrideMethod = strtoupper(trim((string) ($_SERVER['HTTP_X_JRC_UPSTREAM_METHOD'] ?? '')));
+if ($overrideMethod !== '') {
+    if ($clientMethod !== 'POST' || !in_array($overrideMethod, ['PUT', 'PATCH', 'DELETE'], true)) {
+        failProxy(400, 'Invalid upstream method override');
+    }
+    $method = $overrideMethod;
+} else {
+    $method = $clientMethod;
+}
 if (!in_array($method, ['GET', 'HEAD', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'], true)) {
     failProxy(405, 'Method not allowed');
 }
@@ -40,6 +49,7 @@ $excludedHeaders = [
     'x-forwarded-for' => true,
     'x-forwarded-host' => true,
     'x-forwarded-proto' => true,
+    'x-jrc-upstream-method' => true,
 ];
 $contentType = strtolower((string) ($_SERVER['CONTENT_TYPE'] ?? ''));
 $isMultipart = strpos($contentType, 'multipart/form-data') === 0;
