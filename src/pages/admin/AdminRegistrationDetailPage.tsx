@@ -27,6 +27,8 @@ type AdminRegistrationRecord = Omit<RegistrationRecord, 'invoice'> & {
   owner?: Pick<AuthUser, 'id' | 'displayName' | 'email'> | null;
   invoice?: Partial<InvoiceRecord> | null;
 };
+type AdminDocument = NonNullable<AdminRegistrationRecord['documents']>[number];
+type PendingDocumentReplacement = { documentId: string; file: File };
 
 const allowedRoles = new Set(['SUPER_ADMIN', 'REGISTRATION_REVIEWER', 'SUPPORT']);
 const reviewerRoles = new Set(['SUPER_ADMIN', 'REGISTRATION_REVIEWER']);
@@ -68,6 +70,23 @@ const ticketStatusLabels: Record<NonNullable<RegistrationRecord['ticketStatus']>
   REVOKED: 'Dicabut',
 };
 
+const documentCategoryLabels: Record<string, string> = {
+  RECOMMENDATION_LETTER: 'Surat rekomendasi',
+  IDENTITY_CARD: 'Identitas diri',
+  STUDENT_CARD: 'Kartu identitas mahasiswa/pelajar',
+  REGISTRATION_FORM: 'Formulir pendaftaran',
+  TEAM_PHOTO: 'Foto tim',
+  TWIBBON_PROOF: 'Bukti twibbon',
+  MEMBER_PHOTO: 'Foto anggota',
+};
+
+function formatDocumentCategory(category: string | null | undefined): string {
+  const normalized = category?.trim().toUpperCase();
+  if (!normalized) return 'Kategori tidak tersedia';
+  return documentCategoryLabels[normalized]
+    ?? normalized.toLocaleLowerCase('id-ID').replace(/(^|_)(\p{L})/gu, (_match, prefix: string, letter: string) => `${prefix ? ' ' : ''}${letter.toUpperCase()}`);
+}
+
 function formatDate(value: string | null | undefined): string {
   if (!value) return '—';
   const date = new Date(value);
@@ -108,6 +127,8 @@ export default function AdminRegistrationDetailPage({ api = registrationApi }: A
   const [editMode, setEditMode] = useState(false);
   const [editForm, setEditForm] = useState<AdminEditRegistrationInput>({});
   const [replacingDocumentId, setReplacingDocumentId] = useState<string | null>(null);
+  const [pendingDocumentReplacement, setPendingDocumentReplacement] = useState<PendingDocumentReplacement | null>(null);
+  const [documentFeedback, setDocumentFeedback] = useState<string | null>(null);
   const reviewReasonRef = useRef<HTMLTextAreaElement>(null);
 
   const loadRegistration = useCallback(async () => {
@@ -181,15 +202,23 @@ export default function AdminRegistrationDetailPage({ api = registrationApi }: A
     }
   };
 
-  const replaceDocument = async (documentId: string, file: File | null) => {
-    if (!registrationId || !file) return;
+  const requestDocumentReplacement = (documentId: string, file: File | null) => {
+    if (!file) return;
+    setDocumentFeedback(null);
+    setPendingDocumentReplacement({ documentId, file });
+  };
+
+  const replaceDocument = async (documentId: string, file: File) => {
+    if (!registrationId) return;
     setReplacingDocumentId(documentId);
+    setPendingDocumentReplacement(null);
     setMutationError(null);
     try {
       const formData = new FormData();
       formData.append('file', file);
       await api.admin.replaceRegistrationDocument(registrationId, documentId, formData);
       setRegistration(await loadRegistration());
+      setDocumentFeedback('Dokumen pengganti berhasil disimpan. Dokumen lama tetap menjadi riwayat.');
       showToast('Dokumen pengganti berhasil disimpan. Dokumen lama tetap menjadi riwayat.', 'success');
     } catch {
       setMutationError('Dokumen pengganti gagal disimpan. Periksa format dan ukuran berkas.');
@@ -243,6 +272,193 @@ export default function AdminRegistrationDetailPage({ api = registrationApi }: A
   const ticketStatus = registration?.ticket?.status ?? registration?.ticketStatus;
   const paymentStatus = registration?.invoice?.paymentStatus ?? registration?.paymentStatus;
   const canReview = Boolean(user && reviewerRoles.has(user.role));
+  const activeDocuments = documents.filter((document) => document.active !== false);
+  const historyDocuments = documents.filter((document) => document.active === false);
+
+  const renderDocument = (document: AdminDocument) => (
+    <article className={`admin-document${document.active === false ? ' admin-document--history' : ' admin-document--active'}`} key={document.id}>
+      <span aria-hidden="true">DOC</span>
+      <div className="admin-document__body">
+        <strong>{document.originalName || 'Dokumen tanpa nama'}</strong>
+        <small>{formatDocumentCategory(document.category)} · {Math.max(1, Math.round(document.size / 1024))} KB</small>
+        {document.subjectName && <small>{document.subjectName} · {document.subjectRole === 'SUPERVISOR' ? 'Pembina' : 'Peserta'}</small>}
+      </div>
+      <div className="admin-document__actions">
+        {document.downloadUrl && (
+          <a href={apiUrl(document.downloadUrl)} aria-label={`Unduh ${document.originalName}`}>
+            Unduh
+          </a>
+        )}
+        {document.active !== false && (
+          <div className="admin-document__replace-control">
+            <label className="admin-document__replace" htmlFor={`admin-document-replace-${document.id}`}>
+              <input
+                id={`admin-document-replace-${document.id}`}
+                type="file"
+                accept="application/pdf,image/jpeg,image/png"
+                aria-describedby={`admin-document-replace-help-${document.id}`}
+                disabled={replacingDocumentId !== null || pendingDocumentReplacement !== null}
+                onChange={(event) => {
+                  const file = event.currentTarget.files?.[0] ?? null;
+                  event.currentTarget.value = '';
+                  requestDocumentReplacement(document.id, file);
+                }}
+              />
+              <span>{replacingDocumentId === document.id ? 'Mengunggah…' : 'Ganti dokumen'}</span>
+            </label>
+            <span className="admin-sr-only" id={`admin-document-replace-help-${document.id}`}>PDF, JPG, atau PNG. File baru akan menjadi versi aktif setelah dikonfirmasi.</span>
+          </div>
+        )}
+        {document.active === false && <small className="admin-document__history">Riwayat lama</small>}
+        {document.active !== false && <small className="admin-document__active">Versi aktif</small>}
+      </div>
+      {pendingDocumentReplacement?.documentId === document.id && (
+        <div className="admin-document__confirmation" role="group" aria-label={`Konfirmasi penggantian ${document.originalName}`}>
+          <p>Ganti <strong>{document.originalName}</strong> dengan <strong>{pendingDocumentReplacement.file.name}</strong>?</p>
+          <div className="admin-detail-actions">
+            <button
+              className="admin-action admin-action--primary"
+              type="button"
+              disabled={replacingDocumentId !== null}
+              onClick={() => void replaceDocument(document.id, pendingDocumentReplacement.file)}
+            >
+              Konfirmasi penggantian
+            </button>
+            <button className="admin-action" type="button" onClick={() => setPendingDocumentReplacement(null)}>
+              Batal
+            </button>
+          </div>
+        </div>
+      )}
+    </article>
+  );
+
+  const renderEditForm = () => (
+    <section className="admin-detail__edit-form" aria-labelledby="admin-edit-title">
+      <div className="admin-detail__edit-form-heading">
+        <div>
+          <p className="admin-eyebrow">EDIT PENDAFTARAN</p>
+          <h2 id="admin-edit-title">Koreksi data lengkap</h2>
+          <p className="admin-field-help">Perubahan ini hanya memperbarui data peserta dan tim. Status pembayaran, invoice, dokumen, dan tiket tetap aman.</p>
+        </div>
+        <button className="admin-action" type="button" disabled={mutationLoading} onClick={() => setEditMode(false)}>
+          Tutup edit
+        </button>
+      </div>
+      <div className="admin-edit-grid">
+        <fieldset className="admin-edit-group">
+          <legend>Data pemilik dan tim</legend>
+          <label htmlFor="admin-edit-owner-name">Nama pemilik</label>
+          <input
+            id="admin-edit-owner-name"
+            value={editForm.ownerDisplayName ?? ''}
+            disabled={mutationLoading}
+            onChange={(event) => setEditForm((current) => ({ ...current, ownerDisplayName: event.target.value }))}
+          />
+          <label htmlFor="admin-edit-owner-email">Email pemilik</label>
+          <input
+            id="admin-edit-owner-email"
+            type="email"
+            value={editForm.ownerEmail ?? ''}
+            disabled={mutationLoading}
+            onChange={(event) => setEditForm((current) => ({ ...current, ownerEmail: event.target.value }))}
+          />
+          <label htmlFor="admin-edit-team-name">Nama tim</label>
+          <input
+            id="admin-edit-team-name"
+            value={editForm.teamName ?? ''}
+            disabled={mutationLoading}
+            onChange={(event) => setEditForm((current) => ({ ...current, teamName: event.target.value }))}
+          />
+          <label htmlFor="admin-edit-institution">Institusi</label>
+          <input
+            id="admin-edit-institution"
+            value={editForm.institution ?? ''}
+            disabled={mutationLoading}
+            onChange={(event) => setEditForm((current) => ({ ...current, institution: event.target.value }))}
+          />
+          <label htmlFor="admin-edit-phone">Telepon tim</label>
+          <input
+            id="admin-edit-phone"
+            value={editForm.phone ?? ''}
+            disabled={mutationLoading}
+            onChange={(event) => setEditForm((current) => ({ ...current, phone: event.target.value }))}
+          />
+        </fieldset>
+        <div className="admin-edit-group admin-edit-group--members">
+          <h3>Anggota tim</h3>
+          {(editForm.members ?? []).map((member, index) => (
+            <fieldset key={member.id} className="admin-edit-member">
+              <legend>{members[index]?.role === 'LEADER' ? 'Ketua' : members[index]?.role === 'SUPERVISOR' ? 'Pembina' : 'Anggota'}</legend>
+              <label htmlFor={`admin-edit-member-role-${member.id}`}>Peran</label>
+              <select
+                id={`admin-edit-member-role-${member.id}`}
+                value={member.role ?? 'MEMBER'}
+                disabled={mutationLoading}
+                onChange={(event) => setEditForm((current) => ({
+                  ...current,
+                  members: current.members?.map((item) => item.id === member.id ? { ...item, role: event.target.value as 'LEADER' | 'MEMBER' | 'SUPERVISOR' } : item),
+                }))}
+              >
+                <option value="LEADER">Ketua</option>
+                <option value="MEMBER">Anggota</option>
+                <option value="SUPERVISOR">Pembina</option>
+              </select>
+              <label htmlFor={`admin-edit-member-name-${member.id}`}>Nama</label>
+              <input
+                id={`admin-edit-member-name-${member.id}`}
+                value={member.name ?? ''}
+                disabled={mutationLoading}
+                onChange={(event) => setEditForm((current) => ({
+                  ...current,
+                  members: current.members?.map((item) => item.id === member.id ? { ...item, name: event.target.value } : item),
+                }))}
+              />
+              <label htmlFor={`admin-edit-member-student-${member.id}`}>NIS/NIM/NISN</label>
+              <input
+                id={`admin-edit-member-student-${member.id}`}
+                value={member.studentId ?? ''}
+                disabled={mutationLoading}
+                onChange={(event) => setEditForm((current) => ({
+                  ...current,
+                  members: current.members?.map((item) => item.id === member.id ? { ...item, studentId: event.target.value } : item),
+                }))}
+              />
+              <label htmlFor={`admin-edit-member-email-${member.id}`}>Email</label>
+              <input
+                id={`admin-edit-member-email-${member.id}`}
+                type="email"
+                value={member.email ?? ''}
+                disabled={mutationLoading}
+                onChange={(event) => setEditForm((current) => ({
+                  ...current,
+                  members: current.members?.map((item) => item.id === member.id ? { ...item, email: event.target.value } : item),
+                }))}
+              />
+              <label htmlFor={`admin-edit-member-phone-${member.id}`}>Nomor HP</label>
+              <input
+                id={`admin-edit-member-phone-${member.id}`}
+                value={member.phone ?? ''}
+                disabled={mutationLoading}
+                onChange={(event) => setEditForm((current) => ({
+                  ...current,
+                  members: current.members?.map((item) => item.id === member.id ? { ...item, phone: event.target.value } : item),
+                }))}
+              />
+            </fieldset>
+          ))}
+        </div>
+      </div>
+      <div className="admin-detail-actions">
+        <button className="admin-action admin-action--primary" type="button" disabled={mutationLoading} onClick={() => void saveEdit()}>
+          {mutationLoading ? 'Menyimpan…' : 'Simpan koreksi'}
+        </button>
+        <button className="admin-action" type="button" disabled={mutationLoading} onClick={() => setEditMode(false)}>
+          Batal
+        </button>
+      </div>
+    </section>
+  );
 
   return (
     <AdminShell onSignOut={signOut}>
@@ -275,6 +491,8 @@ export default function AdminRegistrationDetailPage({ api = registrationApi }: A
               </div>
               <StatusBadge status={statusBadgeStates[registration.status]} />
             </header>
+
+            {editMode && renderEditForm()}
 
             <div className="admin-detail__layout">
               <div className="admin-detail__content">
@@ -316,42 +534,33 @@ export default function AdminRegistrationDetailPage({ api = registrationApi }: A
                   ) : <p className="admin-muted">Belum ada anggota.</p>}
                 </section>
 
-                <section className="admin-detail-section" aria-labelledby="admin-documents-title">
-                  <div className="admin-detail-section__heading"><h2 id="admin-documents-title">Dokumen</h2></div>
-                  {documents.length > 0 ? documents.map((document) => (
-                    <article className="admin-document" key={document.id}>
-                      <span>DOC</span>
-                      <div>
-                        <strong>{document.originalName || 'Dokumen tanpa nama'}</strong>
-                        <small>{document.category || 'Kategori tidak tersedia'} · {Math.max(1, Math.round(document.size / 1024))} KB</small>
-                        {document.subjectName && <small>{document.subjectName} · {document.subjectRole === 'SUPERVISOR' ? 'Pembina' : 'Peserta'}</small>}
-                      </div>
-                      <div className="admin-document__actions">
-                        {document.downloadUrl && (
-                          <a href={apiUrl(document.downloadUrl)} aria-label={`Unduh ${document.originalName}`}>
-                            Unduh
-                          </a>
-                        )}
-                        {document.active !== false && (
-                          <label className="admin-document__replace">
-                            <span>{replacingDocumentId === document.id ? 'Mengunggah…' : 'Ganti dokumen'}</span>
-                            <input
-                              type="file"
-                              accept="application/pdf,image/jpeg,image/png"
-                              disabled={replacingDocumentId !== null}
-                              onChange={(event) => {
-                                const file = event.target.files?.[0] ?? null;
-                                event.currentTarget.value = '';
-                                void replaceDocument(document.id, file);
-                              }}
-                            />
-                          </label>
-                        )}
-                        {document.active === false && <small className="admin-document__history">Riwayat lama</small>}
-                        {document.active !== false && <small className="admin-document__active">Versi aktif</small>}
-                      </div>
-                    </article>
-                  )) : <p className="admin-muted">Belum ada dokumen.</p>}
+                <section className="admin-detail-section admin-documents-section" aria-labelledby="admin-documents-title">
+                  <div className="admin-detail-section__heading">
+                    <div>
+                      <h2 id="admin-documents-title">Dokumen</h2>
+                      <p className="admin-field-help">Dokumen aktif dapat diganti. Versi lama tetap tersimpan sebagai riwayat.</p>
+                    </div>
+                    {documents.length > 0 && <span aria-label={`${activeDocuments.length} dokumen aktif`}>{activeDocuments.length}</span>}
+                  </div>
+                  {documentFeedback && <p className="admin-document-feedback" role="status">{documentFeedback}</p>}
+                  {documents.length > 0 ? (
+                    <>
+                      {activeDocuments.length > 0 && (
+                        <div className="admin-document-group" aria-label="Dokumen aktif">
+                          <h3>Versi aktif</h3>
+                          {activeDocuments.map(renderDocument)}
+                        </div>
+                      )}
+                      {historyDocuments.length > 0 && (
+                        <details className="admin-document-history" open={false}>
+                          <summary>Riwayat dokumen ({historyDocuments.length})</summary>
+                          <div className="admin-document-group" aria-label="Riwayat dokumen">
+                            {historyDocuments.map(renderDocument)}
+                          </div>
+                        </details>
+                      )}
+                    </>
+                  ) : <p className="admin-muted">Belum ada dokumen.</p>}
                 </section>
 
                 <section className="admin-detail-section" aria-labelledby="admin-billing-title">
@@ -370,118 +579,10 @@ export default function AdminRegistrationDetailPage({ api = registrationApi }: A
                 <h2 id="admin-review-title">Keputusan pendaftaran</h2>
                 <p>Status saat ini: <strong>{statusLabels[registration.status]}</strong></p>
                 <p className="admin-field-help">Koreksi data tidak mengubah status pembayaran, invoice, dokumen, atau tiket.</p>
-                {!editMode ? (
-                  <button className="admin-action" type="button" disabled={mutationLoading} onClick={startEdit}>
-                    Koreksi data peserta
+                {!editMode && (
+                  <button className="admin-action admin-action--primary admin-edit-trigger" type="button" disabled={mutationLoading} onClick={startEdit}>
+                    Edit data peserta dan tim
                   </button>
-                ) : (
-                  <section className="admin-edit-panel" aria-labelledby="admin-edit-title">
-                    <h3 id="admin-edit-title">Koreksi data lengkap</h3>
-                    <label htmlFor="admin-edit-owner-name">Nama pemilik</label>
-                    <input
-                      id="admin-edit-owner-name"
-                      value={editForm.ownerDisplayName ?? ''}
-                      disabled={mutationLoading}
-                      onChange={(event) => setEditForm((current) => ({ ...current, ownerDisplayName: event.target.value }))}
-                    />
-                    <label htmlFor="admin-edit-owner-email">Email pemilik</label>
-                    <input
-                      id="admin-edit-owner-email"
-                      type="email"
-                      value={editForm.ownerEmail ?? ''}
-                      disabled={mutationLoading}
-                      onChange={(event) => setEditForm((current) => ({ ...current, ownerEmail: event.target.value }))}
-                    />
-                    <label htmlFor="admin-edit-team-name">Nama tim</label>
-                    <input
-                      id="admin-edit-team-name"
-                      value={editForm.teamName ?? ''}
-                      disabled={mutationLoading}
-                      onChange={(event) => setEditForm((current) => ({ ...current, teamName: event.target.value }))}
-                    />
-                    <label htmlFor="admin-edit-institution">Institusi</label>
-                    <input
-                      id="admin-edit-institution"
-                      value={editForm.institution ?? ''}
-                      disabled={mutationLoading}
-                      onChange={(event) => setEditForm((current) => ({ ...current, institution: event.target.value }))}
-                    />
-                    <label htmlFor="admin-edit-phone">Telepon tim</label>
-                    <input
-                      id="admin-edit-phone"
-                      value={editForm.phone ?? ''}
-                      disabled={mutationLoading}
-                      onChange={(event) => setEditForm((current) => ({ ...current, phone: event.target.value }))}
-                    />
-                    {(editForm.members ?? []).map((member, index) => (
-                      <fieldset key={member.id} className="admin-edit-member">
-                        <legend>{members[index]?.role === 'LEADER' ? 'Ketua' : members[index]?.role === 'SUPERVISOR' ? 'Pembina' : 'Anggota'}</legend>
-                        <label htmlFor={`admin-edit-member-role-${member.id}`}>Peran</label>
-                        <select
-                          id={`admin-edit-member-role-${member.id}`}
-                          value={member.role ?? 'MEMBER'}
-                          disabled={mutationLoading}
-                          onChange={(event) => setEditForm((current) => ({
-                            ...current,
-                            members: current.members?.map((item) => item.id === member.id ? { ...item, role: event.target.value as 'LEADER' | 'MEMBER' | 'SUPERVISOR' } : item),
-                          }))}
-                        >
-                          <option value="LEADER">Ketua</option>
-                          <option value="MEMBER">Anggota</option>
-                          <option value="SUPERVISOR">Pembina</option>
-                        </select>
-                        <label htmlFor={`admin-edit-member-name-${member.id}`}>Nama</label>
-                        <input
-                          id={`admin-edit-member-name-${member.id}`}
-                          value={member.name ?? ''}
-                          disabled={mutationLoading}
-                          onChange={(event) => setEditForm((current) => ({
-                            ...current,
-                            members: current.members?.map((item) => item.id === member.id ? { ...item, name: event.target.value } : item),
-                          }))}
-                        />
-                        <label htmlFor={`admin-edit-member-student-${member.id}`}>NIS/NIM/NISN</label>
-                        <input
-                          id={`admin-edit-member-student-${member.id}`}
-                          value={member.studentId ?? ''}
-                          disabled={mutationLoading}
-                          onChange={(event) => setEditForm((current) => ({
-                            ...current,
-                            members: current.members?.map((item) => item.id === member.id ? { ...item, studentId: event.target.value } : item),
-                          }))}
-                        />
-                        <label htmlFor={`admin-edit-member-email-${member.id}`}>Email</label>
-                        <input
-                          id={`admin-edit-member-email-${member.id}`}
-                          type="email"
-                          value={member.email ?? ''}
-                          disabled={mutationLoading}
-                          onChange={(event) => setEditForm((current) => ({
-                            ...current,
-                            members: current.members?.map((item) => item.id === member.id ? { ...item, email: event.target.value } : item),
-                          }))}
-                        />
-                        <label htmlFor={`admin-edit-member-phone-${member.id}`}>Nomor HP</label>
-                        <input
-                          id={`admin-edit-member-phone-${member.id}`}
-                          value={member.phone ?? ''}
-                          disabled={mutationLoading}
-                          onChange={(event) => setEditForm((current) => ({
-                            ...current,
-                            members: current.members?.map((item) => item.id === member.id ? { ...item, phone: event.target.value } : item),
-                          }))}
-                        />
-                      </fieldset>
-                    ))}
-                    <div className="admin-detail-actions">
-                      <button className="admin-action admin-action--primary" type="button" disabled={mutationLoading} onClick={() => void saveEdit()}>
-                        {mutationLoading ? 'Menyimpan…' : 'Simpan koreksi'}
-                      </button>
-                      <button className="admin-action" type="button" disabled={mutationLoading} onClick={() => setEditMode(false)}>
-                        Batal
-                      </button>
-                    </div>
-                  </section>
                 )}
                 {registration.reviewReasonCategory && (
                   <p>Kategori alasan: <strong>{REVIEW_REASON_CATEGORY_LABELS[registration.reviewReasonCategory]}</strong></p>

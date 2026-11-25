@@ -134,6 +134,8 @@ describe('AdminRegistrationDetailPage', () => {
     expect(screen.getByText('NRP-001')).toBeInTheDocument();
     expect(screen.getByText('Aktif')).toBeInTheDocument();
 
+    expect(screen.getByText(/Kartu identitas mahasiswa\/pelajar/)).toBeInTheDocument();
+    expect(screen.getByText(/Foto tim/)).toBeInTheDocument();
     const linkedDocument = screen.getByText('kartu-mahasiswa.pdf').closest('article');
     const unlinkedDocument = screen.getByText('foto-tim.png').closest('article');
     expect(linkedDocument).not.toBeNull();
@@ -226,6 +228,11 @@ describe('AdminRegistrationDetailPage', () => {
     const file = new File(['%PDF-correct'], 'kartu-baru.pdf', { type: 'application/pdf' });
     await user.upload(replaceInput, file);
 
+    const confirmation = screen.getByRole('group', { name: 'Konfirmasi penggantian kartu-mahasiswa.pdf' });
+    expect(within(confirmation).getByText('kartu-baru.pdf')).toBeInTheDocument();
+    expect(confirmation).toBeInTheDocument();
+    expect(api.admin.replaceRegistrationDocument).not.toHaveBeenCalled();
+    await user.click(screen.getByRole('button', { name: 'Konfirmasi penggantian' }));
     await waitFor(() => expect(api.admin.replaceRegistrationDocument).toHaveBeenCalledWith(
       'registration-1',
       'document-1',
@@ -244,7 +251,8 @@ describe('AdminRegistrationDetailPage', () => {
     const user = userEvent.setup();
     renderDetail(api);
 
-    await user.click(await screen.findByRole('button', { name: 'Koreksi data peserta' }));
+    await user.click(await screen.findByRole('button', { name: 'Edit data peserta dan tim' }));
+    expect(screen.getByRole('heading', { name: 'Koreksi data lengkap' })).toBeInTheDocument();
     const teamName = screen.getByLabelText('Nama tim');
     await user.clear(teamName);
     await user.type(teamName, 'Garuda Robotika Baru');
