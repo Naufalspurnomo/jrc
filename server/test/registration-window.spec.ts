@@ -155,4 +155,63 @@ describe('draft competition selection window', () => {
       select: { id: true },
     });
   });
+
+  it('gives managed-database registration transactions enough time to complete', async () => {
+    const serialized = {
+      id: REGISTRATION_ID,
+      registrationNumber: 'JRC14-2026-0001',
+      ownerId: OWNER_ID,
+      competitionId: COMPETITION_ID,
+      teamName: 'Team One',
+      institution: 'PENS',
+      phone: null,
+      status: RegistrationStatus.DRAFT,
+      reviewReasonCategory: null,
+      reviewReasonComment: null,
+      submittedAt: null,
+      reviewedAt: null,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      competition: {
+        id: COMPETITION_ID,
+        slug: 'sumo',
+        name: 'Sumo',
+        level: 'Umum',
+        discipline: 'Robot',
+        description: null,
+        eventId: 'JRC-XIV-2026',
+        eventName: 'JRC XIV 2026',
+        fee: 100,
+        currency: 'IDR',
+        registrationOpenAt: OPEN_AT,
+        registrationDeadline: DEADLINE,
+      },
+      members: [],
+      documents: [],
+      invoice: null,
+      ticket: null,
+    };
+    const transaction = {
+      registration: {
+        count: vi.fn().mockResolvedValue(0),
+        create: vi.fn().mockResolvedValue(serialized),
+      },
+    };
+    const prisma = {
+      competition: { findFirst: vi.fn().mockResolvedValue({ id: COMPETITION_ID }) },
+      $transaction: vi.fn((operation: (client: typeof transaction) => Promise<unknown>) => operation(transaction)),
+    };
+    const service = new RegistrationsService(prisma as unknown as PrismaService);
+
+    await expect(service.create(OWNER_ID, {
+      competitionId: COMPETITION_ID,
+      teamName: 'Team One',
+      institution: 'PENS',
+    })).resolves.toMatchObject({ id: REGISTRATION_ID });
+    expect(prisma.$transaction).toHaveBeenCalledWith(expect.any(Function), {
+      isolationLevel: 'Serializable',
+      timeout: 15_000,
+      maxWait: 5_000,
+    });
+  });
 });

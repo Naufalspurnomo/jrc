@@ -397,6 +397,8 @@ export class RegistrationsService {
           return serializeRegistration(registration);
         }, {
           isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
+          timeout: 15_000,
+          maxWait: 5_000,
         });
       } catch (error: unknown) {
         if (this.isRegistrationLimitConstraintError(error)) {

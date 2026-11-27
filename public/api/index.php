@@ -3,6 +3,57 @@ declare(strict_types=1);
 
 const UPSTREAM_ORIGIN = 'https://api.46.250.238.167.nip.io';
 const MAX_PROXY_BODY_BYTES = 8 * 1024 * 1024;
+const PUBLIC_COMPETITIONS_CACHE_TTL_SECONDS = 30;
+const PUBLIC_COMPETITIONS_STALE_SECONDS = 300;
+const PUBLIC_COMPETITIONS_CACHE_FILE = '/tmp/jrc-public-competitions-v1.json';
+
+function readCompetitionCache(bool $allowStale): ?array
+{
+    if (!is_file(PUBLIC_COMPETITIONS_CACHE_FILE)) {
+        return null;
+    }
+    $mtime = @filemtime(PUBLIC_COMPETITIONS_CACHE_FILE);
+    if ($mtime === false) {
+        return null;
+    }
+    $age = time() - $mtime;
+    $limit = $allowStale ? PUBLIC_COMPETITIONS_STALE_SECONDS : PUBLIC_COMPETITIONS_CACHE_TTL_SECONDS;
+    if ($age < 0 || $age > $limit) {
+        return null;
+    }
+    $body = @file_get_contents(PUBLIC_COMPETITIONS_CACHE_FILE);
+    if ($body === false || $body === '') {
+        return null;
+    }
+    json_decode($body, true);
+    if (json_last_error() !== JSON_ERROR_NONE) {
+        return null;
+    }
+    return ['body' => $body, 'age' => $age];
+}
+
+function serveCompetitionCache(array $cache, string $state): void
+{
+    http_response_code(200);
+    header('Content-Type: application/json; charset=utf-8');
+    header('Cache-Control: public, max-age=15, stale-if-error=300');
+    header('X-JRC-Relay-Cache: ' . $state);
+    header('Age: ' . (string) $cache['age']);
+    echo $cache['body'];
+    exit;
+}
+
+function writeCompetitionCache(string $body): void
+{
+    $temporary = PUBLIC_COMPETITIONS_CACHE_FILE . '.' . getmypid() . '.tmp';
+    if (@file_put_contents($temporary, $body, LOCK_EX) === false) {
+        return;
+    }
+    @chmod($temporary, 0600);
+    if (!@rename($temporary, PUBLIC_COMPETITIONS_CACHE_FILE)) {
+        @unlink($temporary);
+    }
+}
 
 function failProxy(int $status, string $message): void
 {
@@ -35,6 +86,16 @@ if (!in_array($method, ['GET', 'HEAD', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTION
 $contentLength = (int) ($_SERVER['CONTENT_LENGTH'] ?? 0);
 if ($contentLength > MAX_PROXY_BODY_BYTES) {
     failProxy(413, 'Request body is too large');
+}
+
+$isPublicCompetitions = $method === 'GET'
+    && parse_url($requestUri, PHP_URL_PATH) === '/api/competitions'
+    && parse_url($requestUri, PHP_URL_QUERY) === null;
+if ($isPublicCompetitions) {
+    $freshCache = readCompetitionCache(false);
+    if ($freshCache !== null) {
+        serveCompetitionCache($freshCache, 'HIT');
+    }
 }
 
 $upstreamUrl = UPSTREAM_ORIGIN . $requestUri;
@@ -141,10 +202,30 @@ if ($method === 'HEAD') {
 $responseBody = curl_exec($curl);
 if ($responseBody === false) {
     curl_close($curl);
+    if ($isPublicCompetitions) {
+        $staleCache = readCompetitionCache(true);
+        if ($staleCache !== null) {
+            serveCompetitionCache($staleCache, 'STALE');
+        }
+    }
     failProxy(502, 'API relay failed');
 }
 $status = (int) curl_getinfo($curl, CURLINFO_RESPONSE_CODE);
 curl_close($curl);
+
+if ($isPublicCompetitions) {
+    $contentType = strtolower((string) ($responseHeaders['content-type'][0] ?? ''));
+    json_decode($responseBody, true);
+    if ($status === 200 && strpos($contentType, 'application/json') !== false && json_last_error() === JSON_ERROR_NONE) {
+        writeCompetitionCache($responseBody);
+        $responseHeaders['x-jrc-relay-cache'] = ['MISS'];
+    } elseif ($status >= 500 || $status === 0) {
+        $staleCache = readCompetitionCache(true);
+        if ($staleCache !== null) {
+            serveCompetitionCache($staleCache, 'STALE');
+        }
+    }
+}
 
 http_response_code($status > 0 ? $status : 502);
 $allowedResponseHeaders = [
@@ -156,6 +237,7 @@ $allowedResponseHeaders = [
     'location' => true,
     'set-cookie' => true,
     'x-request-id' => true,
+    'x-jrc-relay-cache' => true,
 ];
 foreach ($responseHeaders as $name => $values) {
     if (!isset($allowedResponseHeaders[$name])) {
